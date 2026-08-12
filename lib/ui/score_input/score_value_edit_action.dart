@@ -1,0 +1,4 @@
+enum ScoreValueEditAction {
+  replace,
+  add,
+}
