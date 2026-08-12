@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:scoard_game/bootstrap/app_environment.dart';
 import 'package:scoard_game/ui/home/home_screen.dart';
+import 'package:scoard_game/ui/active_games/active_games_screen.dart';
 import 'package:scoard_game/ui/navigation/app_routes.dart';
 import 'package:scoard_game/ui/navigation/placeholder_screen.dart';
 import 'package:scoard_game/ui/players/players_screen.dart';
@@ -33,13 +34,25 @@ class ScoardGameApp extends StatelessWidget {
             AppRoutes.home: (_) => HomeScreen(
                   loadHomeShellModel: environment.loadHomeShellModel,
                 ),
-            AppRoutes.activeGames: (_) => const PlaceholderScreen(
-              title: 'Active Games',
-              description:
-                  'Pick up a score entry that is already in progress.',
-              callout:
-                  'For now this is a placeholder while the active-game flow is being designed.',
-            ),
+            AppRoutes.activeGames: (_) => ActiveGamesScreen(
+                sessionRepository: environment.sessionRepository,
+                loadQuickScoreActiveSession:
+                  environment.loadQuickScoreActiveSession,
+                saveQuickScoreActiveSession:
+                  environment.saveQuickScoreActiveSession,
+                loadQuickScoreSetupModel:
+                  environment.loadQuickScoreSetupModel,
+                saveQuickScoreSession: environment.saveQuickScoreSession,
+                loadRoundScoreActiveSession:
+                  environment.loadRoundScoreActiveSession,
+                saveRoundScoreActiveSession:
+                  environment.saveRoundScoreActiveSession,
+                loadRoundScoreSetupModel:
+                  environment.loadRoundScoreSetupModel,
+                saveRoundScoreSession: environment.saveRoundScoreSession,
+                deleteActiveSession: environment.deleteActiveSession,
+                createPlayer: environment.createPlayer,
+              ),
             AppRoutes.players: (_) => PlayersScreen(
                   loadPlayersScreenModel: environment.loadPlayersScreenModel,
                   createPlayer: environment.createPlayer,
@@ -52,11 +65,17 @@ class ScoardGameApp extends StatelessWidget {
                   loadQuickScoreSetupModel: environment.loadQuickScoreSetupModel,
                   createPlayer: environment.createPlayer,
                   saveQuickScoreSession: environment.saveQuickScoreSession,
+                saveQuickScoreActiveSession:
+                  environment.saveQuickScoreActiveSession,
+                deleteActiveSession: environment.deleteActiveSession,
                 ),
             AppRoutes.roundScore: (_) => RoundScoreFlowScreen(
                   loadRoundScoreSetupModel: environment.loadRoundScoreSetupModel,
                   createPlayer: environment.createPlayer,
                   saveRoundScoreSession: environment.saveRoundScoreSession,
+                saveRoundScoreActiveSession:
+                  environment.saveRoundScoreActiveSession,
+                deleteActiveSession: environment.deleteActiveSession,
                 ),
             AppRoutes.playStats: (_) => const PlaceholderScreen(
                   title: 'Play Stats',

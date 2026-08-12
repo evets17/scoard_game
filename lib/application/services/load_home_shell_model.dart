@@ -29,6 +29,7 @@ class LoadHomeShellModel {
           route: AppRoutes.activeGames,
           title: 'Resume ${activeSession.gameName}',
           icon: 'resume',
+          arguments: true,
         ),
       );
     } else if (activeSessions.length > 1) {

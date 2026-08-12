@@ -15,6 +15,8 @@ void main() {
           loadRoundScoreSetupModel: environment.loadRoundScoreSetupModel,
           createPlayer: environment.createPlayer,
           saveRoundScoreSession: environment.saveRoundScoreSession,
+          saveRoundScoreActiveSession: environment.saveRoundScoreActiveSession,
+          deleteActiveSession: environment.deleteActiveSession,
         ),
       ),
     );

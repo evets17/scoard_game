@@ -36,15 +36,22 @@ class SessionSummary {
   final String outcomeSummary;
 }
 
+enum ActiveSessionKind {
+  quickScore,
+  roundScore,
+}
+
 class ActiveSessionSummary {
   const ActiveSessionSummary({
     required this.id,
+    required this.kind,
     required this.gameName,
     required this.participantLabel,
     required this.progressLabel,
   });
 
   final String id;
+  final ActiveSessionKind kind;
   final String gameName;
   final String participantLabel;
   final String progressLabel;

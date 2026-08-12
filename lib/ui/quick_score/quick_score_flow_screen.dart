@@ -1,14 +1,21 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:scoard_game/application/models/players/player_list_item_model.dart';
 import 'package:scoard_game/application/models/results/quick_score_result.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
+import 'package:scoard_game/application/models/sessions/quick_score_active_session.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_available_player.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_participant_values.dart';
+import 'package:scoard_game/application/models/sessions/quick_score_session_id_rules.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_setup_model.dart';
 import 'package:scoard_game/application/services/players/create_player.dart';
 import 'package:scoard_game/application/services/scoring/load_quick_score_setup_model.dart';
+import 'package:scoard_game/application/services/sessions/delete_active_session.dart';
+import 'package:scoard_game/application/services/sessions/save_quick_score_active_session.dart';
 import 'package:scoard_game/application/services/sessions/save_quick_score_session.dart';
+import 'package:scoard_game/core/scoring/built_in_templates/built_in_scoring_presets.dart';
 import 'package:scoard_game/ui/navigation/app_routes.dart';
 import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
 import 'package:scoard_game/ui/players/player_editor_sheet.dart';
@@ -19,12 +26,18 @@ class QuickScoreFlowScreen extends StatefulWidget {
     required this.loadQuickScoreSetupModel,
     required this.createPlayer,
     required this.saveQuickScoreSession,
+    required this.saveQuickScoreActiveSession,
+    required this.deleteActiveSession,
+    this.initialActiveSession,
     super.key,
   });
 
   final LoadQuickScoreSetupModel loadQuickScoreSetupModel;
   final CreatePlayer createPlayer;
   final SaveQuickScoreSession saveQuickScoreSession;
+  final SaveQuickScoreActiveSession saveQuickScoreActiveSession;
+  final DeleteActiveSession deleteActiveSession;
+  final QuickScoreActiveSession? initialActiveSession;
 
   @override
   State<QuickScoreFlowScreen> createState() => _QuickScoreFlowScreenState();
@@ -45,16 +58,26 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
   ScoringPreset? _preset;
   QuickScoreResult? _result;
   String? _currentSessionId;
+  AppLifecycleListener? _lifecycleListener;
 
   @override
   void initState() {
     super.initState();
     _setupModelFuture = widget.loadQuickScoreSetupModel();
+    _restoreInitialSession();
+    _lifecycleListener = AppLifecycleListener(
+      onHide: _autosaveCurrentSession,
+      onInactive: _autosaveCurrentSession,
+      onPause: _autosaveCurrentSession,
+      onDetach: _autosaveCurrentSession,
+    );
   }
 
   @override
   void dispose() {
+    _lifecycleListener?.dispose();
     for (final controller in _scoreControllers.values) {
+      controller.removeListener(_handleScoreChanged);
       controller.dispose();
     }
     super.dispose();
@@ -190,9 +213,7 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
     for (final player in selectedPlayers) {
       _scoreControllers.putIfAbsent(
         player.id,
-        () => TextEditingController(
-          text: defaultScoreValue?.toString() ?? '',
-        ),
+        () => _createScoreController(defaultScoreValue?.toString() ?? ''),
       );
     }
 
@@ -207,39 +228,21 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
       _selectedPlayers = selectedPlayers;
       _step = _QuickScoreStep.entry;
     });
+
+    unawaited(_autosaveCurrentSession());
   }
 
   Future<void> _saveQuickScoreSession() async {
     final preset = _preset!;
     final fieldDefinition = preset.scoreFields.first;
     final scoreFieldId = preset.scoreFields.first.id;
-    final participantValues = <QuickScoreParticipantValues>[];
-
-    for (final player in _selectedPlayers) {
-      final rawValue = _scoreControllers[player.id]!.text.trim();
-      final parsedScore = _parseEnteredScore(
-        rawValue: rawValue,
-        fieldDefinition: fieldDefinition,
-      );
-
-      if (parsedScore == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Enter a whole-number score for ${player.displayName}.',
-            ),
-          ),
-        );
-        return;
-      }
-
-      participantValues.add(
-        QuickScoreParticipantValues(
-          playerId: player.id,
-          displayName: player.displayName,
-          enteredValues: {scoreFieldId: parsedScore},
-        ),
-      );
+    final participantValues = _buildParticipantValues(
+      fieldDefinition: fieldDefinition,
+      scoreFieldId: scoreFieldId,
+      showErrors: true,
+    );
+    if (participantValues == null) {
+      return;
     }
 
     try {
@@ -252,6 +255,8 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
       if (!mounted) {
         return;
       }
+
+      await widget.deleteActiveSession(sessionId: result.sessionId);
 
       setState(() {
         _currentSessionId = result.sessionId;
@@ -267,6 +272,121 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
         SnackBar(content: Text(error.message)),
       );
     }
+  }
+
+  void _restoreInitialSession() {
+    final session = widget.initialActiveSession;
+    if (session == null) {
+      return;
+    }
+
+    _currentSessionId = session.sessionId;
+    _preset = getBuiltInScoringPresetById(session.presetId);
+    _selectedPlayers = session.participantValues
+        .map(
+          (participant) => QuickScoreAvailablePlayer(
+            id: participant.playerId,
+            displayName: participant.displayName,
+          ),
+        )
+        .toList(growable: false);
+    _selectedPlayerIds.addAll(
+      session.participantValues.map((participant) => participant.playerId),
+    );
+
+    final scoreFieldId = _preset!.scoreFields.first.id;
+    for (final participant in session.participantValues) {
+      _scoreControllers[participant.playerId] = _createScoreController(
+        '${participant.enteredValues[scoreFieldId] ?? 0}',
+      );
+    }
+
+    _step = _QuickScoreStep.entry;
+  }
+
+  TextEditingController _createScoreController(String initialText) {
+    final controller = TextEditingController(text: initialText);
+    controller.addListener(_handleScoreChanged);
+    return controller;
+  }
+
+  void _handleScoreChanged() {
+    unawaited(_autosaveCurrentSession());
+  }
+
+  Future<void> _autosaveCurrentSession() async {
+    final preset = _preset;
+    if (preset == null || _step != _QuickScoreStep.entry) {
+      return;
+    }
+
+    if (_selectedPlayers.length < preset.minimumPlayers) {
+      return;
+    }
+
+    final fieldDefinition = preset.scoreFields.first;
+    final scoreFieldId = fieldDefinition.id;
+    final participantValues = _buildParticipantValues(
+      fieldDefinition: fieldDefinition,
+      scoreFieldId: scoreFieldId,
+      showErrors: false,
+    );
+    if (participantValues == null) {
+      return;
+    }
+
+    final sessionId =
+        _currentSessionId ?? createQuickScoreSessionId(timestamp: DateTime.now());
+    _currentSessionId = sessionId;
+
+    await widget.saveQuickScoreActiveSession(
+      session: QuickScoreActiveSession(
+        sessionId: sessionId,
+        presetId: preset.id,
+        templateDisplayName: preset.displayName,
+        participantValues: participantValues,
+        updatedAt: DateTime.now(),
+      ),
+    );
+  }
+
+  List<QuickScoreParticipantValues>? _buildParticipantValues({
+    required ScoreFieldDefinition fieldDefinition,
+    required String scoreFieldId,
+    required bool showErrors,
+  }) {
+    final participantValues = <QuickScoreParticipantValues>[];
+
+    for (final player in _selectedPlayers) {
+      final rawValue = _scoreControllers[player.id]!.text.trim();
+      final parsedScore = _parseEnteredScore(
+        rawValue: rawValue,
+        fieldDefinition: fieldDefinition,
+      );
+
+      if (parsedScore == null) {
+        if (showErrors) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Enter a whole-number score for ${player.displayName}.',
+              ),
+            ),
+          );
+        }
+        return null;
+      }
+
+      participantValues.add(
+        QuickScoreParticipantValues(
+          playerId: player.id,
+          displayName: player.displayName,
+          enteredValues: {scoreFieldId: parsedScore},
+        ),
+      );
+    }
+
+    return participantValues;
   }
 
   int? _parseEnteredScore({

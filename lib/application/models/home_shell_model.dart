@@ -15,9 +15,11 @@ class HomeActionModel {
     required this.route,
     required this.title,
     required this.icon,
+    this.arguments,
   });
 
   final String route;
   final String title;
   final String icon;
+  final Object? arguments;
 }

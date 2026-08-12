@@ -9,6 +9,11 @@ import 'package:scoard_game/application/services/players/rename_player.dart';
 import 'package:scoard_game/application/services/players/unarchive_player.dart';
 import 'package:scoard_game/application/services/scoring/load_quick_score_setup_model.dart';
 import 'package:scoard_game/application/services/scoring/load_round_score_setup_model.dart';
+import 'package:scoard_game/application/services/sessions/delete_active_session.dart';
+import 'package:scoard_game/application/services/sessions/load_quick_score_active_session.dart';
+import 'package:scoard_game/application/services/sessions/load_round_score_active_session.dart';
+import 'package:scoard_game/application/services/sessions/save_quick_score_active_session.dart';
+import 'package:scoard_game/application/services/sessions/save_round_score_active_session.dart';
 import 'package:scoard_game/application/services/sessions/save_round_score_session.dart';
 import 'package:scoard_game/application/services/sessions/save_quick_score_session.dart';
 import 'package:scoard_game/ui/theme/app_theme_controller.dart';
@@ -29,6 +34,11 @@ class AppEnvironment {
     required this.saveQuickScoreSession,
     required this.loadRoundScoreSetupModel,
     required this.saveRoundScoreSession,
+    required this.loadQuickScoreActiveSession,
+    required this.saveQuickScoreActiveSession,
+    required this.loadRoundScoreActiveSession,
+    required this.saveRoundScoreActiveSession,
+    required this.deleteActiveSession,
   });
 
   final PlayerRepository playerRepository;
@@ -45,4 +55,9 @@ class AppEnvironment {
   final SaveQuickScoreSession saveQuickScoreSession;
   final LoadRoundScoreSetupModel loadRoundScoreSetupModel;
   final SaveRoundScoreSession saveRoundScoreSession;
+  final LoadQuickScoreActiveSession loadQuickScoreActiveSession;
+  final SaveQuickScoreActiveSession saveQuickScoreActiveSession;
+  final LoadRoundScoreActiveSession loadRoundScoreActiveSession;
+  final SaveRoundScoreActiveSession saveRoundScoreActiveSession;
+  final DeleteActiveSession deleteActiveSession;
 }

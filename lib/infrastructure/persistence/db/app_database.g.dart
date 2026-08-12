@@ -2899,6 +2899,555 @@ class RoundScoreFieldValuesTableCompanion
   }
 }
 
+class $ActiveSessionsTableTable extends ActiveSessionsTable
+    with TableInfo<$ActiveSessionsTableTable, ActiveSessionsTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ActiveSessionsTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sessionKindMeta = const VerificationMeta(
+    'sessionKind',
+  );
+  @override
+  late final GeneratedColumn<String> sessionKind = GeneratedColumn<String>(
+    'session_kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _templateIdMeta = const VerificationMeta(
+    'templateId',
+  );
+  @override
+  late final GeneratedColumn<String> templateId = GeneratedColumn<String>(
+    'template_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _templateDisplayNameMeta =
+      const VerificationMeta('templateDisplayName');
+  @override
+  late final GeneratedColumn<String> templateDisplayName =
+      GeneratedColumn<String>(
+        'template_display_name',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _participantLabelMeta = const VerificationMeta(
+    'participantLabel',
+  );
+  @override
+  late final GeneratedColumn<String> participantLabel = GeneratedColumn<String>(
+    'participant_label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _progressLabelMeta = const VerificationMeta(
+    'progressLabel',
+  );
+  @override
+  late final GeneratedColumn<String> progressLabel = GeneratedColumn<String>(
+    'progress_label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _payloadJsonMeta = const VerificationMeta(
+    'payloadJson',
+  );
+  @override
+  late final GeneratedColumn<String> payloadJson = GeneratedColumn<String>(
+    'payload_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    sessionKind,
+    templateId,
+    templateDisplayName,
+    participantLabel,
+    progressLabel,
+    payloadJson,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'active_sessions_table';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ActiveSessionsTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('session_kind')) {
+      context.handle(
+        _sessionKindMeta,
+        sessionKind.isAcceptableOrUnknown(
+          data['session_kind']!,
+          _sessionKindMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_sessionKindMeta);
+    }
+    if (data.containsKey('template_id')) {
+      context.handle(
+        _templateIdMeta,
+        templateId.isAcceptableOrUnknown(data['template_id']!, _templateIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_templateIdMeta);
+    }
+    if (data.containsKey('template_display_name')) {
+      context.handle(
+        _templateDisplayNameMeta,
+        templateDisplayName.isAcceptableOrUnknown(
+          data['template_display_name']!,
+          _templateDisplayNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_templateDisplayNameMeta);
+    }
+    if (data.containsKey('participant_label')) {
+      context.handle(
+        _participantLabelMeta,
+        participantLabel.isAcceptableOrUnknown(
+          data['participant_label']!,
+          _participantLabelMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_participantLabelMeta);
+    }
+    if (data.containsKey('progress_label')) {
+      context.handle(
+        _progressLabelMeta,
+        progressLabel.isAcceptableOrUnknown(
+          data['progress_label']!,
+          _progressLabelMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_progressLabelMeta);
+    }
+    if (data.containsKey('payload_json')) {
+      context.handle(
+        _payloadJsonMeta,
+        payloadJson.isAcceptableOrUnknown(
+          data['payload_json']!,
+          _payloadJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_payloadJsonMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ActiveSessionsTableData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ActiveSessionsTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      sessionKind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}session_kind'],
+      )!,
+      templateId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}template_id'],
+      )!,
+      templateDisplayName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}template_display_name'],
+      )!,
+      participantLabel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}participant_label'],
+      )!,
+      progressLabel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}progress_label'],
+      )!,
+      payloadJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload_json'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ActiveSessionsTableTable createAlias(String alias) {
+    return $ActiveSessionsTableTable(attachedDatabase, alias);
+  }
+}
+
+class ActiveSessionsTableData extends DataClass
+    implements Insertable<ActiveSessionsTableData> {
+  final String id;
+  final String sessionKind;
+  final String templateId;
+  final String templateDisplayName;
+  final String participantLabel;
+  final String progressLabel;
+  final String payloadJson;
+  final DateTime updatedAt;
+  const ActiveSessionsTableData({
+    required this.id,
+    required this.sessionKind,
+    required this.templateId,
+    required this.templateDisplayName,
+    required this.participantLabel,
+    required this.progressLabel,
+    required this.payloadJson,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['session_kind'] = Variable<String>(sessionKind);
+    map['template_id'] = Variable<String>(templateId);
+    map['template_display_name'] = Variable<String>(templateDisplayName);
+    map['participant_label'] = Variable<String>(participantLabel);
+    map['progress_label'] = Variable<String>(progressLabel);
+    map['payload_json'] = Variable<String>(payloadJson);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  ActiveSessionsTableCompanion toCompanion(bool nullToAbsent) {
+    return ActiveSessionsTableCompanion(
+      id: Value(id),
+      sessionKind: Value(sessionKind),
+      templateId: Value(templateId),
+      templateDisplayName: Value(templateDisplayName),
+      participantLabel: Value(participantLabel),
+      progressLabel: Value(progressLabel),
+      payloadJson: Value(payloadJson),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory ActiveSessionsTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ActiveSessionsTableData(
+      id: serializer.fromJson<String>(json['id']),
+      sessionKind: serializer.fromJson<String>(json['sessionKind']),
+      templateId: serializer.fromJson<String>(json['templateId']),
+      templateDisplayName: serializer.fromJson<String>(
+        json['templateDisplayName'],
+      ),
+      participantLabel: serializer.fromJson<String>(json['participantLabel']),
+      progressLabel: serializer.fromJson<String>(json['progressLabel']),
+      payloadJson: serializer.fromJson<String>(json['payloadJson']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'sessionKind': serializer.toJson<String>(sessionKind),
+      'templateId': serializer.toJson<String>(templateId),
+      'templateDisplayName': serializer.toJson<String>(templateDisplayName),
+      'participantLabel': serializer.toJson<String>(participantLabel),
+      'progressLabel': serializer.toJson<String>(progressLabel),
+      'payloadJson': serializer.toJson<String>(payloadJson),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  ActiveSessionsTableData copyWith({
+    String? id,
+    String? sessionKind,
+    String? templateId,
+    String? templateDisplayName,
+    String? participantLabel,
+    String? progressLabel,
+    String? payloadJson,
+    DateTime? updatedAt,
+  }) => ActiveSessionsTableData(
+    id: id ?? this.id,
+    sessionKind: sessionKind ?? this.sessionKind,
+    templateId: templateId ?? this.templateId,
+    templateDisplayName: templateDisplayName ?? this.templateDisplayName,
+    participantLabel: participantLabel ?? this.participantLabel,
+    progressLabel: progressLabel ?? this.progressLabel,
+    payloadJson: payloadJson ?? this.payloadJson,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  ActiveSessionsTableData copyWithCompanion(ActiveSessionsTableCompanion data) {
+    return ActiveSessionsTableData(
+      id: data.id.present ? data.id.value : this.id,
+      sessionKind: data.sessionKind.present
+          ? data.sessionKind.value
+          : this.sessionKind,
+      templateId: data.templateId.present
+          ? data.templateId.value
+          : this.templateId,
+      templateDisplayName: data.templateDisplayName.present
+          ? data.templateDisplayName.value
+          : this.templateDisplayName,
+      participantLabel: data.participantLabel.present
+          ? data.participantLabel.value
+          : this.participantLabel,
+      progressLabel: data.progressLabel.present
+          ? data.progressLabel.value
+          : this.progressLabel,
+      payloadJson: data.payloadJson.present
+          ? data.payloadJson.value
+          : this.payloadJson,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ActiveSessionsTableData(')
+          ..write('id: $id, ')
+          ..write('sessionKind: $sessionKind, ')
+          ..write('templateId: $templateId, ')
+          ..write('templateDisplayName: $templateDisplayName, ')
+          ..write('participantLabel: $participantLabel, ')
+          ..write('progressLabel: $progressLabel, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    sessionKind,
+    templateId,
+    templateDisplayName,
+    participantLabel,
+    progressLabel,
+    payloadJson,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ActiveSessionsTableData &&
+          other.id == this.id &&
+          other.sessionKind == this.sessionKind &&
+          other.templateId == this.templateId &&
+          other.templateDisplayName == this.templateDisplayName &&
+          other.participantLabel == this.participantLabel &&
+          other.progressLabel == this.progressLabel &&
+          other.payloadJson == this.payloadJson &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ActiveSessionsTableCompanion
+    extends UpdateCompanion<ActiveSessionsTableData> {
+  final Value<String> id;
+  final Value<String> sessionKind;
+  final Value<String> templateId;
+  final Value<String> templateDisplayName;
+  final Value<String> participantLabel;
+  final Value<String> progressLabel;
+  final Value<String> payloadJson;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const ActiveSessionsTableCompanion({
+    this.id = const Value.absent(),
+    this.sessionKind = const Value.absent(),
+    this.templateId = const Value.absent(),
+    this.templateDisplayName = const Value.absent(),
+    this.participantLabel = const Value.absent(),
+    this.progressLabel = const Value.absent(),
+    this.payloadJson = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ActiveSessionsTableCompanion.insert({
+    required String id,
+    required String sessionKind,
+    required String templateId,
+    required String templateDisplayName,
+    required String participantLabel,
+    required String progressLabel,
+    required String payloadJson,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       sessionKind = Value(sessionKind),
+       templateId = Value(templateId),
+       templateDisplayName = Value(templateDisplayName),
+       participantLabel = Value(participantLabel),
+       progressLabel = Value(progressLabel),
+       payloadJson = Value(payloadJson),
+       updatedAt = Value(updatedAt);
+  static Insertable<ActiveSessionsTableData> custom({
+    Expression<String>? id,
+    Expression<String>? sessionKind,
+    Expression<String>? templateId,
+    Expression<String>? templateDisplayName,
+    Expression<String>? participantLabel,
+    Expression<String>? progressLabel,
+    Expression<String>? payloadJson,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (sessionKind != null) 'session_kind': sessionKind,
+      if (templateId != null) 'template_id': templateId,
+      if (templateDisplayName != null)
+        'template_display_name': templateDisplayName,
+      if (participantLabel != null) 'participant_label': participantLabel,
+      if (progressLabel != null) 'progress_label': progressLabel,
+      if (payloadJson != null) 'payload_json': payloadJson,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ActiveSessionsTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? sessionKind,
+    Value<String>? templateId,
+    Value<String>? templateDisplayName,
+    Value<String>? participantLabel,
+    Value<String>? progressLabel,
+    Value<String>? payloadJson,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return ActiveSessionsTableCompanion(
+      id: id ?? this.id,
+      sessionKind: sessionKind ?? this.sessionKind,
+      templateId: templateId ?? this.templateId,
+      templateDisplayName: templateDisplayName ?? this.templateDisplayName,
+      participantLabel: participantLabel ?? this.participantLabel,
+      progressLabel: progressLabel ?? this.progressLabel,
+      payloadJson: payloadJson ?? this.payloadJson,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (sessionKind.present) {
+      map['session_kind'] = Variable<String>(sessionKind.value);
+    }
+    if (templateId.present) {
+      map['template_id'] = Variable<String>(templateId.value);
+    }
+    if (templateDisplayName.present) {
+      map['template_display_name'] = Variable<String>(
+        templateDisplayName.value,
+      );
+    }
+    if (participantLabel.present) {
+      map['participant_label'] = Variable<String>(participantLabel.value);
+    }
+    if (progressLabel.present) {
+      map['progress_label'] = Variable<String>(progressLabel.value);
+    }
+    if (payloadJson.present) {
+      map['payload_json'] = Variable<String>(payloadJson.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ActiveSessionsTableCompanion(')
+          ..write('id: $id, ')
+          ..write('sessionKind: $sessionKind, ')
+          ..write('templateId: $templateId, ')
+          ..write('templateDisplayName: $templateDisplayName, ')
+          ..write('participantLabel: $participantLabel, ')
+          ..write('progressLabel: $progressLabel, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2915,6 +3464,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $RoundScorePlayerResultsTableTable(this);
   late final $RoundScoreFieldValuesTableTable roundScoreFieldValuesTable =
       $RoundScoreFieldValuesTableTable(this);
+  late final $ActiveSessionsTableTable activeSessionsTable =
+      $ActiveSessionsTableTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2927,6 +3478,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     roundScoreSessionsTable,
     roundScorePlayerResultsTable,
     roundScoreFieldValuesTable,
+    activeSessionsTable,
   ];
 }
 
@@ -4541,6 +5093,291 @@ typedef $$RoundScoreFieldValuesTableTableProcessedTableManager =
       RoundScoreFieldValuesTableData,
       PrefetchHooks Function()
     >;
+typedef $$ActiveSessionsTableTableCreateCompanionBuilder =
+    ActiveSessionsTableCompanion Function({
+      required String id,
+      required String sessionKind,
+      required String templateId,
+      required String templateDisplayName,
+      required String participantLabel,
+      required String progressLabel,
+      required String payloadJson,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$ActiveSessionsTableTableUpdateCompanionBuilder =
+    ActiveSessionsTableCompanion Function({
+      Value<String> id,
+      Value<String> sessionKind,
+      Value<String> templateId,
+      Value<String> templateDisplayName,
+      Value<String> participantLabel,
+      Value<String> progressLabel,
+      Value<String> payloadJson,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$ActiveSessionsTableTableFilterComposer
+    extends Composer<_$AppDatabase, $ActiveSessionsTableTable> {
+  $$ActiveSessionsTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sessionKind => $composableBuilder(
+    column: $table.sessionKind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get templateId => $composableBuilder(
+    column: $table.templateId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get templateDisplayName => $composableBuilder(
+    column: $table.templateDisplayName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get participantLabel => $composableBuilder(
+    column: $table.participantLabel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get progressLabel => $composableBuilder(
+    column: $table.progressLabel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ActiveSessionsTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $ActiveSessionsTableTable> {
+  $$ActiveSessionsTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sessionKind => $composableBuilder(
+    column: $table.sessionKind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get templateId => $composableBuilder(
+    column: $table.templateId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get templateDisplayName => $composableBuilder(
+    column: $table.templateDisplayName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get participantLabel => $composableBuilder(
+    column: $table.participantLabel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get progressLabel => $composableBuilder(
+    column: $table.progressLabel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ActiveSessionsTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ActiveSessionsTableTable> {
+  $$ActiveSessionsTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get sessionKind => $composableBuilder(
+    column: $table.sessionKind,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get templateId => $composableBuilder(
+    column: $table.templateId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get templateDisplayName => $composableBuilder(
+    column: $table.templateDisplayName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get participantLabel => $composableBuilder(
+    column: $table.participantLabel,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get progressLabel => $composableBuilder(
+    column: $table.progressLabel,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$ActiveSessionsTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ActiveSessionsTableTable,
+          ActiveSessionsTableData,
+          $$ActiveSessionsTableTableFilterComposer,
+          $$ActiveSessionsTableTableOrderingComposer,
+          $$ActiveSessionsTableTableAnnotationComposer,
+          $$ActiveSessionsTableTableCreateCompanionBuilder,
+          $$ActiveSessionsTableTableUpdateCompanionBuilder,
+          (
+            ActiveSessionsTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $ActiveSessionsTableTable,
+              ActiveSessionsTableData
+            >,
+          ),
+          ActiveSessionsTableData,
+          PrefetchHooks Function()
+        > {
+  $$ActiveSessionsTableTableTableManager(
+    _$AppDatabase db,
+    $ActiveSessionsTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ActiveSessionsTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ActiveSessionsTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ActiveSessionsTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> sessionKind = const Value.absent(),
+                Value<String> templateId = const Value.absent(),
+                Value<String> templateDisplayName = const Value.absent(),
+                Value<String> participantLabel = const Value.absent(),
+                Value<String> progressLabel = const Value.absent(),
+                Value<String> payloadJson = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ActiveSessionsTableCompanion(
+                id: id,
+                sessionKind: sessionKind,
+                templateId: templateId,
+                templateDisplayName: templateDisplayName,
+                participantLabel: participantLabel,
+                progressLabel: progressLabel,
+                payloadJson: payloadJson,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String sessionKind,
+                required String templateId,
+                required String templateDisplayName,
+                required String participantLabel,
+                required String progressLabel,
+                required String payloadJson,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ActiveSessionsTableCompanion.insert(
+                id: id,
+                sessionKind: sessionKind,
+                templateId: templateId,
+                templateDisplayName: templateDisplayName,
+                participantLabel: participantLabel,
+                progressLabel: progressLabel,
+                payloadJson: payloadJson,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ActiveSessionsTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ActiveSessionsTableTable,
+      ActiveSessionsTableData,
+      $$ActiveSessionsTableTableFilterComposer,
+      $$ActiveSessionsTableTableOrderingComposer,
+      $$ActiveSessionsTableTableAnnotationComposer,
+      $$ActiveSessionsTableTableCreateCompanionBuilder,
+      $$ActiveSessionsTableTableUpdateCompanionBuilder,
+      (
+        ActiveSessionsTableData,
+        BaseReferences<
+          _$AppDatabase,
+          $ActiveSessionsTableTable,
+          ActiveSessionsTableData
+        >,
+      ),
+      ActiveSessionsTableData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4581,4 +5418,6 @@ class $AppDatabaseManager {
         _db,
         _db.roundScoreFieldValuesTable,
       );
+  $$ActiveSessionsTableTableTableManager get activeSessionsTable =>
+      $$ActiveSessionsTableTableTableManager(_db, _db.activeSessionsTable);
 }

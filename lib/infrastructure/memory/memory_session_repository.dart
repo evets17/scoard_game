@@ -1,12 +1,18 @@
 import 'package:scoard_game/application/models/app_summaries.dart';
 import 'package:scoard_game/application/models/results/quick_score_result.dart';
 import 'package:scoard_game/application/models/results/round_score_result.dart';
+import 'package:scoard_game/application/models/sessions/quick_score_active_session.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_participant_values.dart';
+import 'package:scoard_game/application/models/sessions/round_score_active_session.dart';
 import 'package:scoard_game/application/models/sessions/round_score_round_values.dart';
 import 'package:scoard_game/application/repositories/session_repository.dart';
 
 class MemorySessionRepository implements SessionRepository {
-  MemorySessionRepository._(this._sessions, this._activeSessions);
+  MemorySessionRepository._(
+    this._sessions,
+    this._quickActiveSessions,
+    this._roundActiveSessions,
+  );
 
   factory MemorySessionRepository.seeded() {
     final now = DateTime.now();
@@ -33,25 +39,62 @@ class MemorySessionRepository implements SessionRepository {
         completedAt: now.subtract(const Duration(days: 8)),
         outcomeSummary: 'Rio took the lead after final wall bonuses.',
       ),
-    ], [
-      const ActiveSessionSummary(
-        id: 'active-cascadia-01',
-        gameName: 'Cascadia',
-        participantLabel: 'Avery, Mina, Owen',
-        progressLabel: 'Round 4 of 6',
+    ], {
+      'active-cascadia-01': QuickScoreActiveSession(
+        sessionId: 'active-cascadia-01',
+        presetId: 'quick-final-score-basic',
+        templateDisplayName: 'Cascadia',
+        participantValues: const [
+          QuickScoreParticipantValues(
+            playerId: 'player-avery',
+            displayName: 'Avery',
+            enteredValues: {'final-score': 52},
+          ),
+          QuickScoreParticipantValues(
+            playerId: 'player-mina',
+            displayName: 'Mina',
+            enteredValues: {'final-score': 47},
+          ),
+          QuickScoreParticipantValues(
+            playerId: 'player-owen',
+            displayName: 'Owen',
+            enteredValues: {'final-score': 49},
+          ),
+        ],
+        updatedAt: now,
       ),
-    ]);
+    }, <String, RoundScoreActiveSession>{});
   }
 
   final List<SessionSummary> _sessions;
-  final List<ActiveSessionSummary> _activeSessions;
+  final Map<String, QuickScoreActiveSession> _quickActiveSessions;
+  final Map<String, RoundScoreActiveSession> _roundActiveSessions;
 
   @override
   Future<int> countCompletedSessions() async => _sessions.length;
 
   @override
   Future<List<ActiveSessionSummary>> loadActiveSessions({int limit = 3}) async {
-    return _activeSessions.take(limit).toList(growable: false);
+    final summaries = <ActiveSessionSummary>[
+      ..._quickActiveSessions.values.map(_activeSummaryForQuick),
+      ..._roundActiveSessions.values.map(_activeSummaryForRound),
+    ]..sort((left, right) => right.id.compareTo(left.id));
+
+    return summaries.take(limit).toList(growable: false);
+  }
+
+  @override
+  Future<QuickScoreActiveSession?> loadQuickScoreActiveSession({
+    required String sessionId,
+  }) async {
+    return _quickActiveSessions[sessionId];
+  }
+
+  @override
+  Future<RoundScoreActiveSession?> loadRoundScoreActiveSession({
+    required String sessionId,
+  }) async {
+    return _roundActiveSessions[sessionId];
   }
 
   @override
@@ -82,6 +125,16 @@ class MemorySessionRepository implements SessionRepository {
         outcomeSummary: outcomeSummary,
       ),
     );
+    _quickActiveSessions.remove(result.sessionId);
+    _roundActiveSessions.remove(result.sessionId);
+  }
+
+  @override
+  Future<void> saveQuickScoreActiveSession({
+    required QuickScoreActiveSession session,
+  }) async {
+    _quickActiveSessions[session.sessionId] = session;
+    _roundActiveSessions.remove(session.sessionId);
   }
 
   @override
@@ -103,6 +156,42 @@ class MemorySessionRepository implements SessionRepository {
         completedAt: result.completedAt,
         outcomeSummary: outcomeSummary,
       ),
+    );
+    _quickActiveSessions.remove(result.sessionId);
+    _roundActiveSessions.remove(result.sessionId);
+  }
+
+  @override
+  Future<void> saveRoundScoreActiveSession({
+    required RoundScoreActiveSession session,
+  }) async {
+    _roundActiveSessions[session.sessionId] = session;
+    _quickActiveSessions.remove(session.sessionId);
+  }
+
+  @override
+  Future<void> deleteActiveSession({required String sessionId}) async {
+    _quickActiveSessions.remove(sessionId);
+    _roundActiveSessions.remove(sessionId);
+  }
+
+  ActiveSessionSummary _activeSummaryForQuick(QuickScoreActiveSession session) {
+    return ActiveSessionSummary(
+      id: session.sessionId,
+      kind: ActiveSessionKind.quickScore,
+      gameName: session.templateDisplayName,
+      participantLabel: session.participantLabel,
+      progressLabel: session.progressLabel,
+    );
+  }
+
+  ActiveSessionSummary _activeSummaryForRound(RoundScoreActiveSession session) {
+    return ActiveSessionSummary(
+      id: session.sessionId,
+      kind: ActiveSessionKind.roundScore,
+      gameName: session.templateDisplayName,
+      participantLabel: session.participantLabel,
+      progressLabel: session.progressLabel,
     );
   }
 }

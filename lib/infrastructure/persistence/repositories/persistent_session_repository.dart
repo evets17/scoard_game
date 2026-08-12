@@ -1,7 +1,11 @@
+import 'dart:convert';
+
 import 'package:scoard_game/application/models/app_summaries.dart';
 import 'package:scoard_game/application/models/results/quick_score_result.dart';
 import 'package:scoard_game/application/models/results/round_score_result.dart';
+import 'package:scoard_game/application/models/sessions/quick_score_active_session.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_participant_values.dart';
+import 'package:scoard_game/application/models/sessions/round_score_active_session.dart';
 import 'package:scoard_game/application/models/sessions/round_score_round_values.dart';
 import 'package:scoard_game/application/repositories/session_repository.dart';
 import 'package:scoard_game/infrastructure/persistence/db/app_database.dart';
@@ -22,7 +26,62 @@ class PersistentSessionRepository implements SessionRepository {
 
   @override
   Future<List<ActiveSessionSummary>> loadActiveSessions({int limit = 3}) async {
-    return const [];
+    final sessions = await _appDatabase.loadActiveSessions(limit: limit);
+
+    return sessions
+        .map(
+          (session) => ActiveSessionSummary(
+            id: session.id,
+            kind: _kindFromStorage(session.sessionKind),
+            gameName: session.templateDisplayName,
+            participantLabel: session.participantLabel,
+            progressLabel: session.progressLabel,
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  @override
+  Future<QuickScoreActiveSession?> loadQuickScoreActiveSession({
+    required String sessionId,
+  }) async {
+    final session = await _appDatabase.loadActiveSession(sessionId: sessionId);
+    if (session == null || session.sessionKind != 'quickScore') {
+      return null;
+    }
+
+    final payload = jsonDecode(session.payloadJson) as Map<String, Object?>;
+    final activeSession = QuickScoreActiveSession.fromJson(payload);
+    return QuickScoreActiveSession(
+      sessionId: activeSession.sessionId,
+      presetId: activeSession.presetId,
+      templateDisplayName: activeSession.templateDisplayName,
+      participantValues: activeSession.participantValues,
+      updatedAt: session.updatedAt,
+    );
+  }
+
+  @override
+  Future<RoundScoreActiveSession?> loadRoundScoreActiveSession({
+    required String sessionId,
+  }) async {
+    final session = await _appDatabase.loadActiveSession(sessionId: sessionId);
+    if (session == null || session.sessionKind != 'roundScore') {
+      return null;
+    }
+
+    final payload = jsonDecode(session.payloadJson) as Map<String, Object?>;
+    final activeSession = RoundScoreActiveSession.fromJson(payload);
+    return RoundScoreActiveSession(
+      sessionId: activeSession.sessionId,
+      presetId: activeSession.presetId,
+      templateDisplayName: activeSession.templateDisplayName,
+      selectedPlayers: activeSession.selectedPlayers,
+      savedRounds: activeSession.savedRounds,
+      currentRoundParticipantValues: activeSession.currentRoundParticipantValues,
+      currentRoundNumber: activeSession.currentRoundNumber,
+      updatedAt: session.updatedAt,
+    );
   }
 
   @override
@@ -83,6 +142,22 @@ class PersistentSessionRepository implements SessionRepository {
   }
 
   @override
+  Future<void> saveQuickScoreActiveSession({
+    required QuickScoreActiveSession session,
+  }) {
+    return _appDatabase.saveActiveSession(
+      sessionId: session.sessionId,
+      sessionKind: 'quickScore',
+      templateId: session.presetId,
+      templateDisplayName: session.templateDisplayName,
+      participantLabel: session.participantLabel,
+      progressLabel: session.progressLabel,
+      payloadJson: jsonEncode(session.toJson()),
+      updatedAt: session.updatedAt,
+    );
+  }
+
+  @override
   Future<void> saveRoundScoreResult({
     required RoundScoreResult result,
     required List<RoundScoreRoundValues> rounds,
@@ -97,5 +172,37 @@ class PersistentSessionRepository implements SessionRepository {
       rounds: rounds,
       playerResults: result.playerResults,
     );
+  }
+
+  @override
+  Future<void> saveRoundScoreActiveSession({
+    required RoundScoreActiveSession session,
+  }) {
+    return _appDatabase.saveActiveSession(
+      sessionId: session.sessionId,
+      sessionKind: 'roundScore',
+      templateId: session.presetId,
+      templateDisplayName: session.templateDisplayName,
+      participantLabel: session.participantLabel,
+      progressLabel: session.progressLabel,
+      payloadJson: jsonEncode(session.toJson()),
+      updatedAt: session.updatedAt,
+    );
+  }
+
+  @override
+  Future<void> deleteActiveSession({required String sessionId}) {
+    return _appDatabase.deleteActiveSession(sessionId: sessionId);
+  }
+
+  ActiveSessionKind _kindFromStorage(String sessionKind) {
+    switch (sessionKind) {
+      case 'quickScore':
+        return ActiveSessionKind.quickScore;
+      case 'roundScore':
+        return ActiveSessionKind.roundScore;
+      default:
+        throw StateError('Unknown active session kind: $sessionKind');
+    }
   }
 }

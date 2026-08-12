@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:scoard_game/application/models/players/player_list_item_model.dart';
 import 'package:scoard_game/application/models/results/round_score_result.dart';
@@ -5,11 +7,16 @@ import 'package:scoard_game/application/models/scoring/score_field_definition.da
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_available_player.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_participant_values.dart';
+import 'package:scoard_game/application/models/sessions/quick_score_session_id_rules.dart';
+import 'package:scoard_game/application/models/sessions/round_score_active_session.dart';
 import 'package:scoard_game/application/models/sessions/round_score_round_values.dart';
 import 'package:scoard_game/application/models/sessions/round_score_setup_model.dart';
 import 'package:scoard_game/application/services/players/create_player.dart';
 import 'package:scoard_game/application/services/scoring/load_round_score_setup_model.dart';
+import 'package:scoard_game/application/services/sessions/delete_active_session.dart';
+import 'package:scoard_game/application/services/sessions/save_round_score_active_session.dart';
 import 'package:scoard_game/application/services/sessions/save_round_score_session.dart';
+import 'package:scoard_game/core/scoring/built_in_templates/built_in_scoring_presets.dart';
 import 'package:scoard_game/ui/navigation/app_routes.dart';
 import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
 import 'package:scoard_game/ui/players/player_editor_sheet.dart';
@@ -20,12 +27,18 @@ class RoundScoreFlowScreen extends StatefulWidget {
     required this.loadRoundScoreSetupModel,
     required this.createPlayer,
     required this.saveRoundScoreSession,
+    required this.saveRoundScoreActiveSession,
+    required this.deleteActiveSession,
+    this.initialActiveSession,
     super.key,
   });
 
   final LoadRoundScoreSetupModel loadRoundScoreSetupModel;
   final CreatePlayer createPlayer;
   final SaveRoundScoreSession saveRoundScoreSession;
+  final SaveRoundScoreActiveSession saveRoundScoreActiveSession;
+  final DeleteActiveSession deleteActiveSession;
+  final RoundScoreActiveSession? initialActiveSession;
 
   @override
   State<RoundScoreFlowScreen> createState() => _RoundScoreFlowScreenState();
@@ -48,16 +61,26 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
   RoundScoreResult? _result;
   String? _currentSessionId;
   int _currentRoundNumber = 1;
+  AppLifecycleListener? _lifecycleListener;
 
   @override
   void initState() {
     super.initState();
     _setupModelFuture = widget.loadRoundScoreSetupModel();
+    _restoreInitialSession();
+    _lifecycleListener = AppLifecycleListener(
+      onHide: _autosaveCurrentSession,
+      onInactive: _autosaveCurrentSession,
+      onPause: _autosaveCurrentSession,
+      onDetach: _autosaveCurrentSession,
+    );
   }
 
   @override
   void dispose() {
+    _lifecycleListener?.dispose();
     for (final controller in _scoreControllers.values) {
+      controller.removeListener(_handleScoreChanged);
       controller.dispose();
     }
     super.dispose();
@@ -192,7 +215,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
     for (final player in selectedPlayers) {
       _scoreControllers.putIfAbsent(
         player.id,
-        TextEditingController.new,
+        () => _createScoreController(''),
       );
     }
 
@@ -200,6 +223,8 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
       _selectedPlayers = selectedPlayers;
       _step = _RoundScoreStep.roundEntry;
     });
+
+    unawaited(_autosaveCurrentSession());
   }
 
   Future<void> _completeRound() async {
@@ -213,6 +238,8 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
       _currentRoundNumber += 1;
       _loadRoundIntoInputs(_currentRoundNumber);
     });
+
+    unawaited(_autosaveCurrentSession());
   }
 
   Future<void> _goToPreviousRound() async {
@@ -229,6 +256,8 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
       _currentRoundNumber -= 1;
       _loadRoundIntoInputs(_currentRoundNumber);
     });
+
+    unawaited(_autosaveCurrentSession());
   }
 
   Future<void> _completeGame() async {
@@ -248,6 +277,8 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
       if (!mounted) {
         return;
       }
+
+      await widget.deleteActiveSession(sessionId: result.sessionId);
 
       setState(() {
         _currentSessionId = result.sessionId;
@@ -403,6 +434,91 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
     }
 
     return int.tryParse(rawValue);
+  }
+
+  void _restoreInitialSession() {
+    final session = widget.initialActiveSession;
+    if (session == null) {
+      return;
+    }
+
+    _currentSessionId = session.sessionId;
+    _preset = getBuiltInScoringPresetById(session.presetId);
+    _selectedPlayers = session.selectedPlayers;
+    _selectedPlayerIds.addAll(session.selectedPlayers.map((player) => player.id));
+    _savedRounds.addAll(session.savedRounds);
+    _currentRoundNumber = session.currentRoundNumber;
+
+    for (final player in session.selectedPlayers) {
+      _scoreControllers[player.id] = _createScoreController('');
+    }
+
+    final scoreFieldId = _preset!.scoreFields.first.id;
+    final currentValuesByPlayerId = {
+      for (final participant in session.currentRoundParticipantValues)
+        participant.playerId: participant.enteredValues[scoreFieldId] ?? 0,
+    };
+    for (final player in session.selectedPlayers) {
+      _scoreControllers[player.id]!.text =
+          '${currentValuesByPlayerId[player.id] ?? 0}';
+    }
+
+    _step = _RoundScoreStep.roundEntry;
+  }
+
+  TextEditingController _createScoreController(String initialText) {
+    final controller = TextEditingController(text: initialText);
+    controller.addListener(_handleScoreChanged);
+    return controller;
+  }
+
+  void _handleScoreChanged() {
+    unawaited(_autosaveCurrentSession());
+  }
+
+  Future<void> _autosaveCurrentSession() async {
+    final preset = _preset;
+    if (preset == null || _step != _RoundScoreStep.roundEntry) {
+      return;
+    }
+
+    if (_selectedPlayers.length < preset.minimumPlayers) {
+      return;
+    }
+
+    final scoreFieldId = preset.scoreFields.first.id;
+    final currentRoundParticipantValues = _selectedPlayers
+        .map(
+          (player) => QuickScoreParticipantValues(
+            playerId: player.id,
+            displayName: player.displayName,
+            enteredValues: {
+              scoreFieldId: _parseEnteredScore(
+                    rawValue: _scoreControllers[player.id]!.text.trim(),
+                    fieldDefinition: preset.scoreFields.first,
+                  ) ??
+                  0,
+            },
+          ),
+        )
+        .toList(growable: false);
+
+    final sessionId =
+        _currentSessionId ?? createQuickScoreSessionId(timestamp: DateTime.now());
+    _currentSessionId = sessionId;
+
+    await widget.saveRoundScoreActiveSession(
+      session: RoundScoreActiveSession(
+        sessionId: sessionId,
+        presetId: preset.id,
+        templateDisplayName: preset.displayName,
+        selectedPlayers: _selectedPlayers,
+        savedRounds: List<RoundScoreRoundValues>.from(_savedRounds),
+        currentRoundParticipantValues: currentRoundParticipantValues,
+        currentRoundNumber: _currentRoundNumber,
+        updatedAt: DateTime.now(),
+      ),
+    );
   }
 }
 

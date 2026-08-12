@@ -8,6 +8,11 @@ import 'package:scoard_game/application/services/players/rename_player.dart';
 import 'package:scoard_game/application/services/players/unarchive_player.dart';
 import 'package:scoard_game/application/services/scoring/load_quick_score_setup_model.dart';
 import 'package:scoard_game/application/services/scoring/load_round_score_setup_model.dart';
+import 'package:scoard_game/application/services/sessions/delete_active_session.dart';
+import 'package:scoard_game/application/services/sessions/load_quick_score_active_session.dart';
+import 'package:scoard_game/application/services/sessions/load_round_score_active_session.dart';
+import 'package:scoard_game/application/services/sessions/save_quick_score_active_session.dart';
+import 'package:scoard_game/application/services/sessions/save_round_score_active_session.dart';
 import 'package:scoard_game/application/services/sessions/save_round_score_session.dart';
 import 'package:scoard_game/application/services/sessions/save_quick_score_session.dart';
 import 'package:scoard_game/bootstrap/app_environment.dart';
@@ -73,6 +78,21 @@ class AppBootstrap {
         playerRepository: playerRepository,
       ),
       saveRoundScoreSession: SaveRoundScoreSession(
+        sessionRepository: sessionRepository,
+      ),
+      loadQuickScoreActiveSession: LoadQuickScoreActiveSession(
+        sessionRepository: sessionRepository,
+      ),
+      saveQuickScoreActiveSession: SaveQuickScoreActiveSession(
+        sessionRepository: sessionRepository,
+      ),
+      loadRoundScoreActiveSession: LoadRoundScoreActiveSession(
+        sessionRepository: sessionRepository,
+      ),
+      saveRoundScoreActiveSession: SaveRoundScoreActiveSession(
+        sessionRepository: sessionRepository,
+      ),
+      deleteActiveSession: DeleteActiveSession(
         sessionRepository: sessionRepository,
       ),
     );

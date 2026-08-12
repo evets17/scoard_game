@@ -17,12 +17,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late final Future<HomeShellModel> _homeModel;
+  late Future<HomeShellModel> _homeModel;
 
   @override
   void initState() {
     super.initState();
-    _homeModel = widget.loadHomeShellModel();
+    _reloadHomeModel();
   }
 
   @override
@@ -74,7 +74,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 28),
                       Column(
                         children: model.primaryActions
-                            .map((action) => _ActionButton(action: action))
+                            .map(
+                              (action) => _ActionButton(
+                                action: action,
+                                onTap: () => _handleActionTap(action),
+                              ),
+                            )
                             .toList(growable: false),
                       ),
                     ],
@@ -87,12 +92,30 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  Future<void> _handleActionTap(HomeActionModel action) async {
+    await Navigator.of(context).pushNamed(
+      action.route,
+      arguments: action.arguments,
+    );
+
+    if (mounted) {
+      _reloadHomeModel();
+    }
+  }
+
+  void _reloadHomeModel() {
+    setState(() {
+      _homeModel = widget.loadHomeShellModel();
+    });
+  }
 }
 
 class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.action});
+  const _ActionButton({required this.action, required this.onTap});
 
   final HomeActionModel action;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -104,7 +127,7 @@ class _ActionButton extends StatelessWidget {
       child: Card(
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => Navigator.of(context).pushNamed(action.route),
+          onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
             child: Row(

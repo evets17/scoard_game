@@ -123,6 +123,27 @@ class RoundScoreFieldValuesTable extends Table {
   Set<Column<Object>> get primaryKey => {sessionId, roundNumber, playerId, fieldId};
 }
 
+class ActiveSessionsTable extends Table {
+  TextColumn get id => text()();
+
+  TextColumn get sessionKind => text()();
+
+  TextColumn get templateId => text()();
+
+  TextColumn get templateDisplayName => text()();
+
+  TextColumn get participantLabel => text()();
+
+  TextColumn get progressLabel => text()();
+
+  TextColumn get payloadJson => text()();
+
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
 @DriftDatabase(tables: [
   PlayersTable,
   QuickScoreSessionsTable,
@@ -131,6 +152,7 @@ class RoundScoreFieldValuesTable extends Table {
   RoundScoreSessionsTable,
   RoundScorePlayerResultsTable,
   RoundScoreFieldValuesTable,
+  ActiveSessionsTable,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -138,7 +160,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -155,6 +177,9 @@ class AppDatabase extends _$AppDatabase {
             await migrator.createTable(roundScoreSessionsTable);
             await migrator.createTable(roundScorePlayerResultsTable);
             await migrator.createTable(roundScoreFieldValuesTable);
+          }
+          if (from < 5) {
+            await migrator.createTable(activeSessionsTable);
           }
         },
       );
@@ -298,6 +323,25 @@ class AppDatabase extends _$AppDatabase {
         .get();
   }
 
+  Future<List<ActiveSessionsTableData>> loadActiveSessions({
+    int limit = 20,
+  }) {
+    return (select(activeSessionsTable)
+          ..orderBy([
+            (table) => OrderingTerm.desc(table.updatedAt),
+          ])
+          ..limit(limit))
+        .get();
+  }
+
+  Future<ActiveSessionsTableData?> loadActiveSession({
+    required String sessionId,
+  }) {
+    return (select(activeSessionsTable)
+          ..where((table) => table.id.equals(sessionId)))
+        .getSingleOrNull();
+  }
+
   Future<void> saveQuickScoreResult({
     required String sessionId,
     required String templateId,
@@ -316,6 +360,9 @@ class AppDatabase extends _$AppDatabase {
           .go();
       await (delete(quickScoreSessionsTable)
             ..where((table) => table.id.equals(sessionId)))
+          .go();
+      await (delete(activeSessionsTable)
+        ..where((table) => table.id.equals(sessionId)))
           .go();
 
       await into(quickScoreSessionsTable).insert(
@@ -384,6 +431,9 @@ class AppDatabase extends _$AppDatabase {
       await (delete(roundScoreSessionsTable)
             ..where((table) => table.id.equals(sessionId)))
           .go();
+      await (delete(activeSessionsTable)
+        ..where((table) => table.id.equals(sessionId)))
+          .go();
 
       await into(roundScoreSessionsTable).insert(
         RoundScoreSessionsTableCompanion.insert(
@@ -434,6 +484,36 @@ class AppDatabase extends _$AppDatabase {
         );
       });
     });
+  }
+
+  Future<void> saveActiveSession({
+    required String sessionId,
+    required String sessionKind,
+    required String templateId,
+    required String templateDisplayName,
+    required String participantLabel,
+    required String progressLabel,
+    required String payloadJson,
+    required DateTime updatedAt,
+  }) {
+    return into(activeSessionsTable).insertOnConflictUpdate(
+      ActiveSessionsTableData(
+        id: sessionId,
+        sessionKind: sessionKind,
+        templateId: templateId,
+        templateDisplayName: templateDisplayName,
+        participantLabel: participantLabel,
+        progressLabel: progressLabel,
+        payloadJson: payloadJson,
+        updatedAt: updatedAt,
+      ),
+    );
+  }
+
+  Future<void> deleteActiveSession({required String sessionId}) {
+    return (delete(activeSessionsTable)
+          ..where((table) => table.id.equals(sessionId)))
+        .go();
   }
 }
 
