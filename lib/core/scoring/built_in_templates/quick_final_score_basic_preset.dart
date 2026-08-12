@@ -2,6 +2,7 @@ import 'package:scoard_game/application/models/scoring/score_field_definition.da
 import 'package:scoard_game/application/models/scoring/score_input_kind.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/application/models/scoring/winner_rule.dart';
+import 'package:scoard_game/core/scoring/built_in_templates/shared_prompt_definitions.dart';
 
 const finalScoreFieldId = 'final-score';
 
@@ -12,6 +13,9 @@ const quickFinalScoreBasicPreset = ScoringPreset(
       'Use this when each player only needs one final score entered.',
   minimumPlayers: 2,
   winnerRule: WinnerRule.highestScoreWins,
+  promptDefinitions: [
+    lowScoreWinsPromptDefinition,
+  ],
   scoreFields: [
     ScoreFieldDefinition(
       id: finalScoreFieldId,

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:scoard_game/application/models/app_summaries.dart';
+import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
 import 'package:scoard_game/application/models/results/quick_score_result.dart';
 import 'package:scoard_game/application/models/results/round_score_result.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_active_session.dart';
@@ -56,6 +57,7 @@ class PersistentSessionRepository implements SessionRepository {
       sessionId: activeSession.sessionId,
       presetId: activeSession.presetId,
       templateDisplayName: activeSession.templateDisplayName,
+      promptAnswers: activeSession.promptAnswers,
       participantValues: activeSession.participantValues,
       updatedAt: session.updatedAt,
     );
@@ -76,6 +78,7 @@ class PersistentSessionRepository implements SessionRepository {
       sessionId: activeSession.sessionId,
       presetId: activeSession.presetId,
       templateDisplayName: activeSession.templateDisplayName,
+      promptAnswers: activeSession.promptAnswers,
       selectedPlayers: activeSession.selectedPlayers,
       savedRounds: activeSession.savedRounds,
       currentRoundParticipantValues: activeSession.currentRoundParticipantValues,
@@ -128,6 +131,7 @@ class PersistentSessionRepository implements SessionRepository {
   @override
   Future<void> saveQuickScoreResult({
     required QuickScoreResult result,
+    required List<PresetPromptAnswer> promptAnswers,
     required List<QuickScoreParticipantValues> participantValues,
   }) {
     return _appDatabase.saveQuickScoreResult(
@@ -135,6 +139,9 @@ class PersistentSessionRepository implements SessionRepository {
       templateId: result.templateId,
       templateDisplayName: result.templateDisplayName,
       winnerRule: result.winnerRule.name,
+      optionsJson: jsonEncode(
+        promptAnswers.map((promptAnswer) => promptAnswer.toJson()).toList(),
+      ),
       completedAt: result.completedAt,
       participantValues: participantValues,
       playerResults: result.playerResults,
@@ -160,6 +167,7 @@ class PersistentSessionRepository implements SessionRepository {
   @override
   Future<void> saveRoundScoreResult({
     required RoundScoreResult result,
+    required List<PresetPromptAnswer> promptAnswers,
     required List<RoundScoreRoundValues> rounds,
   }) {
     return _appDatabase.saveRoundScoreResult(
@@ -167,6 +175,9 @@ class PersistentSessionRepository implements SessionRepository {
       templateId: result.templateId,
       templateDisplayName: result.templateDisplayName,
       winnerRule: result.winnerRule.name,
+      optionsJson: jsonEncode(
+        promptAnswers.map((promptAnswer) => promptAnswer.toJson()).toList(),
+      ),
       roundCount: result.roundCount,
       completedAt: result.completedAt,
       rounds: rounds,

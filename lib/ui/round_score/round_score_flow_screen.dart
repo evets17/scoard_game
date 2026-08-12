@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:scoard_game/application/models/players/player_list_item_model.dart';
 import 'package:scoard_game/application/models/results/round_score_result.dart';
+import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_available_player.dart';
@@ -29,6 +30,8 @@ class RoundScoreFlowScreen extends StatefulWidget {
     required this.saveRoundScoreSession,
     required this.saveRoundScoreActiveSession,
     required this.deleteActiveSession,
+    this.initialPresetId,
+    this.initialPromptAnswers = const [],
     this.initialActiveSession,
     super.key,
   });
@@ -38,6 +41,8 @@ class RoundScoreFlowScreen extends StatefulWidget {
   final SaveRoundScoreSession saveRoundScoreSession;
   final SaveRoundScoreActiveSession saveRoundScoreActiveSession;
   final DeleteActiveSession deleteActiveSession;
+  final String? initialPresetId;
+  final List<PresetPromptAnswer> initialPromptAnswers;
   final RoundScoreActiveSession? initialActiveSession;
 
   @override
@@ -58,6 +63,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
   final List<RoundScoreRoundValues> _savedRounds = <RoundScoreRoundValues>[];
   List<QuickScoreAvailablePlayer> _selectedPlayers = const [];
   ScoringPreset? _preset;
+  List<PresetPromptAnswer> _promptAnswers = const [];
   RoundScoreResult? _result;
   String? _currentSessionId;
   int _currentRoundNumber = 1;
@@ -66,7 +72,12 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
   @override
   void initState() {
     super.initState();
-    _setupModelFuture = widget.loadRoundScoreSetupModel();
+    _setupModelFuture = widget.loadRoundScoreSetupModel(
+      presetId:
+          widget.initialActiveSession?.presetId ??
+          widget.initialPresetId ??
+          'round-score-basic',
+    );
     _restoreInitialSession();
     _lifecycleListener = AppLifecycleListener(
       onHide: _autosaveCurrentSession,
@@ -109,6 +120,9 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
 
           final setupModel = snapshot.requireData;
           _preset ??= setupModel.preset;
+          if (_promptAnswers.isEmpty) {
+            _promptAnswers = widget.initialPromptAnswers;
+          }
 
           return switch (_step) {
             _RoundScoreStep.setup => _RoundScoreSetupStep(
@@ -271,6 +285,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
       final result = await widget.saveRoundScoreSession(
         preset: _preset!,
         rounds: rounds,
+        promptAnswers: _promptAnswers,
         sessionId: _currentSessionId,
       );
 
@@ -444,6 +459,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
 
     _currentSessionId = session.sessionId;
     _preset = getBuiltInScoringPresetById(session.presetId);
+    _promptAnswers = session.promptAnswers;
     _selectedPlayers = session.selectedPlayers;
     _selectedPlayerIds.addAll(session.selectedPlayers.map((player) => player.id));
     _savedRounds.addAll(session.savedRounds);
@@ -512,6 +528,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
         sessionId: sessionId,
         presetId: preset.id,
         templateDisplayName: preset.displayName,
+        promptAnswers: _promptAnswers,
         selectedPlayers: _selectedPlayers,
         savedRounds: List<RoundScoreRoundValues>.from(_savedRounds),
         currentRoundParticipantValues: currentRoundParticipantValues,

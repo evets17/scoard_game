@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_participant_values.dart';
 import 'package:scoard_game/application/services/sessions/save_quick_score_session.dart';
 import 'package:scoard_game/bootstrap/app_bootstrap.dart';
@@ -100,5 +101,32 @@ void main() {
 
     expect(matchingSessions.length, 1);
     expect(matchingSessions.single.outcomeSummary, 'Avery won with 18.');
+  });
+
+  test('save quick score session supports low score wins from prompted options', () async {
+    final environment = await AppBootstrap.initialize();
+
+    final result = await environment.saveQuickScoreSession(
+      preset: quickFinalScoreBasicPreset,
+      promptAnswers: const [
+        PresetPromptAnswer.boolean(id: 'low-score-wins', value: true),
+      ],
+      participantValues: const [
+        QuickScoreParticipantValues(
+          playerId: 'player-avery',
+          displayName: 'Avery',
+          enteredValues: {finalScoreFieldId: 18},
+        ),
+        QuickScoreParticipantValues(
+          playerId: 'player-jules',
+          displayName: 'Jules',
+          enteredValues: {finalScoreFieldId: 12},
+        ),
+      ],
+    );
+
+    expect(result.winnerRule.name, 'lowestScoreWins');
+    expect(result.playerResults.first.displayName, 'Jules');
+    expect(result.playerResults.first.placement, 1);
   });
 }

@@ -1,4 +1,5 @@
 import 'package:scoard_game/application/models/app_summaries.dart';
+import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
 import 'package:scoard_game/application/models/results/quick_score_result.dart';
 import 'package:scoard_game/application/models/results/round_score_result.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_active_session.dart';
@@ -44,6 +45,7 @@ class MemorySessionRepository implements SessionRepository {
         sessionId: 'active-cascadia-01',
         presetId: 'quick-final-score-basic',
         templateDisplayName: 'Cascadia',
+        promptAnswers: const [],
         participantValues: const [
           QuickScoreParticipantValues(
             playerId: 'player-avery',
@@ -108,6 +110,7 @@ class MemorySessionRepository implements SessionRepository {
   @override
   Future<void> saveQuickScoreResult({
     required QuickScoreResult result,
+    required List<PresetPromptAnswer> promptAnswers,
     required List<QuickScoreParticipantValues> participantValues,
   }) async {
     final winnerLabel = result.winners.map((winner) => winner.displayName).join(', ');
@@ -140,6 +143,7 @@ class MemorySessionRepository implements SessionRepository {
   @override
   Future<void> saveRoundScoreResult({
     required RoundScoreResult result,
+    required List<PresetPromptAnswer> promptAnswers,
     required List<RoundScoreRoundValues> rounds,
   }) async {
     final winnerLabel = result.winners.map((winner) => winner.displayName).join(', ');

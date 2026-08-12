@@ -1,3 +1,4 @@
+import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/winner_rule.dart';
 
@@ -9,6 +10,7 @@ class ScoringPreset {
     required this.minimumPlayers,
     required this.winnerRule,
     required this.scoreFields,
+    this.promptDefinitions = const [],
   });
 
   final String id;
@@ -17,4 +19,5 @@ class ScoringPreset {
   final int minimumPlayers;
   final WinnerRule winnerRule;
   final List<ScoreFieldDefinition> scoreFields;
+  final List<PresetPromptDefinition> promptDefinitions;
 }

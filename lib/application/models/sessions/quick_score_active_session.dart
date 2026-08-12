@@ -1,3 +1,4 @@
+import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_participant_values.dart';
 
 class QuickScoreActiveSession {
@@ -5,6 +6,7 @@ class QuickScoreActiveSession {
     required this.sessionId,
     required this.presetId,
     required this.templateDisplayName,
+    required this.promptAnswers,
     required this.participantValues,
     required this.updatedAt,
   });
@@ -12,6 +14,7 @@ class QuickScoreActiveSession {
   final String sessionId;
   final String presetId;
   final String templateDisplayName;
+  final List<PresetPromptAnswer> promptAnswers;
   final List<QuickScoreParticipantValues> participantValues;
   final DateTime updatedAt;
 
@@ -25,6 +28,9 @@ class QuickScoreActiveSession {
       'sessionId': sessionId,
       'presetId': presetId,
       'templateDisplayName': templateDisplayName,
+        'promptAnswers': promptAnswers
+          .map((promptAnswer) => promptAnswer.toJson())
+          .toList(growable: false),
       'participantValues': participantValues
           .map(
             (participant) => {
@@ -40,11 +46,20 @@ class QuickScoreActiveSession {
   factory QuickScoreActiveSession.fromJson(Map<String, Object?> json) {
     final rawParticipants =
         (json['participantValues'] as List<Object?>?) ?? const <Object?>[];
+    final rawPromptAnswers =
+        (json['promptAnswers'] as List<Object?>?) ?? const <Object?>[];
 
     return QuickScoreActiveSession(
       sessionId: json['sessionId']! as String,
       presetId: json['presetId']! as String,
       templateDisplayName: json['templateDisplayName']! as String,
+      promptAnswers: rawPromptAnswers
+          .map(
+            (rawPromptAnswer) => PresetPromptAnswer.fromJson(
+              rawPromptAnswer! as Map<String, Object?>,
+            ),
+          )
+          .toList(growable: false),
       participantValues: rawParticipants
           .map((rawParticipant) {
             final participant = rawParticipant! as Map<String, Object?>;

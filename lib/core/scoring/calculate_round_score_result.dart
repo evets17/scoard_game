@@ -8,6 +8,7 @@ RoundScoreResult calculateRoundScoreResult({
   required String sessionId,
   required ScoringPreset preset,
   required DateTime completedAt,
+  required WinnerRule winnerRule,
   required List<RoundScoreRoundValues> rounds,
 }) {
   final scoreFieldId = preset.scoreFields.firstWhere(
@@ -29,7 +30,10 @@ RoundScoreResult calculateRoundScoreResult({
 
   final sortedEntries = cumulativeScores.entries.toList(growable: false)
     ..sort((left, right) {
-      final scoreComparison = right.value.compareTo(left.value);
+      final scoreComparison = switch (winnerRule) {
+        WinnerRule.highestScoreWins => right.value.compareTo(left.value),
+        WinnerRule.lowestScoreWins => left.value.compareTo(right.value),
+      };
       if (scoreComparison != 0) {
         return scoreComparison;
       }
@@ -63,7 +67,7 @@ RoundScoreResult calculateRoundScoreResult({
     templateId: preset.id,
     templateDisplayName: preset.displayName,
     completedAt: completedAt,
-    winnerRule: WinnerRule.highestScoreWins,
+    winnerRule: winnerRule,
     roundCount: rounds.length,
     playerResults: playerResults,
   );

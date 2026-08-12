@@ -1,8 +1,10 @@
+import 'package:scoard_game/application/models/sessions/scoring_session_start_configuration.dart';
 import 'package:flutter/material.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/core/scoring/built_in_templates/built_in_scoring_presets.dart';
 import 'package:scoard_game/ui/navigation/app_routes.dart';
 import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
+import 'package:scoard_game/ui/preset_options/preset_options_screen.dart';
 
 class ScoreGameScreen extends StatelessWidget {
   const ScoreGameScreen({super.key});
@@ -28,15 +30,42 @@ class ScoreGameScreen extends StatelessWidget {
                   .map(
                     (preset) => _PresetOptionCard(
                       preset: preset,
-                      onTap: () => Navigator.of(context).pushNamed(
-                        _routeForPreset(preset.id),
-                      ),
+                      onTap: () => _startPreset(context, preset),
                     ),
                   )
                   .toList(growable: false),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _startPreset(BuildContext context, ScoringPreset preset) async {
+    final routeName = _routeForPreset(preset.id);
+
+    if (preset.promptDefinitions.isEmpty) {
+      await Navigator.of(context).pushNamed(
+        routeName,
+        arguments: ScoringSessionStartConfiguration(presetId: preset.id),
+      );
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PresetOptionsScreen(
+          preset: preset,
+          onContinue: (answers) {
+            Navigator.of(context).pushReplacementNamed(
+              routeName,
+              arguments: ScoringSessionStartConfiguration(
+                presetId: preset.id,
+                promptAnswers: answers,
+              ),
+            );
+          },
+        ),
       ),
     );
   }

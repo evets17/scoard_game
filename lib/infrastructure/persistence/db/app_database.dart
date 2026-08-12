@@ -42,6 +42,8 @@ class QuickScoreSessionsTable extends Table {
 
   TextColumn get winnerRule => text()();
 
+  TextColumn get optionsJson => text().withDefault(const Constant('[]'))();
+
   DateTimeColumn get completedAt => dateTime()();
 
   @override
@@ -83,6 +85,8 @@ class RoundScoreSessionsTable extends Table {
   TextColumn get templateDisplayName => text()();
 
   TextColumn get winnerRule => text()();
+
+  TextColumn get optionsJson => text().withDefault(const Constant('[]'))();
 
   IntColumn get roundCount => integer()();
 
@@ -160,7 +164,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -180,6 +184,16 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 5) {
             await migrator.createTable(activeSessionsTable);
+          }
+          if (from < 6) {
+            await migrator.addColumn(
+              quickScoreSessionsTable,
+              quickScoreSessionsTable.optionsJson as GeneratedColumn<Object>,
+            );
+            await migrator.addColumn(
+              roundScoreSessionsTable,
+              roundScoreSessionsTable.optionsJson as GeneratedColumn<Object>,
+            );
           }
         },
       );
@@ -347,6 +361,7 @@ class AppDatabase extends _$AppDatabase {
     required String templateId,
     required String templateDisplayName,
     required String winnerRule,
+    required String optionsJson,
     required DateTime completedAt,
     required List<QuickScoreParticipantValues> participantValues,
     required List<QuickScorePlayerResult> playerResults,
@@ -371,6 +386,7 @@ class AppDatabase extends _$AppDatabase {
           templateId: templateId,
           templateDisplayName: templateDisplayName,
           winnerRule: winnerRule,
+          optionsJson: Value(optionsJson),
           completedAt: completedAt,
         ),
       );
@@ -416,6 +432,7 @@ class AppDatabase extends _$AppDatabase {
     required String templateId,
     required String templateDisplayName,
     required String winnerRule,
+    required String optionsJson,
     required int roundCount,
     required DateTime completedAt,
     required List<RoundScoreRoundValues> rounds,
@@ -441,6 +458,7 @@ class AppDatabase extends _$AppDatabase {
           templateId: templateId,
           templateDisplayName: templateDisplayName,
           winnerRule: winnerRule,
+          optionsJson: Value(optionsJson),
           roundCount: roundCount,
           completedAt: completedAt,
         ),

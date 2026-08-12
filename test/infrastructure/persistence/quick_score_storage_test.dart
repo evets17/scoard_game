@@ -14,6 +14,7 @@ void main() {
       templateId: 'quick-final-score-basic',
       templateDisplayName: 'Quick Score',
       winnerRule: WinnerRule.highestScoreWins.name,
+      optionsJson: '[]',
       completedAt: DateTime(2026, 8, 9),
       participantValues: const [
         QuickScoreParticipantValues(

@@ -10,7 +10,9 @@ class LoadQuickScoreSetupModel {
 
   final PlayerRepository playerRepository;
 
-  Future<QuickScoreSetupModel> call() async {
+  Future<QuickScoreSetupModel> call({
+    String presetId = _quickFinalScorePresetId,
+  }) async {
     final players = await playerRepository.loadPlayers();
 
     final availablePlayers = players
@@ -25,7 +27,7 @@ class LoadQuickScoreSetupModel {
       ..sort((left, right) => left.displayName.compareTo(right.displayName));
 
     return QuickScoreSetupModel(
-      preset: getBuiltInScoringPresetById(_quickFinalScorePresetId),
+      preset: getBuiltInScoringPresetById(presetId),
       availablePlayers: availablePlayers,
     );
   }

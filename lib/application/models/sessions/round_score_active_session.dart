@@ -1,3 +1,4 @@
+import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_available_player.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_participant_values.dart';
 import 'package:scoard_game/application/models/sessions/round_score_round_values.dart';
@@ -7,6 +8,7 @@ class RoundScoreActiveSession {
     required this.sessionId,
     required this.presetId,
     required this.templateDisplayName,
+    required this.promptAnswers,
     required this.selectedPlayers,
     required this.savedRounds,
     required this.currentRoundParticipantValues,
@@ -17,6 +19,7 @@ class RoundScoreActiveSession {
   final String sessionId;
   final String presetId;
   final String templateDisplayName;
+  final List<PresetPromptAnswer> promptAnswers;
   final List<QuickScoreAvailablePlayer> selectedPlayers;
   final List<RoundScoreRoundValues> savedRounds;
   final List<QuickScoreParticipantValues> currentRoundParticipantValues;
@@ -33,6 +36,9 @@ class RoundScoreActiveSession {
       'sessionId': sessionId,
       'presetId': presetId,
       'templateDisplayName': templateDisplayName,
+        'promptAnswers': promptAnswers
+          .map((promptAnswer) => promptAnswer.toJson())
+          .toList(growable: false),
       'selectedPlayers': selectedPlayers
           .map(
             (player) => {
@@ -73,6 +79,8 @@ class RoundScoreActiveSession {
   factory RoundScoreActiveSession.fromJson(Map<String, Object?> json) {
     final rawSelectedPlayers =
         (json['selectedPlayers'] as List<Object?>?) ?? const <Object?>[];
+    final rawPromptAnswers =
+      (json['promptAnswers'] as List<Object?>?) ?? const <Object?>[];
     final rawSavedRounds =
         (json['savedRounds'] as List<Object?>?) ?? const <Object?>[];
     final rawCurrentRoundParticipantValues =
@@ -96,6 +104,13 @@ class RoundScoreActiveSession {
       sessionId: json['sessionId']! as String,
       presetId: json['presetId']! as String,
       templateDisplayName: json['templateDisplayName']! as String,
+      promptAnswers: rawPromptAnswers
+          .map(
+            (rawPromptAnswer) => PresetPromptAnswer.fromJson(
+              rawPromptAnswer! as Map<String, Object?>,
+            ),
+          )
+          .toList(growable: false),
       selectedPlayers: rawSelectedPlayers
           .map((rawPlayer) {
             final player = rawPlayer! as Map<String, Object?>;

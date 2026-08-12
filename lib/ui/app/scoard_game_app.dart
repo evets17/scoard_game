@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:scoard_game/application/models/sessions/scoring_session_start_configuration.dart';
 import 'package:scoard_game/bootstrap/app_environment.dart';
 import 'package:scoard_game/ui/home/home_screen.dart';
 import 'package:scoard_game/ui/active_games/active_games_screen.dart';
@@ -61,22 +62,6 @@ class ScoardGameApp extends StatelessWidget {
                   unarchivePlayer: environment.unarchivePlayer,
                 ),
             AppRoutes.newGame: (_) => const ScoreGameScreen(),
-            AppRoutes.quickScore: (_) => QuickScoreFlowScreen(
-                  loadQuickScoreSetupModel: environment.loadQuickScoreSetupModel,
-                  createPlayer: environment.createPlayer,
-                  saveQuickScoreSession: environment.saveQuickScoreSession,
-                saveQuickScoreActiveSession:
-                  environment.saveQuickScoreActiveSession,
-                deleteActiveSession: environment.deleteActiveSession,
-                ),
-            AppRoutes.roundScore: (_) => RoundScoreFlowScreen(
-                  loadRoundScoreSetupModel: environment.loadRoundScoreSetupModel,
-                  createPlayer: environment.createPlayer,
-                  saveRoundScoreSession: environment.saveRoundScoreSession,
-                saveRoundScoreActiveSession:
-                  environment.saveRoundScoreActiveSession,
-                deleteActiveSession: environment.deleteActiveSession,
-                ),
             AppRoutes.playStats: (_) => const PlaceholderScreen(
                   title: 'Play Stats',
                   description:
@@ -86,6 +71,52 @@ class ScoardGameApp extends StatelessWidget {
             AppRoutes.settings: (_) => SettingsScreen(
                   themeController: environment.themeController,
                 ),
+          },
+          onGenerateRoute: (settings) {
+            final arguments = settings.arguments;
+
+            switch (settings.name) {
+              case AppRoutes.quickScore:
+                final configuration = arguments is ScoringSessionStartConfiguration
+                    ? arguments
+                    : const ScoringSessionStartConfiguration(
+                        presetId: 'quick-final-score-basic',
+                      );
+                return MaterialPageRoute<void>(
+                  settings: settings,
+                  builder: (_) => QuickScoreFlowScreen(
+                    loadQuickScoreSetupModel: environment.loadQuickScoreSetupModel,
+                    createPlayer: environment.createPlayer,
+                    saveQuickScoreSession: environment.saveQuickScoreSession,
+                    saveQuickScoreActiveSession:
+                        environment.saveQuickScoreActiveSession,
+                    deleteActiveSession: environment.deleteActiveSession,
+                    initialPresetId: configuration.presetId,
+                    initialPromptAnswers: configuration.promptAnswers,
+                  ),
+                );
+              case AppRoutes.roundScore:
+                final configuration = arguments is ScoringSessionStartConfiguration
+                    ? arguments
+                    : const ScoringSessionStartConfiguration(
+                        presetId: 'round-score-basic',
+                      );
+                return MaterialPageRoute<void>(
+                  settings: settings,
+                  builder: (_) => RoundScoreFlowScreen(
+                    loadRoundScoreSetupModel: environment.loadRoundScoreSetupModel,
+                    createPlayer: environment.createPlayer,
+                    saveRoundScoreSession: environment.saveRoundScoreSession,
+                    saveRoundScoreActiveSession:
+                        environment.saveRoundScoreActiveSession,
+                    deleteActiveSession: environment.deleteActiveSession,
+                    initialPresetId: configuration.presetId,
+                    initialPromptAnswers: configuration.promptAnswers,
+                  ),
+                );
+            }
+
+            return null;
           },
           initialRoute: AppRoutes.home,
         );

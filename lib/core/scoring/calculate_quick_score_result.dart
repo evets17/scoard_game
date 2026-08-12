@@ -8,6 +8,7 @@ QuickScoreResult calculateQuickScoreResult({
   required String sessionId,
   required ScoringPreset preset,
   required DateTime completedAt,
+  required WinnerRule winnerRule,
   required List<QuickScoreParticipantValues> participantValues,
 }) {
   final scoreFieldId = preset.scoreFields.firstWhere(
@@ -16,8 +17,12 @@ QuickScoreResult calculateQuickScoreResult({
 
   final sortedParticipants = participantValues.toList(growable: false)
     ..sort((left, right) {
-      final scoreComparison = _scoreFor(right, scoreFieldId)
-          .compareTo(_scoreFor(left, scoreFieldId));
+      final scoreComparison = switch (winnerRule) {
+        WinnerRule.highestScoreWins => _scoreFor(right, scoreFieldId)
+            .compareTo(_scoreFor(left, scoreFieldId)),
+        WinnerRule.lowestScoreWins => _scoreFor(left, scoreFieldId)
+            .compareTo(_scoreFor(right, scoreFieldId)),
+      };
 
       if (scoreComparison != 0) {
         return scoreComparison;
@@ -62,7 +67,7 @@ QuickScoreResult calculateQuickScoreResult({
     templateId: preset.id,
     templateDisplayName: preset.displayName,
     completedAt: completedAt,
-    winnerRule: WinnerRule.highestScoreWins,
+    winnerRule: winnerRule,
     playerResults: playerResults,
   );
 }

@@ -15,6 +15,7 @@ void main() {
       templateId: 'round-score-basic',
       templateDisplayName: 'Round Score',
       winnerRule: WinnerRule.highestScoreWins.name,
+      optionsJson: '[]',
       roundCount: 2,
       completedAt: DateTime(2026, 8, 10),
       rounds: const [

@@ -1,4 +1,5 @@
 import 'package:scoard_game/application/models/app_summaries.dart';
+import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
 import 'package:scoard_game/application/models/results/quick_score_result.dart';
 import 'package:scoard_game/application/models/results/round_score_result.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_active_session.dart';
@@ -23,6 +24,7 @@ abstract class SessionRepository {
 
   Future<void> saveQuickScoreResult({
     required QuickScoreResult result,
+    required List<PresetPromptAnswer> promptAnswers,
     required List<QuickScoreParticipantValues> participantValues,
   });
 
@@ -32,6 +34,7 @@ abstract class SessionRepository {
 
   Future<void> saveRoundScoreResult({
     required RoundScoreResult result,
+    required List<PresetPromptAnswer> promptAnswers,
     required List<RoundScoreRoundValues> rounds,
   });
 

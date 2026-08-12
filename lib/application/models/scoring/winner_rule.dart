@@ -1,3 +1,4 @@
 enum WinnerRule {
   highestScoreWins,
+  lowestScoreWins,
 }

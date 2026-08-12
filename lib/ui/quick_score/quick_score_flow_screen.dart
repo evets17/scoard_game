@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:scoard_game/application/models/players/player_list_item_model.dart';
 import 'package:scoard_game/application/models/results/quick_score_result.dart';
+import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_active_session.dart';
@@ -28,6 +29,8 @@ class QuickScoreFlowScreen extends StatefulWidget {
     required this.saveQuickScoreSession,
     required this.saveQuickScoreActiveSession,
     required this.deleteActiveSession,
+    this.initialPresetId,
+    this.initialPromptAnswers = const [],
     this.initialActiveSession,
     super.key,
   });
@@ -37,6 +40,8 @@ class QuickScoreFlowScreen extends StatefulWidget {
   final SaveQuickScoreSession saveQuickScoreSession;
   final SaveQuickScoreActiveSession saveQuickScoreActiveSession;
   final DeleteActiveSession deleteActiveSession;
+  final String? initialPresetId;
+  final List<PresetPromptAnswer> initialPromptAnswers;
   final QuickScoreActiveSession? initialActiveSession;
 
   @override
@@ -56,6 +61,7 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
   List<QuickScoreAvailablePlayer> _selectedPlayers = const [];
   final Map<String, TextEditingController> _scoreControllers = {};
   ScoringPreset? _preset;
+  List<PresetPromptAnswer> _promptAnswers = const [];
   QuickScoreResult? _result;
   String? _currentSessionId;
   AppLifecycleListener? _lifecycleListener;
@@ -63,7 +69,12 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
   @override
   void initState() {
     super.initState();
-    _setupModelFuture = widget.loadQuickScoreSetupModel();
+    _setupModelFuture = widget.loadQuickScoreSetupModel(
+      presetId:
+          widget.initialActiveSession?.presetId ??
+          widget.initialPresetId ??
+          'quick-final-score-basic',
+    );
     _restoreInitialSession();
     _lifecycleListener = AppLifecycleListener(
       onHide: _autosaveCurrentSession,
@@ -108,6 +119,9 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
 
           final setupModel = snapshot.requireData;
           _preset ??= setupModel.preset;
+          if (_promptAnswers.isEmpty) {
+            _promptAnswers = widget.initialPromptAnswers;
+          }
 
           return switch (_step) {
             _QuickScoreStep.setup => _QuickScoreSetupStep(
@@ -249,6 +263,7 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
       final result = await widget.saveQuickScoreSession(
         preset: preset,
         participantValues: participantValues,
+        promptAnswers: _promptAnswers,
         sessionId: _currentSessionId,
       );
 
@@ -282,6 +297,7 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
 
     _currentSessionId = session.sessionId;
     _preset = getBuiltInScoringPresetById(session.presetId);
+    _promptAnswers = session.promptAnswers;
     _selectedPlayers = session.participantValues
         .map(
           (participant) => QuickScoreAvailablePlayer(
@@ -344,6 +360,7 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
         sessionId: sessionId,
         presetId: preset.id,
         templateDisplayName: preset.displayName,
+        promptAnswers: _promptAnswers,
         participantValues: participantValues,
         updatedAt: DateTime.now(),
       ),

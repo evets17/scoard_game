@@ -10,7 +10,9 @@ class LoadRoundScoreSetupModel {
 
   final PlayerRepository playerRepository;
 
-  Future<RoundScoreSetupModel> call() async {
+  Future<RoundScoreSetupModel> call({
+    String presetId = _roundScorePresetId,
+  }) async {
     final players = await playerRepository.loadPlayers();
 
     final availablePlayers = players
@@ -25,7 +27,7 @@ class LoadRoundScoreSetupModel {
       ..sort((left, right) => left.displayName.compareTo(right.displayName));
 
     return RoundScoreSetupModel(
-      preset: getBuiltInScoringPresetById(_roundScorePresetId),
+      preset: getBuiltInScoringPresetById(presetId),
       availablePlayers: availablePlayers,
     );
   }

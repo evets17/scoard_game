@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scoard_game/application/models/app_summaries.dart';
+import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_active_session.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_available_player.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_participant_values.dart';
@@ -19,6 +20,9 @@ void main() {
         sessionId: 'quick-draft-1',
         presetId: 'quick-final-score-basic',
         templateDisplayName: 'Quick Score',
+        promptAnswers: const [
+          PresetPromptAnswer.boolean(id: 'low-score-wins', value: true),
+        ],
         participantValues: const [
           QuickScoreParticipantValues(
             playerId: 'player-avery',
@@ -43,6 +47,7 @@ void main() {
     expect(summaries.single.kind, ActiveSessionKind.quickScore);
     expect(summaries.single.gameName, 'Quick Score');
     expect(summaries.single.progressLabel, '2 players ready');
+    expect(activeSession?.promptAnswers.single.booleanValue, true);
     expect(activeSession?.participantValues.first.enteredValues['final-score'], 0);
 
     await database.close();
@@ -57,6 +62,9 @@ void main() {
         sessionId: 'round-draft-1',
         presetId: 'round-score-basic',
         templateDisplayName: 'Round Score',
+        promptAnswers: const [
+          PresetPromptAnswer.boolean(id: 'low-score-wins', value: false),
+        ],
         selectedPlayers: const [
           QuickScoreAvailablePlayer(id: 'player-avery', displayName: 'Avery'),
           QuickScoreAvailablePlayer(id: 'player-jules', displayName: 'Jules'),
@@ -102,6 +110,7 @@ void main() {
 
     expect(summaries.single.kind, ActiveSessionKind.roundScore);
     expect(summaries.single.progressLabel, 'Round 2');
+    expect(activeSession?.promptAnswers.single.booleanValue, false);
     expect(activeSession?.currentRoundNumber, 2);
     expect(activeSession?.savedRounds.length, 1);
 

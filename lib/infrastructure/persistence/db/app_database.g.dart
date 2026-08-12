@@ -443,6 +443,18 @@ class $QuickScoreSessionsTableTable extends QuickScoreSessionsTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _optionsJsonMeta = const VerificationMeta(
+    'optionsJson',
+  );
+  @override
+  late final GeneratedColumn<String> optionsJson = GeneratedColumn<String>(
+    'options_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
   static const VerificationMeta _completedAtMeta = const VerificationMeta(
     'completedAt',
   );
@@ -460,6 +472,7 @@ class $QuickScoreSessionsTableTable extends QuickScoreSessionsTable
     templateId,
     templateDisplayName,
     winnerRule,
+    optionsJson,
     completedAt,
   ];
   @override
@@ -506,6 +519,15 @@ class $QuickScoreSessionsTableTable extends QuickScoreSessionsTable
     } else if (isInserting) {
       context.missing(_winnerRuleMeta);
     }
+    if (data.containsKey('options_json')) {
+      context.handle(
+        _optionsJsonMeta,
+        optionsJson.isAcceptableOrUnknown(
+          data['options_json']!,
+          _optionsJsonMeta,
+        ),
+      );
+    }
     if (data.containsKey('completed_at')) {
       context.handle(
         _completedAtMeta,
@@ -545,6 +567,10 @@ class $QuickScoreSessionsTableTable extends QuickScoreSessionsTable
         DriftSqlType.string,
         data['${effectivePrefix}winner_rule'],
       )!,
+      optionsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}options_json'],
+      )!,
       completedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}completed_at'],
@@ -564,12 +590,14 @@ class QuickScoreSessionsTableData extends DataClass
   final String templateId;
   final String templateDisplayName;
   final String winnerRule;
+  final String optionsJson;
   final DateTime completedAt;
   const QuickScoreSessionsTableData({
     required this.id,
     required this.templateId,
     required this.templateDisplayName,
     required this.winnerRule,
+    required this.optionsJson,
     required this.completedAt,
   });
   @override
@@ -579,6 +607,7 @@ class QuickScoreSessionsTableData extends DataClass
     map['template_id'] = Variable<String>(templateId);
     map['template_display_name'] = Variable<String>(templateDisplayName);
     map['winner_rule'] = Variable<String>(winnerRule);
+    map['options_json'] = Variable<String>(optionsJson);
     map['completed_at'] = Variable<DateTime>(completedAt);
     return map;
   }
@@ -589,6 +618,7 @@ class QuickScoreSessionsTableData extends DataClass
       templateId: Value(templateId),
       templateDisplayName: Value(templateDisplayName),
       winnerRule: Value(winnerRule),
+      optionsJson: Value(optionsJson),
       completedAt: Value(completedAt),
     );
   }
@@ -605,6 +635,7 @@ class QuickScoreSessionsTableData extends DataClass
         json['templateDisplayName'],
       ),
       winnerRule: serializer.fromJson<String>(json['winnerRule']),
+      optionsJson: serializer.fromJson<String>(json['optionsJson']),
       completedAt: serializer.fromJson<DateTime>(json['completedAt']),
     );
   }
@@ -616,6 +647,7 @@ class QuickScoreSessionsTableData extends DataClass
       'templateId': serializer.toJson<String>(templateId),
       'templateDisplayName': serializer.toJson<String>(templateDisplayName),
       'winnerRule': serializer.toJson<String>(winnerRule),
+      'optionsJson': serializer.toJson<String>(optionsJson),
       'completedAt': serializer.toJson<DateTime>(completedAt),
     };
   }
@@ -625,12 +657,14 @@ class QuickScoreSessionsTableData extends DataClass
     String? templateId,
     String? templateDisplayName,
     String? winnerRule,
+    String? optionsJson,
     DateTime? completedAt,
   }) => QuickScoreSessionsTableData(
     id: id ?? this.id,
     templateId: templateId ?? this.templateId,
     templateDisplayName: templateDisplayName ?? this.templateDisplayName,
     winnerRule: winnerRule ?? this.winnerRule,
+    optionsJson: optionsJson ?? this.optionsJson,
     completedAt: completedAt ?? this.completedAt,
   );
   QuickScoreSessionsTableData copyWithCompanion(
@@ -647,6 +681,9 @@ class QuickScoreSessionsTableData extends DataClass
       winnerRule: data.winnerRule.present
           ? data.winnerRule.value
           : this.winnerRule,
+      optionsJson: data.optionsJson.present
+          ? data.optionsJson.value
+          : this.optionsJson,
       completedAt: data.completedAt.present
           ? data.completedAt.value
           : this.completedAt,
@@ -660,14 +697,21 @@ class QuickScoreSessionsTableData extends DataClass
           ..write('templateId: $templateId, ')
           ..write('templateDisplayName: $templateDisplayName, ')
           ..write('winnerRule: $winnerRule, ')
+          ..write('optionsJson: $optionsJson, ')
           ..write('completedAt: $completedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, templateId, templateDisplayName, winnerRule, completedAt);
+  int get hashCode => Object.hash(
+    id,
+    templateId,
+    templateDisplayName,
+    winnerRule,
+    optionsJson,
+    completedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -676,6 +720,7 @@ class QuickScoreSessionsTableData extends DataClass
           other.templateId == this.templateId &&
           other.templateDisplayName == this.templateDisplayName &&
           other.winnerRule == this.winnerRule &&
+          other.optionsJson == this.optionsJson &&
           other.completedAt == this.completedAt);
 }
 
@@ -685,6 +730,7 @@ class QuickScoreSessionsTableCompanion
   final Value<String> templateId;
   final Value<String> templateDisplayName;
   final Value<String> winnerRule;
+  final Value<String> optionsJson;
   final Value<DateTime> completedAt;
   final Value<int> rowid;
   const QuickScoreSessionsTableCompanion({
@@ -692,6 +738,7 @@ class QuickScoreSessionsTableCompanion
     this.templateId = const Value.absent(),
     this.templateDisplayName = const Value.absent(),
     this.winnerRule = const Value.absent(),
+    this.optionsJson = const Value.absent(),
     this.completedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -700,6 +747,7 @@ class QuickScoreSessionsTableCompanion
     required String templateId,
     required String templateDisplayName,
     required String winnerRule,
+    this.optionsJson = const Value.absent(),
     required DateTime completedAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -712,6 +760,7 @@ class QuickScoreSessionsTableCompanion
     Expression<String>? templateId,
     Expression<String>? templateDisplayName,
     Expression<String>? winnerRule,
+    Expression<String>? optionsJson,
     Expression<DateTime>? completedAt,
     Expression<int>? rowid,
   }) {
@@ -721,6 +770,7 @@ class QuickScoreSessionsTableCompanion
       if (templateDisplayName != null)
         'template_display_name': templateDisplayName,
       if (winnerRule != null) 'winner_rule': winnerRule,
+      if (optionsJson != null) 'options_json': optionsJson,
       if (completedAt != null) 'completed_at': completedAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -731,6 +781,7 @@ class QuickScoreSessionsTableCompanion
     Value<String>? templateId,
     Value<String>? templateDisplayName,
     Value<String>? winnerRule,
+    Value<String>? optionsJson,
     Value<DateTime>? completedAt,
     Value<int>? rowid,
   }) {
@@ -739,6 +790,7 @@ class QuickScoreSessionsTableCompanion
       templateId: templateId ?? this.templateId,
       templateDisplayName: templateDisplayName ?? this.templateDisplayName,
       winnerRule: winnerRule ?? this.winnerRule,
+      optionsJson: optionsJson ?? this.optionsJson,
       completedAt: completedAt ?? this.completedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -761,6 +813,9 @@ class QuickScoreSessionsTableCompanion
     if (winnerRule.present) {
       map['winner_rule'] = Variable<String>(winnerRule.value);
     }
+    if (optionsJson.present) {
+      map['options_json'] = Variable<String>(optionsJson.value);
+    }
     if (completedAt.present) {
       map['completed_at'] = Variable<DateTime>(completedAt.value);
     }
@@ -777,6 +832,7 @@ class QuickScoreSessionsTableCompanion
           ..write('templateId: $templateId, ')
           ..write('templateDisplayName: $templateDisplayName, ')
           ..write('winnerRule: $winnerRule, ')
+          ..write('optionsJson: $optionsJson, ')
           ..write('completedAt: $completedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -1608,6 +1664,18 @@ class $RoundScoreSessionsTableTable extends RoundScoreSessionsTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _optionsJsonMeta = const VerificationMeta(
+    'optionsJson',
+  );
+  @override
+  late final GeneratedColumn<String> optionsJson = GeneratedColumn<String>(
+    'options_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
   static const VerificationMeta _roundCountMeta = const VerificationMeta(
     'roundCount',
   );
@@ -1636,6 +1704,7 @@ class $RoundScoreSessionsTableTable extends RoundScoreSessionsTable
     templateId,
     templateDisplayName,
     winnerRule,
+    optionsJson,
     roundCount,
     completedAt,
   ];
@@ -1682,6 +1751,15 @@ class $RoundScoreSessionsTableTable extends RoundScoreSessionsTable
       );
     } else if (isInserting) {
       context.missing(_winnerRuleMeta);
+    }
+    if (data.containsKey('options_json')) {
+      context.handle(
+        _optionsJsonMeta,
+        optionsJson.isAcceptableOrUnknown(
+          data['options_json']!,
+          _optionsJsonMeta,
+        ),
+      );
     }
     if (data.containsKey('round_count')) {
       context.handle(
@@ -1730,6 +1808,10 @@ class $RoundScoreSessionsTableTable extends RoundScoreSessionsTable
         DriftSqlType.string,
         data['${effectivePrefix}winner_rule'],
       )!,
+      optionsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}options_json'],
+      )!,
       roundCount: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}round_count'],
@@ -1753,6 +1835,7 @@ class RoundScoreSessionsTableData extends DataClass
   final String templateId;
   final String templateDisplayName;
   final String winnerRule;
+  final String optionsJson;
   final int roundCount;
   final DateTime completedAt;
   const RoundScoreSessionsTableData({
@@ -1760,6 +1843,7 @@ class RoundScoreSessionsTableData extends DataClass
     required this.templateId,
     required this.templateDisplayName,
     required this.winnerRule,
+    required this.optionsJson,
     required this.roundCount,
     required this.completedAt,
   });
@@ -1770,6 +1854,7 @@ class RoundScoreSessionsTableData extends DataClass
     map['template_id'] = Variable<String>(templateId);
     map['template_display_name'] = Variable<String>(templateDisplayName);
     map['winner_rule'] = Variable<String>(winnerRule);
+    map['options_json'] = Variable<String>(optionsJson);
     map['round_count'] = Variable<int>(roundCount);
     map['completed_at'] = Variable<DateTime>(completedAt);
     return map;
@@ -1781,6 +1866,7 @@ class RoundScoreSessionsTableData extends DataClass
       templateId: Value(templateId),
       templateDisplayName: Value(templateDisplayName),
       winnerRule: Value(winnerRule),
+      optionsJson: Value(optionsJson),
       roundCount: Value(roundCount),
       completedAt: Value(completedAt),
     );
@@ -1798,6 +1884,7 @@ class RoundScoreSessionsTableData extends DataClass
         json['templateDisplayName'],
       ),
       winnerRule: serializer.fromJson<String>(json['winnerRule']),
+      optionsJson: serializer.fromJson<String>(json['optionsJson']),
       roundCount: serializer.fromJson<int>(json['roundCount']),
       completedAt: serializer.fromJson<DateTime>(json['completedAt']),
     );
@@ -1810,6 +1897,7 @@ class RoundScoreSessionsTableData extends DataClass
       'templateId': serializer.toJson<String>(templateId),
       'templateDisplayName': serializer.toJson<String>(templateDisplayName),
       'winnerRule': serializer.toJson<String>(winnerRule),
+      'optionsJson': serializer.toJson<String>(optionsJson),
       'roundCount': serializer.toJson<int>(roundCount),
       'completedAt': serializer.toJson<DateTime>(completedAt),
     };
@@ -1820,6 +1908,7 @@ class RoundScoreSessionsTableData extends DataClass
     String? templateId,
     String? templateDisplayName,
     String? winnerRule,
+    String? optionsJson,
     int? roundCount,
     DateTime? completedAt,
   }) => RoundScoreSessionsTableData(
@@ -1827,6 +1916,7 @@ class RoundScoreSessionsTableData extends DataClass
     templateId: templateId ?? this.templateId,
     templateDisplayName: templateDisplayName ?? this.templateDisplayName,
     winnerRule: winnerRule ?? this.winnerRule,
+    optionsJson: optionsJson ?? this.optionsJson,
     roundCount: roundCount ?? this.roundCount,
     completedAt: completedAt ?? this.completedAt,
   );
@@ -1844,6 +1934,9 @@ class RoundScoreSessionsTableData extends DataClass
       winnerRule: data.winnerRule.present
           ? data.winnerRule.value
           : this.winnerRule,
+      optionsJson: data.optionsJson.present
+          ? data.optionsJson.value
+          : this.optionsJson,
       roundCount: data.roundCount.present
           ? data.roundCount.value
           : this.roundCount,
@@ -1860,6 +1953,7 @@ class RoundScoreSessionsTableData extends DataClass
           ..write('templateId: $templateId, ')
           ..write('templateDisplayName: $templateDisplayName, ')
           ..write('winnerRule: $winnerRule, ')
+          ..write('optionsJson: $optionsJson, ')
           ..write('roundCount: $roundCount, ')
           ..write('completedAt: $completedAt')
           ..write(')'))
@@ -1872,6 +1966,7 @@ class RoundScoreSessionsTableData extends DataClass
     templateId,
     templateDisplayName,
     winnerRule,
+    optionsJson,
     roundCount,
     completedAt,
   );
@@ -1883,6 +1978,7 @@ class RoundScoreSessionsTableData extends DataClass
           other.templateId == this.templateId &&
           other.templateDisplayName == this.templateDisplayName &&
           other.winnerRule == this.winnerRule &&
+          other.optionsJson == this.optionsJson &&
           other.roundCount == this.roundCount &&
           other.completedAt == this.completedAt);
 }
@@ -1893,6 +1989,7 @@ class RoundScoreSessionsTableCompanion
   final Value<String> templateId;
   final Value<String> templateDisplayName;
   final Value<String> winnerRule;
+  final Value<String> optionsJson;
   final Value<int> roundCount;
   final Value<DateTime> completedAt;
   final Value<int> rowid;
@@ -1901,6 +1998,7 @@ class RoundScoreSessionsTableCompanion
     this.templateId = const Value.absent(),
     this.templateDisplayName = const Value.absent(),
     this.winnerRule = const Value.absent(),
+    this.optionsJson = const Value.absent(),
     this.roundCount = const Value.absent(),
     this.completedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1910,6 +2008,7 @@ class RoundScoreSessionsTableCompanion
     required String templateId,
     required String templateDisplayName,
     required String winnerRule,
+    this.optionsJson = const Value.absent(),
     required int roundCount,
     required DateTime completedAt,
     this.rowid = const Value.absent(),
@@ -1924,6 +2023,7 @@ class RoundScoreSessionsTableCompanion
     Expression<String>? templateId,
     Expression<String>? templateDisplayName,
     Expression<String>? winnerRule,
+    Expression<String>? optionsJson,
     Expression<int>? roundCount,
     Expression<DateTime>? completedAt,
     Expression<int>? rowid,
@@ -1934,6 +2034,7 @@ class RoundScoreSessionsTableCompanion
       if (templateDisplayName != null)
         'template_display_name': templateDisplayName,
       if (winnerRule != null) 'winner_rule': winnerRule,
+      if (optionsJson != null) 'options_json': optionsJson,
       if (roundCount != null) 'round_count': roundCount,
       if (completedAt != null) 'completed_at': completedAt,
       if (rowid != null) 'rowid': rowid,
@@ -1945,6 +2046,7 @@ class RoundScoreSessionsTableCompanion
     Value<String>? templateId,
     Value<String>? templateDisplayName,
     Value<String>? winnerRule,
+    Value<String>? optionsJson,
     Value<int>? roundCount,
     Value<DateTime>? completedAt,
     Value<int>? rowid,
@@ -1954,6 +2056,7 @@ class RoundScoreSessionsTableCompanion
       templateId: templateId ?? this.templateId,
       templateDisplayName: templateDisplayName ?? this.templateDisplayName,
       winnerRule: winnerRule ?? this.winnerRule,
+      optionsJson: optionsJson ?? this.optionsJson,
       roundCount: roundCount ?? this.roundCount,
       completedAt: completedAt ?? this.completedAt,
       rowid: rowid ?? this.rowid,
@@ -1977,6 +2080,9 @@ class RoundScoreSessionsTableCompanion
     if (winnerRule.present) {
       map['winner_rule'] = Variable<String>(winnerRule.value);
     }
+    if (optionsJson.present) {
+      map['options_json'] = Variable<String>(optionsJson.value);
+    }
     if (roundCount.present) {
       map['round_count'] = Variable<int>(roundCount.value);
     }
@@ -1996,6 +2102,7 @@ class RoundScoreSessionsTableCompanion
           ..write('templateId: $templateId, ')
           ..write('templateDisplayName: $templateDisplayName, ')
           ..write('winnerRule: $winnerRule, ')
+          ..write('optionsJson: $optionsJson, ')
           ..write('roundCount: $roundCount, ')
           ..write('completedAt: $completedAt, ')
           ..write('rowid: $rowid')
@@ -3694,6 +3801,7 @@ typedef $$QuickScoreSessionsTableTableCreateCompanionBuilder =
       required String templateId,
       required String templateDisplayName,
       required String winnerRule,
+      Value<String> optionsJson,
       required DateTime completedAt,
       Value<int> rowid,
     });
@@ -3703,6 +3811,7 @@ typedef $$QuickScoreSessionsTableTableUpdateCompanionBuilder =
       Value<String> templateId,
       Value<String> templateDisplayName,
       Value<String> winnerRule,
+      Value<String> optionsJson,
       Value<DateTime> completedAt,
       Value<int> rowid,
     });
@@ -3733,6 +3842,11 @@ class $$QuickScoreSessionsTableTableFilterComposer
 
   ColumnFilters<String> get winnerRule => $composableBuilder(
     column: $table.winnerRule,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get optionsJson => $composableBuilder(
+    column: $table.optionsJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3771,6 +3885,11 @@ class $$QuickScoreSessionsTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get optionsJson => $composableBuilder(
+    column: $table.optionsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get completedAt => $composableBuilder(
     column: $table.completedAt,
     builder: (column) => ColumnOrderings(column),
@@ -3801,6 +3920,11 @@ class $$QuickScoreSessionsTableTableAnnotationComposer
 
   GeneratedColumn<String> get winnerRule => $composableBuilder(
     column: $table.winnerRule,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get optionsJson => $composableBuilder(
+    column: $table.optionsJson,
     builder: (column) => column,
   );
 
@@ -3860,6 +3984,7 @@ class $$QuickScoreSessionsTableTableTableManager
                 Value<String> templateId = const Value.absent(),
                 Value<String> templateDisplayName = const Value.absent(),
                 Value<String> winnerRule = const Value.absent(),
+                Value<String> optionsJson = const Value.absent(),
                 Value<DateTime> completedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => QuickScoreSessionsTableCompanion(
@@ -3867,6 +3992,7 @@ class $$QuickScoreSessionsTableTableTableManager
                 templateId: templateId,
                 templateDisplayName: templateDisplayName,
                 winnerRule: winnerRule,
+                optionsJson: optionsJson,
                 completedAt: completedAt,
                 rowid: rowid,
               ),
@@ -3876,6 +4002,7 @@ class $$QuickScoreSessionsTableTableTableManager
                 required String templateId,
                 required String templateDisplayName,
                 required String winnerRule,
+                Value<String> optionsJson = const Value.absent(),
                 required DateTime completedAt,
                 Value<int> rowid = const Value.absent(),
               }) => QuickScoreSessionsTableCompanion.insert(
@@ -3883,6 +4010,7 @@ class $$QuickScoreSessionsTableTableTableManager
                 templateId: templateId,
                 templateDisplayName: templateDisplayName,
                 winnerRule: winnerRule,
+                optionsJson: optionsJson,
                 completedAt: completedAt,
                 rowid: rowid,
               ),
@@ -4365,6 +4493,7 @@ typedef $$RoundScoreSessionsTableTableCreateCompanionBuilder =
       required String templateId,
       required String templateDisplayName,
       required String winnerRule,
+      Value<String> optionsJson,
       required int roundCount,
       required DateTime completedAt,
       Value<int> rowid,
@@ -4375,6 +4504,7 @@ typedef $$RoundScoreSessionsTableTableUpdateCompanionBuilder =
       Value<String> templateId,
       Value<String> templateDisplayName,
       Value<String> winnerRule,
+      Value<String> optionsJson,
       Value<int> roundCount,
       Value<DateTime> completedAt,
       Value<int> rowid,
@@ -4406,6 +4536,11 @@ class $$RoundScoreSessionsTableTableFilterComposer
 
   ColumnFilters<String> get winnerRule => $composableBuilder(
     column: $table.winnerRule,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get optionsJson => $composableBuilder(
+    column: $table.optionsJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4449,6 +4584,11 @@ class $$RoundScoreSessionsTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get optionsJson => $composableBuilder(
+    column: $table.optionsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get roundCount => $composableBuilder(
     column: $table.roundCount,
     builder: (column) => ColumnOrderings(column),
@@ -4484,6 +4624,11 @@ class $$RoundScoreSessionsTableTableAnnotationComposer
 
   GeneratedColumn<String> get winnerRule => $composableBuilder(
     column: $table.winnerRule,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get optionsJson => $composableBuilder(
+    column: $table.optionsJson,
     builder: (column) => column,
   );
 
@@ -4548,6 +4693,7 @@ class $$RoundScoreSessionsTableTableTableManager
                 Value<String> templateId = const Value.absent(),
                 Value<String> templateDisplayName = const Value.absent(),
                 Value<String> winnerRule = const Value.absent(),
+                Value<String> optionsJson = const Value.absent(),
                 Value<int> roundCount = const Value.absent(),
                 Value<DateTime> completedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -4556,6 +4702,7 @@ class $$RoundScoreSessionsTableTableTableManager
                 templateId: templateId,
                 templateDisplayName: templateDisplayName,
                 winnerRule: winnerRule,
+                optionsJson: optionsJson,
                 roundCount: roundCount,
                 completedAt: completedAt,
                 rowid: rowid,
@@ -4566,6 +4713,7 @@ class $$RoundScoreSessionsTableTableTableManager
                 required String templateId,
                 required String templateDisplayName,
                 required String winnerRule,
+                Value<String> optionsJson = const Value.absent(),
                 required int roundCount,
                 required DateTime completedAt,
                 Value<int> rowid = const Value.absent(),
@@ -4574,6 +4722,7 @@ class $$RoundScoreSessionsTableTableTableManager
                 templateId: templateId,
                 templateDisplayName: templateDisplayName,
                 winnerRule: winnerRule,
+                optionsJson: optionsJson,
                 roundCount: roundCount,
                 completedAt: completedAt,
                 rowid: rowid,
