@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:scoard_game/application/models/app_summaries.dart';
 import 'package:scoard_game/application/repositories/session_repository.dart';
 import 'package:scoard_game/application/services/players/create_player.dart';
+import 'package:scoard_game/application/services/players/rename_player.dart';
 import 'package:scoard_game/application/services/scoring/load_quick_score_setup_model.dart';
 import 'package:scoard_game/application/services/scoring/load_round_score_setup_model.dart';
 import 'package:scoard_game/application/services/sessions/delete_active_session.dart';
@@ -28,6 +29,7 @@ class ActiveGamesScreen extends StatefulWidget {
     required this.saveRoundScoreSession,
     required this.deleteActiveSession,
     required this.createPlayer,
+    required this.renamePlayer,
     super.key,
   });
 
@@ -42,6 +44,7 @@ class ActiveGamesScreen extends StatefulWidget {
   final SaveRoundScoreSession saveRoundScoreSession;
   final DeleteActiveSession deleteActiveSession;
   final CreatePlayer createPlayer;
+  final RenamePlayer renamePlayer;
 
   @override
   State<ActiveGamesScreen> createState() => _ActiveGamesScreenState();
@@ -162,6 +165,7 @@ class _ActiveGamesScreenState extends State<ActiveGamesScreen> {
         destination = QuickScoreFlowScreen(
           loadQuickScoreSetupModel: widget.loadQuickScoreSetupModel,
           createPlayer: widget.createPlayer,
+          renamePlayer: widget.renamePlayer,
           saveQuickScoreSession: widget.saveQuickScoreSession,
           saveQuickScoreActiveSession: widget.saveQuickScoreActiveSession,
           deleteActiveSession: widget.deleteActiveSession,
@@ -178,6 +182,7 @@ class _ActiveGamesScreenState extends State<ActiveGamesScreen> {
         destination = RoundScoreFlowScreen(
           loadRoundScoreSetupModel: widget.loadRoundScoreSetupModel,
           createPlayer: widget.createPlayer,
+          renamePlayer: widget.renamePlayer,
           saveRoundScoreSession: widget.saveRoundScoreSession,
           saveRoundScoreActiveSession: widget.saveRoundScoreActiveSession,
           deleteActiveSession: widget.deleteActiveSession,

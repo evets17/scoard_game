@@ -6,4 +6,13 @@ class QuickScoreAvailablePlayer {
 
   final String id;
   final String displayName;
+
+  QuickScoreAvailablePlayer withCurrentPlayerName(
+    Map<String, String> playerNames,
+  ) {
+    return QuickScoreAvailablePlayer(
+      id: id,
+      displayName: playerNames[id] ?? displayName,
+    );
+  }
 }

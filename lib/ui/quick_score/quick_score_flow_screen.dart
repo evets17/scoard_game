@@ -6,26 +6,35 @@ import 'package:scoard_game/application/models/results/quick_score_result.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
+import 'package:scoard_game/application/models/sessions/player_sort_mode.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_active_session.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_available_player.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_participant_values.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_session_id_rules.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_setup_model.dart';
 import 'package:scoard_game/application/services/players/create_player.dart';
+import 'package:scoard_game/application/services/players/rename_player.dart';
 import 'package:scoard_game/application/services/scoring/load_quick_score_setup_model.dart';
 import 'package:scoard_game/application/services/sessions/delete_active_session.dart';
 import 'package:scoard_game/application/services/sessions/save_quick_score_active_session.dart';
 import 'package:scoard_game/application/services/sessions/save_quick_score_session.dart';
+import 'package:scoard_game/core/players/order_players.dart';
 import 'package:scoard_game/core/scoring/built_in_templates/built_in_scoring_presets.dart';
+import 'package:scoard_game/core/scoring/resolve_preset_options.dart';
+import 'package:scoard_game/ui/help/scoring_help_screen.dart';
 import 'package:scoard_game/ui/navigation/app_routes.dart';
 import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
+import 'package:scoard_game/ui/players/in_game_player_actions.dart';
 import 'package:scoard_game/ui/players/player_editor_sheet.dart';
+import 'package:scoard_game/ui/players/player_reorderable_list.dart';
+import 'package:scoard_game/ui/players/player_sort_menu_button.dart';
 import 'package:scoard_game/ui/score_input/numeric_score_field.dart';
 
 class QuickScoreFlowScreen extends StatefulWidget {
   const QuickScoreFlowScreen({
     required this.loadQuickScoreSetupModel,
     required this.createPlayer,
+    required this.renamePlayer,
     required this.saveQuickScoreSession,
     required this.saveQuickScoreActiveSession,
     required this.deleteActiveSession,
@@ -37,6 +46,7 @@ class QuickScoreFlowScreen extends StatefulWidget {
 
   final LoadQuickScoreSetupModel loadQuickScoreSetupModel;
   final CreatePlayer createPlayer;
+  final RenamePlayer renamePlayer;
   final SaveQuickScoreSession saveQuickScoreSession;
   final SaveQuickScoreActiveSession saveQuickScoreActiveSession;
   final DeleteActiveSession deleteActiveSession;
@@ -65,6 +75,8 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
   QuickScoreResult? _result;
   String? _currentSessionId;
   AppLifecycleListener? _lifecycleListener;
+  PlayerSortMode _sortMode = PlayerSortMode.playOrder;
+  Map<String, int> _scoreSortSnapshot = const {};
 
   @override
   void initState() {
@@ -102,19 +114,31 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
       _QuickScoreStep.result => 'Result',
     };
 
+    final preset = _preset;
+
     return AppScreenScaffold(
       title: title,
+      actions: [
+        if (_step == _QuickScoreStep.entry && preset != null) ...[
+          PlayerSortMenuButton(
+            sortMode: _sortMode,
+            onSelected: _setSortMode,
+          ),
+          ScoringHelpButton(fieldDefinition: preset.scoreFields.first),
+        ],
+      ],
       child: FutureBuilder<QuickScoreSetupModel>(
         future: _setupModelFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator.adaptive());
-          }
-
           if (snapshot.hasError) {
             return const Center(
               child: Text('Quick Score could not load right now.'),
             );
+          }
+
+          // Keep showing the previous model while player changes reload it.
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator.adaptive());
           }
 
           final setupModel = snapshot.requireData;
@@ -128,13 +152,26 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
                 setupModel: setupModel,
                 selectedPlayerIds: _selectedPlayerIds,
                 onTogglePlayer: _togglePlayer,
+                onReorderSelected: _reorderSelectedPlayerIds,
                 onAddPlayer: () => _handleAddPlayer(setupModel),
                 onContinue: () => _continueToScoreEntry(setupModel),
               ),
             _QuickScoreStep.entry => _QuickScoreEntryStep(
-                players: _selectedPlayers,
+                players: orderPlayersForDisplay(
+                  _selectedPlayers,
+                  sortMode: _sortMode,
+                  winnerRule: resolvePresetOptions(
+                    preset: _preset!,
+                    promptAnswers: _promptAnswers,
+                  ).winnerRule,
+                  scoresByPlayerId: _scoreSortSnapshot,
+                ),
+                canReorder: _sortMode == PlayerSortMode.playOrder,
                 fieldDefinition: _preset!.scoreFields.first,
                 controllers: _scoreControllers,
+                onPlayerTap: (player) => _handlePlayerTap(setupModel, player),
+                onReorder: _reorderPlayers,
+                onScoreEditorClosed: _refreshScoreSort,
                 onBack: () => setState(() => _step = _QuickScoreStep.setup),
                 onSave: _saveQuickScoreSession,
               ),
@@ -146,6 +183,61 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
         },
       ),
     );
+  }
+
+  void _setSortMode(PlayerSortMode sortMode) {
+    setState(() {
+      _sortMode = sortMode;
+      _scoreSortSnapshot = _currentScores();
+    });
+
+    unawaited(_autosaveCurrentSession());
+  }
+
+  // Score sorting uses a snapshot so rows don't jump on every +/- tap.
+  void _refreshScoreSort() {
+    if (_sortMode != PlayerSortMode.score) {
+      return;
+    }
+
+    setState(() => _scoreSortSnapshot = _currentScores());
+  }
+
+  Map<String, int> _currentScores() {
+    final fieldDefinition = _preset!.scoreFields.first;
+    return {
+      for (final player in _selectedPlayers)
+        player.id: _parseEnteredScore(
+              rawValue: _scoreControllers[player.id]?.text.trim() ?? '',
+              fieldDefinition: fieldDefinition,
+            ) ??
+            0,
+    };
+  }
+
+  void _reorderPlayers(int oldIndex, int newIndex) {
+    setState(() {
+      _selectedPlayers = moveListItem(_selectedPlayers, oldIndex, newIndex);
+      _applySelectedPlayerOrder(
+        _selectedPlayers.map((player) => player.id).toList(growable: false),
+      );
+    });
+
+    unawaited(_autosaveCurrentSession());
+  }
+
+  void _reorderSelectedPlayerIds(List<String> orderedPlayerIds) {
+    setState(() => _applySelectedPlayerOrder(orderedPlayerIds));
+  }
+
+  void _applySelectedPlayerOrder(List<String> orderedPlayerIds) {
+    final remainingIds = _selectedPlayerIds
+        .where((playerId) => !orderedPlayerIds.contains(playerId))
+        .toList(growable: false);
+    _selectedPlayerIds
+      ..clear()
+      ..addAll(orderedPlayerIds)
+      ..addAll(remainingIds);
   }
 
   void _togglePlayer(String playerId, bool isSelected) {
@@ -161,21 +253,11 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
   }
 
   Future<void> _handleAddPlayer(QuickScoreSetupModel setupModel) async {
-    final existingPlayers = setupModel.availablePlayers
-        .map(
-          (player) => PlayerListItemModel(
-            id: player.id,
-            displayName: player.displayName,
-            isArchived: false,
-          ),
-        )
-        .toList(growable: false);
-
     final playerName = await showPlayerEditorSheet(
       context,
       title: 'Add Player',
       confirmLabel: 'Save Player',
-      existingPlayers: existingPlayers,
+      existingPlayers: _existingPlayerItems(setupModel),
     );
 
     if (playerName == null) {
@@ -203,6 +285,165 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error.message)),
       );
+    }
+  }
+
+  List<PlayerListItemModel> _existingPlayerItems(
+    QuickScoreSetupModel setupModel,
+  ) {
+    return setupModel.availablePlayers
+        .map(
+          (player) => PlayerListItemModel(
+            id: player.id,
+            displayName: player.displayName,
+            isArchived: false,
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  Future<void> _handlePlayerTap(
+    QuickScoreSetupModel setupModel,
+    QuickScoreAvailablePlayer player,
+  ) async {
+    final action = await showInGamePlayerActionsSheet(
+      context,
+      playerName: player.displayName,
+    );
+
+    if (action == null || !mounted) {
+      return;
+    }
+
+    switch (action) {
+      case InGamePlayerAction.edit:
+        await _editPlayerInGame(setupModel, player);
+      case InGamePlayerAction.switchPlayer:
+        await _switchPlayerInGame(setupModel, player);
+    }
+  }
+
+  Future<void> _editPlayerInGame(
+    QuickScoreSetupModel setupModel,
+    QuickScoreAvailablePlayer player,
+  ) async {
+    final updatedName = await showPlayerEditorSheet(
+      context,
+      title: 'Edit Player',
+      confirmLabel: 'Save Changes',
+      initialValue: player.displayName,
+      existingPlayers: _existingPlayerItems(setupModel),
+      editingPlayerId: player.id,
+    );
+
+    if (updatedName == null) {
+      return;
+    }
+
+    try {
+      final renamedPlayer = await widget.renamePlayer(
+        playerId: player.id,
+        displayName: updatedName,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      final playerNames = {renamedPlayer.id: renamedPlayer.displayName};
+      setState(() {
+        _selectedPlayers = _selectedPlayers
+            .map((selected) => selected.withCurrentPlayerName(playerNames))
+            .toList(growable: false);
+        _setupModelFuture = widget.loadQuickScoreSetupModel(
+          presetId: _preset!.id,
+        );
+      });
+
+      unawaited(_autosaveCurrentSession());
+    } on PlayerValidationException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    }
+  }
+
+  Future<void> _switchPlayerInGame(
+    QuickScoreSetupModel setupModel,
+    QuickScoreAvailablePlayer player,
+  ) async {
+    final choice = await showSwitchPlayerSheet(
+      context,
+      replacingPlayerName: player.displayName,
+      candidates: setupModel.availablePlayers
+          .where((candidate) => !_selectedPlayerIds.contains(candidate.id))
+          .toList(growable: false),
+    );
+
+    if (choice == null || !mounted) {
+      return;
+    }
+
+    final replacement = choice.isNewPlayer
+        ? await _createReplacementPlayer(setupModel)
+        : choice.player;
+
+    if (replacement == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _selectedPlayers = _selectedPlayers
+          .map((selected) => selected.id == player.id ? replacement : selected)
+          .toList(growable: false);
+      final selectedIndex = _selectedPlayerIds.indexOf(player.id);
+      if (selectedIndex >= 0) {
+        _selectedPlayerIds[selectedIndex] = replacement.id;
+      }
+      final controller = _scoreControllers.remove(player.id);
+      if (controller != null) {
+        _scoreControllers[replacement.id] = controller;
+      }
+      _scoreSortSnapshot = _currentScores();
+      _setupModelFuture = widget.loadQuickScoreSetupModel(
+        presetId: _preset!.id,
+      );
+    });
+
+    unawaited(_autosaveCurrentSession());
+  }
+
+  Future<QuickScoreAvailablePlayer?> _createReplacementPlayer(
+    QuickScoreSetupModel setupModel,
+  ) async {
+    final playerName = await showPlayerEditorSheet(
+      context,
+      title: 'Add Player',
+      confirmLabel: 'Save Player',
+      existingPlayers: _existingPlayerItems(setupModel),
+    );
+
+    if (playerName == null) {
+      return null;
+    }
+
+    try {
+      final createdPlayer = await widget.createPlayer(displayName: playerName);
+      return QuickScoreAvailablePlayer(
+        id: createdPlayer.id,
+        displayName: createdPlayer.displayName,
+      );
+    } on PlayerValidationException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
+      return null;
     }
   }
 
@@ -317,6 +558,8 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
       );
     }
 
+    _sortMode = session.sortMode;
+    _scoreSortSnapshot = _currentScores();
     _step = _QuickScoreStep.entry;
   }
 
@@ -363,6 +606,7 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
         promptAnswers: _promptAnswers,
         participantValues: participantValues,
         updatedAt: DateTime.now(),
+        sortMode: _sortMode,
       ),
     );
   }
@@ -423,6 +667,7 @@ class _QuickScoreSetupStep extends StatelessWidget {
     required this.setupModel,
     required this.selectedPlayerIds,
     required this.onTogglePlayer,
+    required this.onReorderSelected,
     required this.onAddPlayer,
     required this.onContinue,
   });
@@ -430,6 +675,7 @@ class _QuickScoreSetupStep extends StatelessWidget {
   final QuickScoreSetupModel setupModel;
   final List<String> selectedPlayerIds;
   final void Function(String playerId, bool isSelected) onTogglePlayer;
+  final ValueChanged<List<String>> onReorderSelected;
   final VoidCallback onAddPlayer;
   final VoidCallback onContinue;
 
@@ -466,12 +712,24 @@ class _QuickScoreSetupStep extends StatelessWidget {
                   message: 'Tap players below to add them to this game.',
                 )
               else
-                ...selectedPlayers.map(
-                  (player) => _QuickScorePlayerSelectionTile(
-                    player: player,
-                    onTap: () => onTogglePlayer(player.id, false),
-                    trailingIcon: Icons.close_rounded,
+                PlayerReorderableList(
+                  shrinkWrap: true,
+                  playerIds: selectedPlayers
+                      .map((player) => player.id)
+                      .toList(growable: false),
+                  onReorder: (oldIndex, newIndex) => onReorderSelected(
+                    moveListItem(selectedPlayers, oldIndex, newIndex)
+                        .map((player) => player.id)
+                        .toList(growable: false),
                   ),
+                  itemBuilder: (context, index) {
+                    final player = selectedPlayers[index];
+                    return _QuickScorePlayerSelectionTile(
+                      player: player,
+                      onTap: () => onTogglePlayer(player.id, false),
+                      trailingIcon: Icons.close_rounded,
+                    );
+                  },
                 ),
               const SizedBox(height: 20),
               Row(
@@ -585,6 +843,10 @@ class _QuickScoreEntryStep extends StatelessWidget {
     required this.players,
     required this.fieldDefinition,
     required this.controllers,
+    required this.canReorder,
+    required this.onPlayerTap,
+    required this.onReorder,
+    required this.onScoreEditorClosed,
     required this.onBack,
     required this.onSave,
   });
@@ -592,32 +854,33 @@ class _QuickScoreEntryStep extends StatelessWidget {
   final List<QuickScoreAvailablePlayer> players;
   final ScoreFieldDefinition fieldDefinition;
   final Map<String, TextEditingController> controllers;
+  final bool canReorder;
+  final ValueChanged<QuickScoreAvailablePlayer> onPlayerTap;
+  final ReorderCallback onReorder;
+  final VoidCallback onScoreEditorClosed;
   final VoidCallback onBack;
   final VoidCallback onSave;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Tap a score to edit it.',
-          style: theme.textTheme.bodyLarge,
-        ),
-        const SizedBox(height: 16),
         Expanded(
-          child: ListView(
-            children: players
-                .map(
-                  (player) => NumericScoreField(
-                    label: player.displayName,
-                    fieldDefinition: fieldDefinition,
-                    controller: controllers[player.id]!,
-                  ),
-                )
-                .toList(growable: false),
+          child: PlayerReorderableList(
+            playerIds: players.map((player) => player.id).toList(growable: false),
+            canReorder: canReorder,
+            onReorder: onReorder,
+            itemBuilder: (context, index) {
+              final player = players[index];
+              return NumericScoreField(
+                label: player.displayName,
+                fieldDefinition: fieldDefinition,
+                controller: controllers[player.id]!,
+                onLabelTap: () => onPlayerTap(player),
+                onEditorClosed: onScoreEditorClosed,
+              );
+            },
           ),
         ),
         const SizedBox(height: 12),

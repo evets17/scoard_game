@@ -10,6 +10,8 @@ class NumericScoreField extends StatefulWidget {
     required this.controller,
     this.valueLabelBuilder,
     this.valueLabelMinimumDigits = 0,
+    this.onLabelTap,
+    this.onEditorClosed,
     super.key,
   });
 
@@ -18,6 +20,8 @@ class NumericScoreField extends StatefulWidget {
   final TextEditingController controller;
   final String? Function(int currentValue)? valueLabelBuilder;
   final int valueLabelMinimumDigits;
+  final VoidCallback? onLabelTap;
+  final VoidCallback? onEditorClosed;
 
   @override
   State<NumericScoreField> createState() => _NumericScoreFieldState();
@@ -76,9 +80,13 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
         child: Row(
           children: [
             Expanded(
-              child: Text(
-                widget.label,
-                style: theme.textTheme.titleLarge?.copyWith(fontSize: 22),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: widget.onLabelTap,
+                child: Text(
+                  widget.label,
+                  style: theme.textTheme.titleLarge?.copyWith(fontSize: 22),
+                ),
               ),
             ),
             Row(
@@ -172,6 +180,8 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
       case ScoreValueEditAction.add:
         _setValue(currentValue + request.value);
     }
+
+    widget.onEditorClosed?.call();
   }
 
   void _setValue(int value) {

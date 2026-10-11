@@ -1,4 +1,5 @@
 import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
+import 'package:scoard_game/application/models/sessions/player_sort_mode.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_participant_values.dart';
 
 class QuickScoreActiveSession {
@@ -9,6 +10,7 @@ class QuickScoreActiveSession {
     required this.promptAnswers,
     required this.participantValues,
     required this.updatedAt,
+    this.sortMode = PlayerSortMode.playOrder,
   });
 
   final String sessionId;
@@ -17,17 +19,36 @@ class QuickScoreActiveSession {
   final List<PresetPromptAnswer> promptAnswers;
   final List<QuickScoreParticipantValues> participantValues;
   final DateTime updatedAt;
+  final PlayerSortMode sortMode;
 
   String get participantLabel =>
       participantValues.map((participant) => participant.displayName).join(', ');
 
   String get progressLabel => '${participantValues.length} players ready';
 
+  QuickScoreActiveSession withCurrentPlayerNames(
+    Map<String, String> playerNames, {
+    DateTime? updatedAt,
+  }) {
+    return QuickScoreActiveSession(
+      sessionId: sessionId,
+      presetId: presetId,
+      templateDisplayName: templateDisplayName,
+      promptAnswers: promptAnswers,
+      participantValues: participantValues
+          .map((participant) => participant.withCurrentPlayerName(playerNames))
+          .toList(growable: false),
+      updatedAt: updatedAt ?? this.updatedAt,
+      sortMode: sortMode,
+    );
+  }
+
   Map<String, Object?> toJson() {
     return {
       'sessionId': sessionId,
       'presetId': presetId,
       'templateDisplayName': templateDisplayName,
+      'sortMode': sortMode.name,
         'promptAnswers': promptAnswers
           .map((promptAnswer) => promptAnswer.toJson())
           .toList(growable: false),
@@ -76,6 +97,7 @@ class QuickScoreActiveSession {
           })
           .toList(growable: false),
       updatedAt: DateTime.now(),
+      sortMode: PlayerSortMode.fromStorage(json['sortMode']),
     );
   }
 }

@@ -14,6 +14,7 @@ void main() {
         home: RoundScoreFlowScreen(
           loadRoundScoreSetupModel: environment.loadRoundScoreSetupModel,
           createPlayer: environment.createPlayer,
+          renamePlayer: environment.renamePlayer,
           saveRoundScoreSession: environment.saveRoundScoreSession,
           saveRoundScoreActiveSession: environment.saveRoundScoreActiveSession,
           deleteActiveSession: environment.deleteActiveSession,

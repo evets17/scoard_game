@@ -6,12 +6,14 @@ class AppTitleBar extends StatelessWidget {
     required this.title,
     this.showBackButton = false,
     this.showSettingsButton = true,
+    this.actions = const [],
     super.key,
   });
 
   final String title;
   final bool showBackButton;
   final bool showSettingsButton;
+  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +35,7 @@ class AppTitleBar extends StatelessWidget {
             style: theme.textTheme.headlineMedium,
           ),
         ),
+        ...actions,
         if (showSettingsButton)
           IconButton(
             onPressed: () => Navigator.of(context).pushNamed(AppRoutes.settings),

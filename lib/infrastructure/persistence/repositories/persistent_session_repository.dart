@@ -28,6 +28,7 @@ class PersistentSessionRepository implements SessionRepository {
   @override
   Future<List<ActiveSessionSummary>> loadActiveSessions({int limit = 3}) async {
     final sessions = await _appDatabase.loadActiveSessions(limit: limit);
+    final playerNames = await _loadPlayerNames();
 
     return sessions
         .map(
@@ -35,7 +36,7 @@ class PersistentSessionRepository implements SessionRepository {
             id: session.id,
             kind: _kindFromStorage(session.sessionKind),
             gameName: session.templateDisplayName,
-            participantLabel: session.participantLabel,
+            participantLabel: _activeParticipantLabel(session, playerNames),
             progressLabel: session.progressLabel,
           ),
         )
@@ -52,13 +53,8 @@ class PersistentSessionRepository implements SessionRepository {
     }
 
     final payload = jsonDecode(session.payloadJson) as Map<String, Object?>;
-    final activeSession = QuickScoreActiveSession.fromJson(payload);
-    return QuickScoreActiveSession(
-      sessionId: activeSession.sessionId,
-      presetId: activeSession.presetId,
-      templateDisplayName: activeSession.templateDisplayName,
-      promptAnswers: activeSession.promptAnswers,
-      participantValues: activeSession.participantValues,
+    return QuickScoreActiveSession.fromJson(payload).withCurrentPlayerNames(
+      await _loadPlayerNames(),
       updatedAt: session.updatedAt,
     );
   }
@@ -73,16 +69,8 @@ class PersistentSessionRepository implements SessionRepository {
     }
 
     final payload = jsonDecode(session.payloadJson) as Map<String, Object?>;
-    final activeSession = RoundScoreActiveSession.fromJson(payload);
-    return RoundScoreActiveSession(
-      sessionId: activeSession.sessionId,
-      presetId: activeSession.presetId,
-      templateDisplayName: activeSession.templateDisplayName,
-      promptAnswers: activeSession.promptAnswers,
-      selectedPlayers: activeSession.selectedPlayers,
-      savedRounds: activeSession.savedRounds,
-      currentRoundParticipantValues: activeSession.currentRoundParticipantValues,
-      currentRoundNumber: activeSession.currentRoundNumber,
+    return RoundScoreActiveSession.fromJson(payload).withCurrentPlayerNames(
+      await _loadPlayerNames(),
       updatedAt: session.updatedAt,
     );
   }
@@ -90,19 +78,21 @@ class PersistentSessionRepository implements SessionRepository {
   @override
   Future<List<SessionSummary>> loadRecentSessions({int limit = 3}) async {
     final quickSessions = await _appDatabase.loadQuickScoreSessions(limit: limit);
+    final playerNames = await _loadPlayerNames();
     final quickSummaries = <SessionSummary>[];
+
+    String nameOf(QuickScorePlayerResultsTableData playerResult) =>
+        playerNames[playerResult.playerId] ?? playerResult.displayName;
 
     for (final session in quickSessions) {
       final playerResults = await _appDatabase.loadQuickScorePlayerResults(
         sessionId: session.id,
       );
-      final participantLabel = playerResults
-          .map((playerResult) => playerResult.displayName)
-          .join(', ');
+      final participantLabel = playerResults.map(nameOf).join(', ');
       final winners = playerResults.where((playerResult) => playerResult.placement == 1).toList(growable: false);
       final outcomeSummary = winners.length > 1
-          ? '${winners.map((winner) => winner.displayName).join(', ')} tied at ${winners.first.finalScore}.'
-          : '${winners.first.displayName} won with ${winners.first.finalScore}.';
+          ? '${winners.map(nameOf).join(', ')} tied at ${winners.first.finalScore}.'
+          : '${nameOf(winners.first)} won with ${winners.first.finalScore}.';
 
       quickSummaries.add(
         SessionSummary(
@@ -117,6 +107,7 @@ class PersistentSessionRepository implements SessionRepository {
 
     final roundSummaries = await loadRoundScoreSessionSummaries(
       _appDatabase,
+      playerNames: playerNames,
       limit: limit,
     );
 
@@ -204,6 +195,31 @@ class PersistentSessionRepository implements SessionRepository {
   @override
   Future<void> deleteActiveSession({required String sessionId}) {
     return _appDatabase.deleteActiveSession(sessionId: sessionId);
+  }
+
+  Future<Map<String, String>> _loadPlayerNames() async {
+    final players = await _appDatabase.loadPlayers();
+    return {
+      for (final player in players) player.id: player.displayName,
+    };
+  }
+
+  String _activeParticipantLabel(
+    ActiveSessionsTableData session,
+    Map<String, String> playerNames,
+  ) {
+    final payload = jsonDecode(session.payloadJson) as Map<String, Object?>;
+
+    switch (_kindFromStorage(session.sessionKind)) {
+      case ActiveSessionKind.quickScore:
+        return QuickScoreActiveSession.fromJson(payload)
+            .withCurrentPlayerNames(playerNames)
+            .participantLabel;
+      case ActiveSessionKind.roundScore:
+        return RoundScoreActiveSession.fromJson(payload)
+            .withCurrentPlayerNames(playerNames)
+            .participantLabel;
+    }
   }
 
   ActiveSessionKind _kindFromStorage(String sessionKind) {

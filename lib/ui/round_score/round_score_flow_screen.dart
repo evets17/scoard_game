@@ -6,6 +6,8 @@ import 'package:scoard_game/application/models/results/round_score_result.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
+import 'package:scoard_game/application/models/scoring/winner_rule.dart';
+import 'package:scoard_game/application/models/sessions/player_sort_mode.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_available_player.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_participant_values.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_session_id_rules.dart';
@@ -13,20 +15,28 @@ import 'package:scoard_game/application/models/sessions/round_score_active_sessi
 import 'package:scoard_game/application/models/sessions/round_score_round_values.dart';
 import 'package:scoard_game/application/models/sessions/round_score_setup_model.dart';
 import 'package:scoard_game/application/services/players/create_player.dart';
+import 'package:scoard_game/application/services/players/rename_player.dart';
 import 'package:scoard_game/application/services/scoring/load_round_score_setup_model.dart';
 import 'package:scoard_game/application/services/sessions/delete_active_session.dart';
 import 'package:scoard_game/application/services/sessions/save_round_score_active_session.dart';
 import 'package:scoard_game/application/services/sessions/save_round_score_session.dart';
+import 'package:scoard_game/core/players/order_players.dart';
 import 'package:scoard_game/core/scoring/built_in_templates/built_in_scoring_presets.dart';
+import 'package:scoard_game/core/scoring/resolve_preset_options.dart';
+import 'package:scoard_game/ui/help/scoring_help_screen.dart';
 import 'package:scoard_game/ui/navigation/app_routes.dart';
 import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
+import 'package:scoard_game/ui/players/in_game_player_actions.dart';
 import 'package:scoard_game/ui/players/player_editor_sheet.dart';
+import 'package:scoard_game/ui/players/player_reorderable_list.dart';
+import 'package:scoard_game/ui/players/player_sort_menu_button.dart';
 import 'package:scoard_game/ui/score_input/numeric_score_field.dart';
 
 class RoundScoreFlowScreen extends StatefulWidget {
   const RoundScoreFlowScreen({
     required this.loadRoundScoreSetupModel,
     required this.createPlayer,
+    required this.renamePlayer,
     required this.saveRoundScoreSession,
     required this.saveRoundScoreActiveSession,
     required this.deleteActiveSession,
@@ -38,6 +48,7 @@ class RoundScoreFlowScreen extends StatefulWidget {
 
   final LoadRoundScoreSetupModel loadRoundScoreSetupModel;
   final CreatePlayer createPlayer;
+  final RenamePlayer renamePlayer;
   final SaveRoundScoreSession saveRoundScoreSession;
   final SaveRoundScoreActiveSession saveRoundScoreActiveSession;
   final DeleteActiveSession deleteActiveSession;
@@ -68,6 +79,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
   String? _currentSessionId;
   int _currentRoundNumber = 1;
   AppLifecycleListener? _lifecycleListener;
+  PlayerSortMode _sortMode = PlayerSortMode.playOrder;
 
   @override
   void initState() {
@@ -105,17 +117,32 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
       _RoundScoreStep.result => 'Final Result',
     };
 
+    final preset = _preset;
+
     return AppScreenScaffold(
       title: title,
+      actions: [
+        if (_step == _RoundScoreStep.roundEntry && preset != null) ...[
+          PlayerSortMenuButton(
+            sortMode: _sortMode,
+            onSelected: _setSortMode,
+          ),
+          ScoringHelpButton(
+            fieldDefinition: preset.scoreFields.first,
+            isRoundScoring: true,
+          ),
+        ],
+      ],
       child: FutureBuilder<RoundScoreSetupModel>(
         future: _setupModelFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator.adaptive());
-          }
-
           if (snapshot.hasError) {
             return const Center(child: Text('Round Score could not load right now.'));
+          }
+
+          // Keep showing the previous model while player changes reload it.
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator.adaptive());
           }
 
           final setupModel = snapshot.requireData;
@@ -129,6 +156,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
                 setupModel: setupModel,
                 selectedPlayerIds: _selectedPlayerIds,
                 onTogglePlayer: _togglePlayer,
+                onReorderSelected: _reorderSelectedPlayerIds,
                 onAddPlayer: () => _handleAddPlayer(setupModel),
                 onContinue: () => _continueToRoundEntry(setupModel),
               ),
@@ -136,8 +164,15 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
                 currentRoundNumber: _currentRoundNumber,
                 fieldDefinition: _preset!.scoreFields.first,
                 players: _selectedPlayers,
+                sortMode: _sortMode,
+                winnerRule: resolvePresetOptions(
+                  preset: _preset!,
+                  promptAnswers: _promptAnswers,
+                ).winnerRule,
                 controllers: _scoreControllers,
                 savedRounds: _savedRounds,
+                onPlayerTap: (player) => _handlePlayerTap(setupModel, player),
+                onReorder: _reorderPlayers,
                 onBack: () => setState(() => _step = _RoundScoreStep.setup),
                 onPreviousRound: _goToPreviousRound,
                 onCompleteRound: _completeRound,
@@ -153,6 +188,36 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
     );
   }
 
+  void _setSortMode(PlayerSortMode sortMode) {
+    setState(() => _sortMode = sortMode);
+    unawaited(_autosaveCurrentSession());
+  }
+
+  void _reorderPlayers(int oldIndex, int newIndex) {
+    setState(() {
+      _selectedPlayers = moveListItem(_selectedPlayers, oldIndex, newIndex);
+      _applySelectedPlayerOrder(
+        _selectedPlayers.map((player) => player.id).toList(growable: false),
+      );
+    });
+
+    unawaited(_autosaveCurrentSession());
+  }
+
+  void _reorderSelectedPlayerIds(List<String> orderedPlayerIds) {
+    setState(() => _applySelectedPlayerOrder(orderedPlayerIds));
+  }
+
+  void _applySelectedPlayerOrder(List<String> orderedPlayerIds) {
+    final remainingIds = _selectedPlayerIds
+        .where((playerId) => !orderedPlayerIds.contains(playerId))
+        .toList(growable: false);
+    _selectedPlayerIds
+      ..clear()
+      ..addAll(orderedPlayerIds)
+      ..addAll(remainingIds);
+  }
+
   void _togglePlayer(String playerId, bool isSelected) {
     setState(() {
       if (isSelected) {
@@ -166,21 +231,11 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
   }
 
   Future<void> _handleAddPlayer(RoundScoreSetupModel setupModel) async {
-    final existingPlayers = setupModel.availablePlayers
-        .map(
-          (player) => PlayerListItemModel(
-            id: player.id,
-            displayName: player.displayName,
-            isArchived: false,
-          ),
-        )
-        .toList(growable: false);
-
     final playerName = await showPlayerEditorSheet(
       context,
       title: 'Add Player',
       confirmLabel: 'Save Player',
-      existingPlayers: existingPlayers,
+      existingPlayers: _existingPlayerItems(setupModel),
     );
 
     if (playerName == null) {
@@ -206,6 +261,189 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error.message)),
+      );
+    }
+  }
+
+  List<PlayerListItemModel> _existingPlayerItems(
+    RoundScoreSetupModel setupModel,
+  ) {
+    return setupModel.availablePlayers
+        .map(
+          (player) => PlayerListItemModel(
+            id: player.id,
+            displayName: player.displayName,
+            isArchived: false,
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  Future<void> _handlePlayerTap(
+    RoundScoreSetupModel setupModel,
+    QuickScoreAvailablePlayer player,
+  ) async {
+    final action = await showInGamePlayerActionsSheet(
+      context,
+      playerName: player.displayName,
+    );
+
+    if (action == null || !mounted) {
+      return;
+    }
+
+    switch (action) {
+      case InGamePlayerAction.edit:
+        await _editPlayerInGame(setupModel, player);
+      case InGamePlayerAction.switchPlayer:
+        await _switchPlayerInGame(setupModel, player);
+    }
+  }
+
+  Future<void> _editPlayerInGame(
+    RoundScoreSetupModel setupModel,
+    QuickScoreAvailablePlayer player,
+  ) async {
+    final updatedName = await showPlayerEditorSheet(
+      context,
+      title: 'Edit Player',
+      confirmLabel: 'Save Changes',
+      initialValue: player.displayName,
+      existingPlayers: _existingPlayerItems(setupModel),
+      editingPlayerId: player.id,
+    );
+
+    if (updatedName == null) {
+      return;
+    }
+
+    try {
+      final renamedPlayer = await widget.renamePlayer(
+        playerId: player.id,
+        displayName: updatedName,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      final playerNames = {renamedPlayer.id: renamedPlayer.displayName};
+      setState(() {
+        _selectedPlayers = _selectedPlayers
+            .map((selected) => selected.withCurrentPlayerName(playerNames))
+            .toList(growable: false);
+        _replaceSavedRoundParticipants(
+          (participant) => participant.withCurrentPlayerName(playerNames),
+        );
+        _setupModelFuture = widget.loadRoundScoreSetupModel(
+          presetId: _preset!.id,
+        );
+      });
+
+      unawaited(_autosaveCurrentSession());
+    } on PlayerValidationException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    }
+  }
+
+  Future<void> _switchPlayerInGame(
+    RoundScoreSetupModel setupModel,
+    QuickScoreAvailablePlayer player,
+  ) async {
+    final choice = await showSwitchPlayerSheet(
+      context,
+      replacingPlayerName: player.displayName,
+      candidates: setupModel.availablePlayers
+          .where((candidate) => !_selectedPlayerIds.contains(candidate.id))
+          .toList(growable: false),
+    );
+
+    if (choice == null || !mounted) {
+      return;
+    }
+
+    final replacement = choice.isNewPlayer
+        ? await _createReplacementPlayer(setupModel)
+        : choice.player;
+
+    if (replacement == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _selectedPlayers = _selectedPlayers
+          .map((selected) => selected.id == player.id ? replacement : selected)
+          .toList(growable: false);
+      final selectedIndex = _selectedPlayerIds.indexOf(player.id);
+      if (selectedIndex >= 0) {
+        _selectedPlayerIds[selectedIndex] = replacement.id;
+      }
+      final controller = _scoreControllers.remove(player.id);
+      if (controller != null) {
+        _scoreControllers[replacement.id] = controller;
+      }
+      _replaceSavedRoundParticipants(
+        (participant) => participant.playerId == player.id
+            ? QuickScoreParticipantValues(
+                playerId: replacement.id,
+                displayName: replacement.displayName,
+                enteredValues: participant.enteredValues,
+              )
+            : participant,
+      );
+      _setupModelFuture = widget.loadRoundScoreSetupModel(
+        presetId: _preset!.id,
+      );
+    });
+
+    unawaited(_autosaveCurrentSession());
+  }
+
+  Future<QuickScoreAvailablePlayer?> _createReplacementPlayer(
+    RoundScoreSetupModel setupModel,
+  ) async {
+    final playerName = await showPlayerEditorSheet(
+      context,
+      title: 'Add Player',
+      confirmLabel: 'Save Player',
+      existingPlayers: _existingPlayerItems(setupModel),
+    );
+
+    if (playerName == null) {
+      return null;
+    }
+
+    try {
+      final createdPlayer = await widget.createPlayer(displayName: playerName);
+      return QuickScoreAvailablePlayer(
+        id: createdPlayer.id,
+        displayName: createdPlayer.displayName,
+      );
+    } on PlayerValidationException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
+      return null;
+    }
+  }
+
+  void _replaceSavedRoundParticipants(
+    QuickScoreParticipantValues Function(QuickScoreParticipantValues) replace,
+  ) {
+    for (var index = 0; index < _savedRounds.length; index++) {
+      final round = _savedRounds[index];
+      _savedRounds[index] = RoundScoreRoundValues(
+        roundNumber: round.roundNumber,
+        participantValues:
+            round.participantValues.map(replace).toList(growable: false),
       );
     }
   }
@@ -479,6 +717,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
           '${currentValuesByPlayerId[player.id] ?? 0}';
     }
 
+    _sortMode = session.sortMode;
     _step = _RoundScoreStep.roundEntry;
   }
 
@@ -533,6 +772,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
         savedRounds: List<RoundScoreRoundValues>.from(_savedRounds),
         currentRoundParticipantValues: currentRoundParticipantValues,
         currentRoundNumber: _currentRoundNumber,
+        sortMode: _sortMode,
         updatedAt: DateTime.now(),
       ),
     );
@@ -544,6 +784,7 @@ class _RoundScoreSetupStep extends StatelessWidget {
     required this.setupModel,
     required this.selectedPlayerIds,
     required this.onTogglePlayer,
+    required this.onReorderSelected,
     required this.onAddPlayer,
     required this.onContinue,
   });
@@ -551,6 +792,7 @@ class _RoundScoreSetupStep extends StatelessWidget {
   final RoundScoreSetupModel setupModel;
   final List<String> selectedPlayerIds;
   final void Function(String playerId, bool isSelected) onTogglePlayer;
+  final ValueChanged<List<String>> onReorderSelected;
   final VoidCallback onAddPlayer;
   final VoidCallback onContinue;
 
@@ -585,12 +827,24 @@ class _RoundScoreSetupStep extends StatelessWidget {
                   message: 'Tap players below to add them to this game.',
                 )
               else
-                ...selectedPlayers.map(
-                  (player) => _RoundScorePlayerSelectionTile(
-                    player: player,
-                    onTap: () => onTogglePlayer(player.id, false),
-                    trailingIcon: Icons.close_rounded,
+                PlayerReorderableList(
+                  shrinkWrap: true,
+                  playerIds: selectedPlayers
+                      .map((player) => player.id)
+                      .toList(growable: false),
+                  onReorder: (oldIndex, newIndex) => onReorderSelected(
+                    moveListItem(selectedPlayers, oldIndex, newIndex)
+                        .map((player) => player.id)
+                        .toList(growable: false),
                   ),
+                  itemBuilder: (context, index) {
+                    final player = selectedPlayers[index];
+                    return _RoundScorePlayerSelectionTile(
+                      player: player,
+                      onTap: () => onTogglePlayer(player.id, false),
+                      trailingIcon: Icons.close_rounded,
+                    );
+                  },
                 ),
               const SizedBox(height: 20),
               Row(
@@ -704,8 +958,12 @@ class _RoundScoreEntryStep extends StatelessWidget {
     required this.currentRoundNumber,
     required this.fieldDefinition,
     required this.players,
+    required this.sortMode,
+    required this.winnerRule,
     required this.controllers,
     required this.savedRounds,
+    required this.onPlayerTap,
+    required this.onReorder,
     required this.onBack,
     required this.onPreviousRound,
     required this.onCompleteRound,
@@ -716,7 +974,11 @@ class _RoundScoreEntryStep extends StatelessWidget {
   final ScoreFieldDefinition fieldDefinition;
   final List<QuickScoreAvailablePlayer> players;
   final Map<String, TextEditingController> controllers;
+  final PlayerSortMode sortMode;
+  final WinnerRule winnerRule;
   final List<RoundScoreRoundValues> savedRounds;
+  final ValueChanged<QuickScoreAvailablePlayer> onPlayerTap;
+  final ReorderCallback onReorder;
   final VoidCallback onBack;
   final VoidCallback onPreviousRound;
   final VoidCallback onCompleteRound;
@@ -724,17 +986,19 @@ class _RoundScoreEntryStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final priorRoundTotals = _calculatePriorRoundTotals();
+    // Score sorting uses earlier rounds only, so rows stay put while this
+    // round is being entered.
+    final displayedPlayers = orderPlayersForDisplay(
+      players,
+      sortMode: sortMode,
+      winnerRule: winnerRule,
+      scoresByPlayerId: priorRoundTotals,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Enter the scores for round $currentRoundNumber.',
-          style: theme.textTheme.bodyLarge,
-        ),
-        const SizedBox(height: 16),
         Row(
           children: [
             TextButton(
@@ -750,19 +1014,24 @@ class _RoundScoreEntryStep extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Expanded(
-          child: ListView(
-            children: [
-              ...players.map(
-                (player) => NumericScoreField(
-                  label: player.displayName,
-                  fieldDefinition: fieldDefinition,
-                  controller: controllers[player.id]!,
-                  valueLabelMinimumDigits: 3,
-                  valueLabelBuilder: (currentValue) =>
-                      '${((priorRoundTotals[player.id] ?? 0) + currentValue)}',
-                ),
-              ),
-            ],
+          child: PlayerReorderableList(
+            playerIds: displayedPlayers
+                .map((player) => player.id)
+                .toList(growable: false),
+            canReorder: sortMode == PlayerSortMode.playOrder,
+            onReorder: onReorder,
+            itemBuilder: (context, index) {
+              final player = displayedPlayers[index];
+              return NumericScoreField(
+                label: player.displayName,
+                fieldDefinition: fieldDefinition,
+                controller: controllers[player.id]!,
+                onLabelTap: () => onPlayerTap(player),
+                valueLabelMinimumDigits: 3,
+                valueLabelBuilder: (currentValue) =>
+                    '${((priorRoundTotals[player.id] ?? 0) + currentValue)}',
+              );
+            },
           ),
         ),
         const SizedBox(height: 12),

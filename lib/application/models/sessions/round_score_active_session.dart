@@ -1,4 +1,5 @@
 import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
+import 'package:scoard_game/application/models/sessions/player_sort_mode.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_available_player.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_participant_values.dart';
 import 'package:scoard_game/application/models/sessions/round_score_round_values.dart';
@@ -14,6 +15,7 @@ class RoundScoreActiveSession {
     required this.currentRoundParticipantValues,
     required this.currentRoundNumber,
     required this.updatedAt,
+    this.sortMode = PlayerSortMode.playOrder,
   });
 
   final String sessionId;
@@ -25,17 +27,55 @@ class RoundScoreActiveSession {
   final List<QuickScoreParticipantValues> currentRoundParticipantValues;
   final int currentRoundNumber;
   final DateTime updatedAt;
+  final PlayerSortMode sortMode;
 
   String get participantLabel =>
       selectedPlayers.map((player) => player.displayName).join(', ');
 
   String get progressLabel => 'Round $currentRoundNumber';
 
+  RoundScoreActiveSession withCurrentPlayerNames(
+    Map<String, String> playerNames, {
+    DateTime? updatedAt,
+  }) {
+    List<QuickScoreParticipantValues> renameParticipants(
+      List<QuickScoreParticipantValues> participants,
+    ) {
+      return participants
+          .map((participant) => participant.withCurrentPlayerName(playerNames))
+          .toList(growable: false);
+    }
+
+    return RoundScoreActiveSession(
+      sessionId: sessionId,
+      presetId: presetId,
+      templateDisplayName: templateDisplayName,
+      promptAnswers: promptAnswers,
+      selectedPlayers: selectedPlayers
+          .map((player) => player.withCurrentPlayerName(playerNames))
+          .toList(growable: false),
+      savedRounds: savedRounds
+          .map(
+            (round) => RoundScoreRoundValues(
+              roundNumber: round.roundNumber,
+              participantValues: renameParticipants(round.participantValues),
+            ),
+          )
+          .toList(growable: false),
+      currentRoundParticipantValues:
+          renameParticipants(currentRoundParticipantValues),
+      currentRoundNumber: currentRoundNumber,
+      updatedAt: updatedAt ?? this.updatedAt,
+      sortMode: sortMode,
+    );
+  }
+
   Map<String, Object?> toJson() {
     return {
       'sessionId': sessionId,
       'presetId': presetId,
       'templateDisplayName': templateDisplayName,
+      'sortMode': sortMode.name,
         'promptAnswers': promptAnswers
           .map((promptAnswer) => promptAnswer.toJson())
           .toList(growable: false),
@@ -140,6 +180,7 @@ class RoundScoreActiveSession {
           .toList(growable: false),
       currentRoundNumber: json['currentRoundNumber']! as int,
       updatedAt: DateTime.now(),
+      sortMode: PlayerSortMode.fromStorage(json['sortMode']),
     );
   }
 }

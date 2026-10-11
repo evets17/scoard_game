@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scoard_game/application/models/app_summaries.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
+import 'package:scoard_game/application/models/sessions/player_sort_mode.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_active_session.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_available_player.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_participant_values.dart';
@@ -113,6 +114,36 @@ void main() {
     expect(activeSession?.promptAnswers.single.booleanValue, false);
     expect(activeSession?.currentRoundNumber, 2);
     expect(activeSession?.savedRounds.length, 1);
+
+    await database.close();
+  });
+
+  test('persistent session repository keeps the active sort mode', () async {
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    final repository = PersistentSessionRepository(database);
+
+    await repository.saveRoundScoreActiveSession(
+      session: RoundScoreActiveSession(
+        sessionId: 'round-draft-sorted',
+        presetId: 'round-score-basic',
+        templateDisplayName: 'Round Score',
+        promptAnswers: const [],
+        selectedPlayers: const [
+          QuickScoreAvailablePlayer(id: 'player-avery', displayName: 'Avery'),
+        ],
+        savedRounds: const [],
+        currentRoundParticipantValues: const [],
+        currentRoundNumber: 1,
+        updatedAt: DateTime(2026, 10, 11, 10, 0),
+        sortMode: PlayerSortMode.score,
+      ),
+    );
+
+    final activeSession = await repository.loadRoundScoreActiveSession(
+      sessionId: 'round-draft-sorted',
+    );
+
+    expect(activeSession?.sortMode, PlayerSortMode.score);
 
     await database.close();
   });

@@ -7,6 +7,7 @@ class AppScreenScaffold extends StatelessWidget {
     required this.child,
     this.showBackButton = true,
     this.showSettingsButton = true,
+    this.actions = const [],
     this.maxBodyWidth = 560,
     super.key,
   });
@@ -15,6 +16,7 @@ class AppScreenScaffold extends StatelessWidget {
   final Widget child;
   final bool showBackButton;
   final bool showSettingsButton;
+  final List<Widget> actions;
   final double maxBodyWidth;
 
   @override
@@ -33,6 +35,7 @@ class AppScreenScaffold extends StatelessWidget {
                     title: title,
                     showBackButton: showBackButton,
                     showSettingsButton: showSettingsButton,
+                    actions: actions,
                   ),
                   const SizedBox(height: 24),
                   Expanded(child: child),

@@ -53,6 +53,7 @@ class ScoardGameApp extends StatelessWidget {
                 saveRoundScoreSession: environment.saveRoundScoreSession,
                 deleteActiveSession: environment.deleteActiveSession,
                 createPlayer: environment.createPlayer,
+                renamePlayer: environment.renamePlayer,
               ),
             AppRoutes.players: (_) => PlayersScreen(
                   loadPlayersScreenModel: environment.loadPlayersScreenModel,
@@ -87,6 +88,7 @@ class ScoardGameApp extends StatelessWidget {
                   builder: (_) => QuickScoreFlowScreen(
                     loadQuickScoreSetupModel: environment.loadQuickScoreSetupModel,
                     createPlayer: environment.createPlayer,
+                    renamePlayer: environment.renamePlayer,
                     saveQuickScoreSession: environment.saveQuickScoreSession,
                     saveQuickScoreActiveSession:
                         environment.saveQuickScoreActiveSession,
@@ -106,6 +108,7 @@ class ScoardGameApp extends StatelessWidget {
                   builder: (_) => RoundScoreFlowScreen(
                     loadRoundScoreSetupModel: environment.loadRoundScoreSetupModel,
                     createPlayer: environment.createPlayer,
+                    renamePlayer: environment.renamePlayer,
                     saveRoundScoreSession: environment.saveRoundScoreSession,
                     saveRoundScoreActiveSession:
                         environment.saveRoundScoreActiveSession,
