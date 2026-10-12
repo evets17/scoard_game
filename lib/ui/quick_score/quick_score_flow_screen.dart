@@ -28,6 +28,7 @@ import 'package:scoard_game/ui/players/in_game_player_actions.dart';
 import 'package:scoard_game/ui/players/player_editor_sheet.dart';
 import 'package:scoard_game/ui/players/player_reorderable_list.dart';
 import 'package:scoard_game/ui/players/player_sort_menu_button.dart';
+import 'package:scoard_game/ui/settings/stay_awake_controller.dart';
 import 'package:scoard_game/ui/score_input/numeric_score_field.dart';
 import 'package:scoard_game/ui/score_input/score_entry_mode.dart';
 
@@ -36,6 +37,7 @@ class QuickScoreFlowScreen extends StatefulWidget {
     required this.loadQuickScoreSetupModel,
     required this.createPlayer,
     required this.renamePlayer,
+    required this.stayAwakeController,
     required this.saveQuickScoreSession,
     required this.saveQuickScoreActiveSession,
     required this.deleteActiveSession,
@@ -48,6 +50,7 @@ class QuickScoreFlowScreen extends StatefulWidget {
   final LoadQuickScoreSetupModel loadQuickScoreSetupModel;
   final CreatePlayer createPlayer;
   final RenamePlayer renamePlayer;
+  final StayAwakeController stayAwakeController;
   final SaveQuickScoreSession saveQuickScoreSession;
   final SaveQuickScoreActiveSession saveQuickScoreActiveSession;
   final DeleteActiveSession deleteActiveSession;
@@ -118,72 +121,76 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
 
     final preset = _preset;
 
-    return AppScreenScaffold(
-      title: title,
-      actions: [
-        if (_step == _QuickScoreStep.entry && preset != null) ...[
-          PlayerSortMenuButton(
-            sortMode: _sortMode,
-            onSelected: _setSortMode,
-          ),
-          ScoringHelpButton(fieldDefinition: preset.scoreFields.first),
+    return StayAwakeWhileScoring(
+      controller: widget.stayAwakeController,
+      active: _step == _QuickScoreStep.entry,
+      child: AppScreenScaffold(
+        title: title,
+        actions: [
+          if (_step == _QuickScoreStep.entry && preset != null) ...[
+            PlayerSortMenuButton(
+              sortMode: _sortMode,
+              onSelected: _setSortMode,
+            ),
+            ScoringHelpButton(fieldDefinition: preset.scoreFields.first),
+          ],
         ],
-      ],
-      child: FutureBuilder<QuickScoreSetupModel>(
-        future: _setupModelFuture,
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const Center(
-              child: Text('Quick Score could not load right now.'),
-            );
-          }
-
-          // Keep showing the previous model while player changes reload it.
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator.adaptive());
-          }
-
-          final setupModel = snapshot.requireData;
-          _preset ??= setupModel.preset;
-          if (_promptAnswers.isEmpty) {
-            _promptAnswers = widget.initialPromptAnswers;
-          }
-
-          return switch (_step) {
-            _QuickScoreStep.setup => _QuickScoreSetupStep(
-                setupModel: setupModel,
-                selectedPlayerIds: _selectedPlayerIds,
-                onTogglePlayer: _togglePlayer,
-                onReorderSelected: _reorderSelectedPlayerIds,
-                onAddPlayer: () => _handleAddPlayer(setupModel),
-                onContinue: () => _continueToScoreEntry(setupModel),
-              ),
-            _QuickScoreStep.entry => _QuickScoreEntryStep(
-                players: orderPlayersForDisplay(
-                  _selectedPlayers,
-                  sortMode: _sortMode,
-                  winnerRule: resolvePresetOptions(
-                    preset: _preset!,
-                    promptAnswers: _promptAnswers,
-                  ).winnerRule,
-                  scoresByPlayerId: _scoreSortSnapshot,
+        child: FutureBuilder<QuickScoreSetupModel>(
+          future: _setupModelFuture,
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return const Center(
+                child: Text('Quick Score could not load right now.'),
+              );
+            }
+  
+            // Keep showing the previous model while player changes reload it.
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator.adaptive());
+            }
+  
+            final setupModel = snapshot.requireData;
+            _preset ??= setupModel.preset;
+            if (_promptAnswers.isEmpty) {
+              _promptAnswers = widget.initialPromptAnswers;
+            }
+  
+            return switch (_step) {
+              _QuickScoreStep.setup => _QuickScoreSetupStep(
+                  setupModel: setupModel,
+                  selectedPlayerIds: _selectedPlayerIds,
+                  onTogglePlayer: _togglePlayer,
+                  onReorderSelected: _reorderSelectedPlayerIds,
+                  onAddPlayer: () => _handleAddPlayer(setupModel),
+                  onContinue: () => _continueToScoreEntry(setupModel),
                 ),
-                canReorder: _sortMode == PlayerSortMode.playOrder,
-                fieldDefinition: _preset!.scoreFields.first,
-                controllers: _scoreControllers,
-                entryMemory: _scoreEntryMemory,
-                onPlayerTap: (player) => _handlePlayerTap(setupModel, player),
-                onReorder: _reorderPlayers,
-                onScoreEditorClosed: _refreshScoreSort,
-                onBack: () => setState(() => _step = _QuickScoreStep.setup),
-                onSave: _saveQuickScoreSession,
-              ),
-            _QuickScoreStep.result => _QuickScoreResultStep(
-                result: _result!,
-                onBackToScoring: () => setState(() => _step = _QuickScoreStep.entry),
-              ),
-          };
-        },
+              _QuickScoreStep.entry => _QuickScoreEntryStep(
+                  players: orderPlayersForDisplay(
+                    _selectedPlayers,
+                    sortMode: _sortMode,
+                    winnerRule: resolvePresetOptions(
+                      preset: _preset!,
+                      promptAnswers: _promptAnswers,
+                    ).winnerRule,
+                    scoresByPlayerId: _scoreSortSnapshot,
+                  ),
+                  canReorder: _sortMode == PlayerSortMode.playOrder,
+                  fieldDefinition: _preset!.scoreFields.first,
+                  controllers: _scoreControllers,
+                  entryMemory: _scoreEntryMemory,
+                  onPlayerTap: (player) => _handlePlayerTap(setupModel, player),
+                  onReorder: _reorderPlayers,
+                  onScoreEditorClosed: _refreshScoreSort,
+                  onBack: () => setState(() => _step = _QuickScoreStep.setup),
+                  onSave: _saveQuickScoreSession,
+                ),
+              _QuickScoreStep.result => _QuickScoreResultStep(
+                  result: _result!,
+                  onBackToScoring: () => setState(() => _step = _QuickScoreStep.entry),
+                ),
+            };
+          },
+        ),
       ),
     );
   }

@@ -15,6 +15,7 @@ void main() {
           loadRoundScoreSetupModel: environment.loadRoundScoreSetupModel,
           createPlayer: environment.createPlayer,
           renamePlayer: environment.renamePlayer,
+          stayAwakeController: environment.stayAwakeController,
           saveRoundScoreSession: environment.saveRoundScoreSession,
           saveRoundScoreActiveSession: environment.saveRoundScoreActiveSession,
           deleteActiveSession: environment.deleteActiveSession,

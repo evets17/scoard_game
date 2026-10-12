@@ -20,9 +20,11 @@ import 'package:scoard_game/infrastructure/memory/memory_game_repository.dart';
 import 'package:scoard_game/infrastructure/memory/memory_player_repository.dart';
 import 'package:scoard_game/infrastructure/memory/memory_session_repository.dart';
 import 'package:scoard_game/infrastructure/persistence/db/app_database.dart';
+import 'package:scoard_game/infrastructure/persistence/preferences/stay_awake_preference_store.dart';
 import 'package:scoard_game/infrastructure/persistence/preferences/theme_preference_store.dart';
 import 'package:scoard_game/infrastructure/persistence/repositories/persistent_player_repository.dart';
 import 'package:scoard_game/infrastructure/persistence/repositories/persistent_session_repository.dart';
+import 'package:scoard_game/ui/settings/stay_awake_controller.dart';
 import 'package:scoard_game/ui/theme/app_theme_controller.dart';
 
 class AppBootstrap {
@@ -35,10 +37,12 @@ class AppBootstrap {
     final PlayerRepository playerRepository;
     final SessionRepository sessionRepository;
     final AppThemeController themeController;
+    final StayAwakeController stayAwakeController;
 
     if (usePersistentStorage) {
       final appDatabase = AppDatabase();
       final themePreferenceStore = await ThemePreferenceStore.create();
+      final stayAwakePreferenceStore = await StayAwakePreferenceStore.create();
 
       playerRepository = PersistentPlayerRepository(appDatabase);
       sessionRepository = PersistentSessionRepository(appDatabase);
@@ -46,10 +50,15 @@ class AppBootstrap {
         initialChoice: await themePreferenceStore.loadThemeChoice(),
         onThemeChanged: themePreferenceStore.saveThemeChoice,
       );
+      stayAwakeController = StayAwakeController(
+        initialEnabled: stayAwakePreferenceStore.loadStayAwake(),
+        onEnabledChanged: stayAwakePreferenceStore.saveStayAwake,
+      );
     } else {
       playerRepository = MemoryPlayerRepository.seeded();
       sessionRepository = MemorySessionRepository.seeded();
       themeController = AppThemeController();
+      stayAwakeController = StayAwakeController();
     }
 
     return AppEnvironment(
@@ -61,6 +70,7 @@ class AppBootstrap {
         sessionRepository: sessionRepository,
       ),
       themeController: themeController,
+      stayAwakeController: stayAwakeController,
       loadPlayersScreenModel: LoadPlayersScreenModel(
         playerRepository: playerRepository,
       ),

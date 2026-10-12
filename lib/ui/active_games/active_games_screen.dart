@@ -15,6 +15,7 @@ import 'package:scoard_game/application/services/sessions/save_round_score_sessi
 import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
 import 'package:scoard_game/ui/quick_score/quick_score_flow_screen.dart';
 import 'package:scoard_game/ui/round_score/round_score_flow_screen.dart';
+import 'package:scoard_game/ui/settings/stay_awake_controller.dart';
 
 class ActiveGamesScreen extends StatefulWidget {
   const ActiveGamesScreen({
@@ -30,6 +31,7 @@ class ActiveGamesScreen extends StatefulWidget {
     required this.deleteActiveSession,
     required this.createPlayer,
     required this.renamePlayer,
+    required this.stayAwakeController,
     super.key,
   });
 
@@ -45,6 +47,7 @@ class ActiveGamesScreen extends StatefulWidget {
   final DeleteActiveSession deleteActiveSession;
   final CreatePlayer createPlayer;
   final RenamePlayer renamePlayer;
+  final StayAwakeController stayAwakeController;
 
   @override
   State<ActiveGamesScreen> createState() => _ActiveGamesScreenState();
@@ -166,6 +169,7 @@ class _ActiveGamesScreenState extends State<ActiveGamesScreen> {
           loadQuickScoreSetupModel: widget.loadQuickScoreSetupModel,
           createPlayer: widget.createPlayer,
           renamePlayer: widget.renamePlayer,
+          stayAwakeController: widget.stayAwakeController,
           saveQuickScoreSession: widget.saveQuickScoreSession,
           saveQuickScoreActiveSession: widget.saveQuickScoreActiveSession,
           deleteActiveSession: widget.deleteActiveSession,
@@ -183,6 +187,7 @@ class _ActiveGamesScreenState extends State<ActiveGamesScreen> {
           loadRoundScoreSetupModel: widget.loadRoundScoreSetupModel,
           createPlayer: widget.createPlayer,
           renamePlayer: widget.renamePlayer,
+          stayAwakeController: widget.stayAwakeController,
           saveRoundScoreSession: widget.saveRoundScoreSession,
           saveRoundScoreActiveSession: widget.saveRoundScoreActiveSession,
           deleteActiveSession: widget.deleteActiveSession,

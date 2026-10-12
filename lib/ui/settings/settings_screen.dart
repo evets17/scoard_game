@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
+import 'package:scoard_game/ui/settings/stay_awake_controller.dart';
 import 'package:scoard_game/ui/theme/app_colors.dart';
 import 'package:scoard_game/ui/theme/app_theme_controller.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({
     required this.themeController,
+    required this.stayAwakeController,
     super.key,
   });
 
   final AppThemeController themeController;
+  final StayAwakeController stayAwakeController;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return AnimatedBuilder(
-      animation: themeController,
+      animation: Listenable.merge([themeController, stayAwakeController]),
       builder: (context, _) {
         return AppScreenScaffold(
           title: 'Settings',
@@ -42,6 +45,23 @@ class SettingsScreen extends StatelessWidget {
                       option: option,
                       selected: option.choice == themeController.selectedChoice,
                       onSelected: () => themeController.selectTheme(option.choice),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'While scoring',
+                  style: theme.textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: SwitchListTile(
+                    value: stayAwakeController.enabled,
+                    onChanged: stayAwakeController.setEnabled,
+                    title: const Text('Stay awake when scoring'),
+                    subtitle: const Text(
+                      'Keep the screen on while entering scores, even if no one touches it.',
                     ),
                   ),
                 ),

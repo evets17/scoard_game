@@ -30,6 +30,7 @@ import 'package:scoard_game/ui/players/in_game_player_actions.dart';
 import 'package:scoard_game/ui/players/player_editor_sheet.dart';
 import 'package:scoard_game/ui/players/player_reorderable_list.dart';
 import 'package:scoard_game/ui/players/player_sort_menu_button.dart';
+import 'package:scoard_game/ui/settings/stay_awake_controller.dart';
 import 'package:scoard_game/ui/score_input/numeric_score_field.dart';
 import 'package:scoard_game/ui/score_input/score_entry_mode.dart';
 
@@ -38,6 +39,7 @@ class RoundScoreFlowScreen extends StatefulWidget {
     required this.loadRoundScoreSetupModel,
     required this.createPlayer,
     required this.renamePlayer,
+    required this.stayAwakeController,
     required this.saveRoundScoreSession,
     required this.saveRoundScoreActiveSession,
     required this.deleteActiveSession,
@@ -50,6 +52,7 @@ class RoundScoreFlowScreen extends StatefulWidget {
   final LoadRoundScoreSetupModel loadRoundScoreSetupModel;
   final CreatePlayer createPlayer;
   final RenamePlayer renamePlayer;
+  final StayAwakeController stayAwakeController;
   final SaveRoundScoreSession saveRoundScoreSession;
   final SaveRoundScoreActiveSession saveRoundScoreActiveSession;
   final DeleteActiveSession deleteActiveSession;
@@ -121,72 +124,76 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
 
     final preset = _preset;
 
-    return AppScreenScaffold(
-      title: title,
-      actions: [
-        if (_step == _RoundScoreStep.roundEntry && preset != null) ...[
-          PlayerSortMenuButton(
-            sortMode: _sortMode,
-            onSelected: _setSortMode,
-          ),
-          ScoringHelpButton(
-            fieldDefinition: preset.scoreFields.first,
-            isRoundScoring: true,
-          ),
+    return StayAwakeWhileScoring(
+      controller: widget.stayAwakeController,
+      active: _step == _RoundScoreStep.roundEntry,
+      child: AppScreenScaffold(
+        title: title,
+        actions: [
+          if (_step == _RoundScoreStep.roundEntry && preset != null) ...[
+            PlayerSortMenuButton(
+              sortMode: _sortMode,
+              onSelected: _setSortMode,
+            ),
+            ScoringHelpButton(
+              fieldDefinition: preset.scoreFields.first,
+              isRoundScoring: true,
+            ),
+          ],
         ],
-      ],
-      child: FutureBuilder<RoundScoreSetupModel>(
-        future: _setupModelFuture,
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const Center(child: Text('Round Score could not load right now.'));
-          }
-
-          // Keep showing the previous model while player changes reload it.
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator.adaptive());
-          }
-
-          final setupModel = snapshot.requireData;
-          _preset ??= setupModel.preset;
-          if (_promptAnswers.isEmpty) {
-            _promptAnswers = widget.initialPromptAnswers;
-          }
-
-          return switch (_step) {
-            _RoundScoreStep.setup => _RoundScoreSetupStep(
-                setupModel: setupModel,
-                selectedPlayerIds: _selectedPlayerIds,
-                onTogglePlayer: _togglePlayer,
-                onReorderSelected: _reorderSelectedPlayerIds,
-                onAddPlayer: () => _handleAddPlayer(setupModel),
-                onContinue: () => _continueToRoundEntry(setupModel),
-              ),
-            _RoundScoreStep.roundEntry => _RoundScoreEntryStep(
-                currentRoundNumber: _currentRoundNumber,
-                fieldDefinition: _preset!.scoreFields.first,
-                players: _selectedPlayers,
-                sortMode: _sortMode,
-                winnerRule: resolvePresetOptions(
-                  preset: _preset!,
-                  promptAnswers: _promptAnswers,
-                ).winnerRule,
-                controllers: _scoreControllers,
-                entryMemory: _scoreEntryMemory,
-                savedRounds: _savedRounds,
-                onPlayerTap: (player) => _handlePlayerTap(setupModel, player),
-                onReorder: _reorderPlayers,
-                onBack: () => setState(() => _step = _RoundScoreStep.setup),
-                onPreviousRound: _goToPreviousRound,
-                onCompleteRound: _completeRound,
-                onGameOver: _completeGame,
-              ),
-            _RoundScoreStep.result => _RoundScoreResultStep(
-                result: _result!,
-                onBackToRounds: () => setState(() => _step = _RoundScoreStep.roundEntry),
-              ),
-          };
-        },
+        child: FutureBuilder<RoundScoreSetupModel>(
+          future: _setupModelFuture,
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return const Center(child: Text('Round Score could not load right now.'));
+            }
+  
+            // Keep showing the previous model while player changes reload it.
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator.adaptive());
+            }
+  
+            final setupModel = snapshot.requireData;
+            _preset ??= setupModel.preset;
+            if (_promptAnswers.isEmpty) {
+              _promptAnswers = widget.initialPromptAnswers;
+            }
+  
+            return switch (_step) {
+              _RoundScoreStep.setup => _RoundScoreSetupStep(
+                  setupModel: setupModel,
+                  selectedPlayerIds: _selectedPlayerIds,
+                  onTogglePlayer: _togglePlayer,
+                  onReorderSelected: _reorderSelectedPlayerIds,
+                  onAddPlayer: () => _handleAddPlayer(setupModel),
+                  onContinue: () => _continueToRoundEntry(setupModel),
+                ),
+              _RoundScoreStep.roundEntry => _RoundScoreEntryStep(
+                  currentRoundNumber: _currentRoundNumber,
+                  fieldDefinition: _preset!.scoreFields.first,
+                  players: _selectedPlayers,
+                  sortMode: _sortMode,
+                  winnerRule: resolvePresetOptions(
+                    preset: _preset!,
+                    promptAnswers: _promptAnswers,
+                  ).winnerRule,
+                  controllers: _scoreControllers,
+                  entryMemory: _scoreEntryMemory,
+                  savedRounds: _savedRounds,
+                  onPlayerTap: (player) => _handlePlayerTap(setupModel, player),
+                  onReorder: _reorderPlayers,
+                  onBack: () => setState(() => _step = _RoundScoreStep.setup),
+                  onPreviousRound: _goToPreviousRound,
+                  onCompleteRound: _completeRound,
+                  onGameOver: _completeGame,
+                ),
+              _RoundScoreStep.result => _RoundScoreResultStep(
+                  result: _result!,
+                  onBackToRounds: () => setState(() => _step = _RoundScoreStep.roundEntry),
+                ),
+            };
+          },
+        ),
       ),
     );
   }

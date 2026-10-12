@@ -16,6 +16,7 @@ import 'package:scoard_game/application/services/sessions/save_quick_score_activ
 import 'package:scoard_game/application/services/sessions/save_round_score_active_session.dart';
 import 'package:scoard_game/application/services/sessions/save_round_score_session.dart';
 import 'package:scoard_game/application/services/sessions/save_quick_score_session.dart';
+import 'package:scoard_game/ui/settings/stay_awake_controller.dart';
 import 'package:scoard_game/ui/theme/app_theme_controller.dart';
 
 class AppEnvironment {
@@ -25,6 +26,7 @@ class AppEnvironment {
     required this.sessionRepository,
     required this.loadHomeShellModel,
     required this.themeController,
+    required this.stayAwakeController,
     required this.loadPlayersScreenModel,
     required this.createPlayer,
     required this.renamePlayer,
@@ -46,6 +48,7 @@ class AppEnvironment {
   final SessionRepository sessionRepository;
   final LoadHomeShellModel loadHomeShellModel;
   final AppThemeController themeController;
+  final StayAwakeController stayAwakeController;
   final LoadPlayersScreenModel loadPlayersScreenModel;
   final CreatePlayer createPlayer;
   final RenamePlayer renamePlayer;
