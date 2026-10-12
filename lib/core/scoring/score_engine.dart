@@ -101,7 +101,7 @@ class ScoreEngine {
   }
 }
 
-class _PlayerScope implements FormulaScope {
+class _PlayerScope extends FormulaScope {
   _PlayerScope(this._playerId, this._values, this._builtIns);
 
   final String _playerId;

@@ -65,7 +65,7 @@ class ScoringHelpScreen extends StatelessWidget {
                   _HelpTip(
                     icon: Icons.style_outlined,
                     text:
-                        '${picker.label}: tap each one in front of the player and they add up. Tap one in the picked row to take it back.',
+                        '${picker.label}: tap each one in front of the player and the score is worked out for you. Tap one in the picked row to take it back.',
                   ),
               if (fieldDefinition.enableTapToEdit)
                 const _HelpTip(

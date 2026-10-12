@@ -153,15 +153,60 @@ Version 1 supports one type, `valuePicker`: tiles for the values that can be in 
 | `type` | yes | string | `valuePicker`. |
 | `id` | yes | string | Same format as the template `id`. Unique within the field. |
 | `label` | yes | string | Non-empty. Names the mode, for example `"Cards"`. |
-| `values` | yes | array | 1 to 24 entries, so the tiles fit on a phone. |
+| `values` | one of `values` or `groups` | array | The tiles. The score is their sum. |
+| `groups` | one of `values` or `groups` | array | Tiles in named groups, for when the score is not a plain sum. See below. |
+| `total` | no, and only with `groups` | string | Formula for the score from the group totals. See below. Without it, every tapped tile is added up. |
 
-Each of `values`:
+A picker has at most 24 tiles in all, so they fit on a phone.
+
+Each tile, in `values` or in a group's `values`:
 
 | Key | Required | Type | Rules |
 |---|---|---|---|
-| `value` | yes | integer | Unique within the mode. Negative values are allowed. |
-| `label` | no | string | Non-empty. Shown small under the number, for example `"Hole"`. |
+| `value` | yes | integer | What the tile is worth. Negative values are allowed. |
+| `text` | no | string | Shown on the tile instead of the value, for example `"+4"`, `"×2"`, or `"Bust"`. At most 6 characters. |
+| `label` | no | string | Non-empty. Shown small under the main text, for example `"Hole"`. |
 | `color` | no | string | Tile colour as `#RRGGBB`. Match the physical item where it helps players find it. |
+
+Every tile in a picker must look different: its `text`, or its value when it has no `text`, must be unique. So the number card `2` and a `"+2"` modifier can both exist.
+
+#### Groups and `total`
+
+Use groups when tiles count differently, for example Flip 7, where ×2 doubles only the number cards and a bust scores 0:
+
+```json
+{
+  "type": "valuePicker",
+  "id": "cards",
+  "label": "Cards",
+  "groups": [
+    { "id": "numbers", "values": [{ "value": 0 }, { "value": 1 }, { "value": 12 }] },
+    { "id": "modifiers", "values": [{ "value": 4, "text": "+4", "color": "#F57C00" }] },
+    { "id": "double", "values": [{ "value": 1, "text": "×2", "color": "#F57C00" }] },
+    { "id": "bust", "values": [{ "value": 1, "text": "Bust", "color": "#B71C1C" }] }
+  ],
+  "total": "if({bust} > 0, 0, {numbers} * if({double} > 0, 2, 1) + {modifiers} + if(distinctIn(numbers) >= 7, 15, 0))"
+}
+```
+
+Group rules:
+
+| Key | Required | Rules |
+|---|---|---|
+| `id` | yes | Same format as the template `id`. Unique within the picker. |
+| `values` | yes | At least one tile. |
+
+The tiles are shown in template order, groups one after another, in one grid. Give groups their own colours so players can tell them apart.
+
+`total` uses the formula language from [version 2](template_schema_v2.md#formula-language) (numbers, operators, `min`, `max`, `abs`, `if`), with these values instead of fields:
+
+| Write | Means |
+|---|---|
+| `{group}` | The sum of the values of the tapped tiles in that group (0 if none). |
+| `countIn(group)` | How many tiles were tapped in that group. |
+| `distinctIn(group)` | How many different tiles were tapped in that group. |
+
+The players see the total update as they tap, and Replace or Adjust uses it.
 
 ---
 
@@ -196,6 +241,7 @@ Each of `values`:
 |---|---|---|
 | `templateId` | yes | Must match the file name and an existing template. |
 | `scenarios` | yes | At least one scenario. |
+| `pickerTotals` | when a value picker has a `total` | Checks of the picker's total. See below. |
 
 Each scenario:
 
@@ -216,12 +262,35 @@ Each scenario:
 | `winners` | The players in first place. More than one means a tie. Order does not matter. |
 | `placements` | Each player's place. Tied players share a place. |
 
+### `pickerTotals`
+
+Each check taps tiles in a value picker and states the score they should give. Tiles are named by what they show. Use the rulebook's own examples where it has them.
+
+```json
+"pickerTotals": [
+  {
+    "name": "Rulebook example: ×2 doubles the number cards, then +4",
+    "picker": "cards",
+    "taps": ["8", "6", "3", "×2", "+4"],
+    "expected": 38
+  }
+]
+```
+
+| Key | Required | Rules |
+|---|---|---|
+| `name` | yes | Describes what the check proves. |
+| `picker` | yes | The `id` of a value picker in the template. |
+| `taps` | yes | Tiles in the order they are tapped, by their text or value. |
+| `expected` | yes | The score. |
+
 ### Coverage Rules
 
 The test run fails unless a template's scenarios:
 
 * include at least one tie for first place
 * answer every prompt that has an `effect` with a non-default value at least once
+* include at least one `pickerTotals` check for every value picker with a `total`
 
 ---
 

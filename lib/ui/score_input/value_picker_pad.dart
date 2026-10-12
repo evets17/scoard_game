@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_definition.dart';
+import 'package:scoard_game/core/scoring/value_picker_total.dart';
 
-/// Tap the values in front of a player (such as Skyjo cards) to add them up.
+/// Tap the values in front of a player (such as Skyjo cards) to work out
+/// their score.
 ///
-/// [picked] holds the tapped values in order. The picked values sit above
-/// the tiles, so the tiles stay put as the list grows.
+/// [picked] holds the tapped tiles, as indexes into the picker's options, in
+/// the order they were tapped. The picked tiles sit above the tile grid, so
+/// the grid stays put as the list grows.
 class ValuePickerPad extends StatelessWidget {
   const ValuePickerPad({
     required this.definition,
@@ -16,7 +19,11 @@ class ValuePickerPad extends StatelessWidget {
 
   final ValuePickerDefinition definition;
   final List<int> picked;
+
+  /// Called with the index of the tapped tile.
   final ValueChanged<int> onAdd;
+
+  /// Called with the position in [picked] to take back.
   final ValueChanged<int> onRemoveAt;
 
   static const double _gap = 6;
@@ -24,10 +31,10 @@ class ValuePickerPad extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final optionsByValue = {
-      for (final option in definition.options) option.value: option,
-    };
-    final total = picked.fold<int>(0, (sum, value) => sum + value);
+    final options = definition.options;
+    final total = valuePickerTotal(definition, picked);
+    // Larger pickers use shorter tiles so the sheet still fits a phone.
+    final tileHeight = options.length > 15 ? 46.0 : 52.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,10 +52,10 @@ class ValuePickerPad extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 44),
+          constraints: const BoxConstraints(minHeight: 38),
           child: picked.isEmpty
               ? Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 9),
                   child: Text(
                     'Tap each one below. Tap one here to take it back.',
                     style: theme.textTheme.bodyMedium?.copyWith(
@@ -60,15 +67,17 @@ class ValuePickerPad extends StatelessWidget {
                   spacing: 4,
                   runSpacing: 4,
                   children: [
-                    for (var index = 0; index < picked.length; index++)
+                    for (var position = 0; position < picked.length; position++)
                       _ValueTile(
-                        option: optionsByValue[picked[index]] ??
-                            ValuePickerOption(value: picked[index]),
-                        width: 36,
-                        height: 44,
+                        option: options[picked[position]],
+                        width: options[picked[position]].displayText.length > 3
+                            ? 40
+                            : 28,
+                        height: 38,
                         compact: true,
-                        tooltip: 'Remove ${picked[index]}',
-                        onTap: () => onRemoveAt(index),
+                        tooltip:
+                            'Remove ${options[picked[position]].displayText}',
+                        onTap: () => onRemoveAt(position),
                       ),
                   ],
                 ),
@@ -80,17 +89,22 @@ class ValuePickerPad extends StatelessWidget {
             final tileWidth =
                 (constraints.maxWidth - _gap * (columns - 1)) / columns;
 
+            // One flowing grid: grouped tiles sit next to each other in
+            // template order and are told apart by colour, so a small group
+            // like ×2 does not take a whole row.
             return Wrap(
               spacing: _gap,
               runSpacing: _gap,
               children: [
-                for (final option in definition.options)
+                for (var index = 0; index < options.length; index++)
                   _ValueTile(
-                    option: option,
+                    option: options[index],
                     width: tileWidth,
-                    height: option.label == null ? 52 : 60,
-                    count: picked.where((value) => value == option.value).length,
-                    onTap: () => onAdd(option.value),
+                    height: options[index].label == null
+                        ? tileHeight
+                        : tileHeight + 8,
+                    count: picked.where((p) => p == index).length,
+                    onTap: () => onAdd(index),
                   ),
               ],
             );
@@ -144,13 +158,22 @@ class _ValueTile extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      '${option.value}',
-                      style: TextStyle(
-                        color: foreground,
-                        fontSize: compact ? 16 : 22,
-                        fontWeight: FontWeight.w700,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+                    // One line, shrunk to fit narrow tiles ("Bust", "+10").
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 3),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          option.displayText,
+                          maxLines: 1,
+                          softWrap: false,
+                          style: TextStyle(
+                            color: foreground,
+                            fontSize: compact ? 15 : 22,
+                            fontWeight: FontWeight.w700,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
                       ),
                     ),
                     if (!compact && option.label != null)

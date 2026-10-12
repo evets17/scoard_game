@@ -166,4 +166,98 @@ void main() {
     expect(sheetScroll.position.maxScrollExtent, 0);
     expect(find.text('Cancel').hitTestable(), findsOneWidget);
   });
+
+  group('Flip 7 cards', () {
+    final flip7Cards =
+        loadTestTemplateCatalog().byId('flip-7').scoreFields.single.valuePickers;
+
+    testWidgets('×2 doubles the number cards as they are tapped', (
+      tester,
+    ) async {
+      ScoreValueEditRequest? request;
+      await openSheet(
+        tester,
+        memory: ScoreEntryMemory(),
+        valuePickers: flip7Cards,
+        onClosed: (r) => request = r,
+      );
+
+      for (final card in ['8', '6', '3']) {
+        await tester.tap(tile(card));
+        await tester.pump();
+      }
+      expect(find.text('= 17'), findsOneWidget);
+
+      await tester.tap(tile('×2'));
+      await tester.pump();
+      expect(find.text('= 34'), findsOneWidget);
+
+      await tester.tap(tile('+4'));
+      await tester.pump();
+      expect(find.text('= 38'), findsOneWidget);
+
+      // Taking back the ×2 undoes the doubling.
+      await tester.tap(find.byTooltip('Remove ×2'));
+      await tester.pump();
+      expect(find.text('= 21'), findsOneWidget);
+
+      await tester.tap(tile('×2'));
+      await tester.pump();
+      await tester.tap(find.text('Replace -> 38'));
+      await tester.pumpAndSettle();
+
+      expect(request?.value, 38);
+    });
+
+    testWidgets('Bust makes the round 0', (tester) async {
+      ScoreValueEditRequest? request;
+      await openSheet(
+        tester,
+        memory: ScoreEntryMemory(),
+        valuePickers: flip7Cards,
+        onClosed: (r) => request = r,
+      );
+
+      await tester.tap(tile('9'));
+      await tester.pump();
+      await tester.tap(tile('Bust'));
+      await tester.pump();
+
+      expect(find.text('= 0'), findsOneWidget);
+
+      await tester.tap(find.text('Replace -> 0'));
+      await tester.pumpAndSettle();
+
+      expect(request?.value, 0);
+    });
+
+    testWidgets('every Flip 7 tile fits a small phone without scrolling', (
+      tester,
+    ) async {
+      await openSheet(
+        tester,
+        memory: ScoreEntryMemory(),
+        valuePickers: flip7Cards,
+        logicalSize: const Size(360, 640),
+        statusBarHeight: 24,
+      );
+
+      // A full hand: seven number cards, two modifiers, and ×2.
+      for (final card in ['0', '2', '5', '7', '9', '11', '12', '+4', '+10', '×2']) {
+        await tester.tap(tile(card));
+        await tester.pump();
+      }
+
+      final sheetScroll = tester.state<ScrollableState>(
+        find
+            .descendant(
+              of: find.byType(SingleChildScrollView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      expect(sheetScroll.position.maxScrollExtent, 0);
+      expect(find.text('Cancel').hitTestable(), findsOneWidget);
+    });
+  });
 }

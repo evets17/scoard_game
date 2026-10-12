@@ -83,19 +83,37 @@ ScoreFieldDefinition _parseEnteredField(Map<String, Object?> field) {
 }
 
 ValuePickerDefinition _parseValuePicker(Map<String, Object?> mode) {
-  final values = mode['values']! as List<Object?>;
+  ValuePickerOption parseTile(Object? rawTile, String? groupId) {
+    final tile = rawTile! as Map<String, Object?>;
+    return ValuePickerOption(
+      value: tile['value']! as int,
+      label: tile['label'] as String?,
+      color: tile['color'] as String?,
+      text: tile['text'] as String?,
+      groupId: groupId,
+    );
+  }
+
+  final options = <ValuePickerOption>[];
+  if (mode['groups'] case final List<Object?> groups) {
+    for (final rawGroup in groups) {
+      final group = rawGroup! as Map<String, Object?>;
+      final groupId = group['id']! as String;
+      for (final tile in group['values']! as List<Object?>) {
+        options.add(parseTile(tile, groupId));
+      }
+    }
+  } else {
+    for (final tile in mode['values']! as List<Object?>) {
+      options.add(parseTile(tile, null));
+    }
+  }
 
   return ValuePickerDefinition(
     id: mode['id']! as String,
     label: mode['label']! as String,
-    options: values.map((rawOption) {
-      final option = rawOption! as Map<String, Object?>;
-      return ValuePickerOption(
-        value: option['value']! as int,
-        label: option['label'] as String?,
-        color: option['color'] as String?,
-      );
-    }).toList(growable: false),
+    options: options,
+    total: mode['total'] as String?,
   );
 }
 

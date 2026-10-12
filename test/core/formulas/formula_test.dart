@@ -3,7 +3,7 @@ import 'package:scoard_game/core/formulas/formula_checker.dart';
 import 'package:scoard_game/core/formulas/formula_evaluator.dart';
 import 'package:scoard_game/core/formulas/formula_parser.dart';
 
-class _Scope implements FormulaScope {
+class _Scope extends FormulaScope {
   _Scope(this.own, {this.others = const {}, this.otherCount = 0});
 
   final Map<String, int> own;

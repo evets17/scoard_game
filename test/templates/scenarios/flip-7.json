@@ -1,0 +1,104 @@
+{
+  "templateId": "flip-7",
+  "scenarios": [
+    {
+      "name": "Highest total wins across rounds",
+      "players": ["avery", "jules", "mina"],
+      "rounds": [
+        { "avery": 17, "jules": 31, "mina": 9 },
+        { "avery": 25, "jules": 12, "mina": 40 }
+      ],
+      "expected": {
+        "totals": { "avery": 42, "jules": 43, "mina": 49 },
+        "winners": ["mina"],
+        "placements": { "mina": 1, "jules": 2, "avery": 3 }
+      }
+    },
+    {
+      "name": "A bust scores 0 for the round",
+      "players": ["avery", "jules", "mina"],
+      "rounds": [
+        { "avery": 0, "jules": 21, "mina": 18 },
+        { "avery": 33, "jules": 0, "mina": 0 }
+      ],
+      "expected": {
+        "totals": { "avery": 33, "jules": 21, "mina": 18 },
+        "winners": ["avery"]
+      }
+    },
+    {
+      "name": "Players over 200 in the same round: highest total wins",
+      "players": ["avery", "jules", "mina"],
+      "rounds": [
+        { "avery": 180, "jules": 190, "mina": 60 },
+        { "avery": 35, "jules": 12, "mina": 20 }
+      ],
+      "expected": {
+        "totals": { "avery": 215, "jules": 202, "mina": 80 },
+        "winners": ["avery"]
+      }
+    },
+    {
+      "name": "Equal totals tie for first",
+      "players": ["avery", "jules", "mina"],
+      "rounds": [
+        { "avery": 30, "jules": 20, "mina": 15 },
+        { "avery": 10, "jules": 20, "mina": 5 }
+      ],
+      "expected": {
+        "totals": { "avery": 40, "jules": 40, "mina": 20 },
+        "winners": ["avery", "jules"]
+      }
+    }
+  ],
+  "pickerTotals": [
+    {
+      "name": "Rulebook example: ×2 doubles the number cards, then +4",
+      "picker": "cards",
+      "taps": ["8", "6", "3", "×2", "+4"],
+      "expected": 38
+    },
+    {
+      "name": "Without ×2 the cards and modifier just add up",
+      "picker": "cards",
+      "taps": ["8", "6", "3", "+4"],
+      "expected": 21
+    },
+    {
+      "name": "The number 2 and the +2 modifier are different tiles",
+      "picker": "cards",
+      "taps": ["2", "+2"],
+      "expected": 4
+    },
+    {
+      "name": "×2 does not double modifiers",
+      "picker": "cards",
+      "taps": ["+10", "5", "×2"],
+      "expected": 20
+    },
+    {
+      "name": "A bust scores 0 whatever else is tapped",
+      "picker": "cards",
+      "taps": ["5", "9", "+6", "Bust"],
+      "expected": 0
+    },
+    {
+      "name": "Seven different number cards earn 15",
+      "picker": "cards",
+      "taps": ["1", "2", "3", "4", "5", "6", "7"],
+      "expected": 43
+    },
+    {
+      "name": "The Flip 7 bonus is not doubled by ×2",
+      "picker": "cards",
+      "taps": ["1", "2", "3", "4", "5", "6", "7", "×2"],
+      "expected": 71
+    },
+    {
+      "name": "Seven cards with a repeat do not earn the bonus",
+      "picker": "cards",
+      "taps": ["1", "1", "2", "3", "4", "5", "6"],
+      "expected": 22
+    }
+  ]
+}

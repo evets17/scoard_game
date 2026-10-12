@@ -553,7 +553,11 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
 
     if (selectedPlayers.length < setupModel.preset.minimumPlayers) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Choose at least two players to continue.')),
+        SnackBar(
+          content: Text(
+            'Choose at least ${setupModel.preset.minimumPlayers} players to continue.',
+          ),
+        ),
       );
       return;
     }

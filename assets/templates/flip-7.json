@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "id": "flip-7",
+  "version": "1.1.0",
+  "name": "Flip 7",
+  "description": "Add up the cards in front of you each round: number cards (doubled by ×2), then +modifiers, plus 15 for seven different number cards. A bust scores 0. Highest total wins once someone has 200 or more at the end of a round.",
+  "source": "https://officialgamerules.org/game-rules/flip-7-rules/",
+  "players": { "minimum": 3 },
+  "scoringModel": "rounds",
+  "winner": "highestScore",
+  "scoreField": {
+    "id": "round-score",
+    "label": "Round Score",
+    "initialValue": 0,
+    "minimumDisplayDigits": 2,
+    "entry": { "tapToEdit": true, "quickAdjust": true, "replace": true, "adjust": true },
+    "entryModes": [
+      {
+        "type": "valuePicker",
+        "id": "cards",
+        "label": "Cards",
+        "groups": [
+          {
+            "id": "numbers",
+            "values": [
+              { "value": 0 }, { "value": 1 }, { "value": 2 }, { "value": 3 },
+              { "value": 4 }, { "value": 5 }, { "value": 6 }, { "value": 7 },
+              { "value": 8 }, { "value": 9 }, { "value": 10 }, { "value": 11 },
+              { "value": 12 }
+            ]
+          },
+          {
+            "id": "modifiers",
+            "values": [
+              { "value": 2, "text": "+2", "color": "#F57C00" },
+              { "value": 4, "text": "+4", "color": "#F57C00" },
+              { "value": 6, "text": "+6", "color": "#F57C00" },
+              { "value": 8, "text": "+8", "color": "#F57C00" },
+              { "value": 10, "text": "+10", "color": "#F57C00" }
+            ]
+          },
+          {
+            "id": "double",
+            "values": [{ "value": 1, "text": "×2", "color": "#F57C00" }]
+          },
+          {
+            "id": "bust",
+            "values": [{ "value": 1, "text": "Bust", "color": "#B71C1C" }]
+          }
+        ],
+        "total": "if({bust} > 0, 0, {numbers} * if({double} > 0, 2, 1) + {modifiers} + if(distinctIn(numbers) >= 7, 15, 0))"
+      }
+    ]
+  }
+}

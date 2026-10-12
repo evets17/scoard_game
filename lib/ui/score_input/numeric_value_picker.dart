@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_definition.dart';
 import 'package:scoard_game/core/scoring/score_expression.dart';
+import 'package:scoard_game/core/scoring/value_picker_total.dart';
 import 'package:scoard_game/ui/score_input/quick_pick_grid.dart';
 import 'package:scoard_game/ui/score_input/score_entry_mode.dart';
 import 'package:scoard_game/ui/score_input/score_value_edit_action.dart';
@@ -60,7 +61,8 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
   late String _modeKey = _initialModeKey();
   ScoreExpression _expression = const ScoreExpression();
   int? _quickPickValue;
-  List<int> _pickedValues = const [];
+  /// Indexes of the value picker tiles tapped so far, in order.
+  List<int> _pickedTiles = const [];
   String? _errorText;
 
   static String _pickerKey(String id) => 'picker:$id';
@@ -96,9 +98,9 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
     if (_isQuickPick) {
       return _quickPickValue;
     }
-    return _pickedValues.isEmpty
+    return _pickedTiles.isEmpty
         ? null
-        : _pickedValues.fold<int>(0, (sum, value) => sum + value);
+        : valuePickerTotal(_activePicker!, _pickedTiles);
   }
 
   @override
@@ -164,14 +166,14 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
           if (activePicker != null) ...[
             ValuePickerPad(
               definition: activePicker,
-              picked: _pickedValues,
+              picked: _pickedTiles,
               onAdd: (value) => setState(() {
                 _errorText = null;
-                _pickedValues = [..._pickedValues, value];
+                _pickedTiles = [..._pickedTiles, value];
               }),
               onRemoveAt: (index) => setState(() {
                 _errorText = null;
-                _pickedValues = [..._pickedValues]..removeAt(index);
+                _pickedTiles = [..._pickedTiles]..removeAt(index);
               }),
             ),
             if (errorText != null) _ErrorText(errorText),
@@ -254,7 +256,7 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
 
     setState(() {
       if (modeKey != _modeKey) {
-        _pickedValues = const [];
+        _pickedTiles = const [];
       }
       _modeKey = modeKey;
       _errorText = null;

@@ -200,12 +200,12 @@ void main() {
       problems,
       containsAll([
         'scoreField.entryModes[0].values[0].color: "red" must look like #3A7BD5',
-        'scoreField.entryModes[0].values[1].value: duplicate value 1',
+        'scoreField.entryModes[0].values[1].value: duplicate tile "1"',
         'scoreField.entryModes[0].values[2].size: unknown key',
         'scoreField.entryModes[1].type: unsupported value "slider"; expected one of: valuePicker',
         'scoreField.entryModes[1].id: duplicate entry mode id "cards"',
         'scoreField.entryModes[1].values: needs at least one value',
-        'scoreField.entryModes[2].values: has 25 values; the most is 24',
+        'scoreField.entryModes[2].values: has 25 tiles; the most is 24',
       ]),
     );
   });
@@ -232,5 +232,65 @@ void main() {
         'scoreField.entryModes: need entry.tapToEdit to be true, or the entry sheet never opens',
       ),
     );
+  });
+
+  test('grouped value pickers and their totals are checked', () {
+    Map<String, Object?> picker(Map<String, Object?> extra) => {
+          'type': 'valuePicker',
+          'id': 'cards',
+          'label': 'Cards',
+          ...extra,
+        };
+
+    final problems = problemsFor((template) {
+      child(template, 'scoreField')['entryModes'] = [
+        picker({
+          'groups': [
+            {
+              'id': 'numbers',
+              'values': [
+                {'value': 2},
+              ],
+            },
+            {
+              'id': 'modifiers',
+              'values': [
+                {'value': 2, 'text': '+2'},
+                {'value': 4, 'text': '+4'},
+                {'value': 6, 'text': '+4'},
+                {'value': 8, 'text': 'plus eight'},
+              ],
+            },
+          ],
+          'total': '{numbers} * 2 + {bonus} + countIn({modifiers})',
+        }),
+        picker({
+          'values': [
+            {'value': 1},
+          ],
+          'total': '{numbers}',
+        }),
+        picker({
+          'values': [
+            {'value': 1},
+          ],
+          'groups': const [],
+        }),
+      ];
+    });
+
+    expect(
+      problems,
+      containsAll([
+        'scoreField.entryModes[0].groups[1].values[2].text: duplicate tile "+4"',
+        'scoreField.entryModes[0].groups[1].values[3].text: must be at most 6 characters',
+        'scoreField.entryModes[0].total: unknown name "bonus"; expected one of: numbers, modifiers at position 17',
+        'scoreField.entryModes[0].total: countIn needs a group name without braces, for example countIn(numbers) at position 35',
+        'scoreField.entryModes[1].total: needs "groups"; without groups the tiles are added up',
+        'scoreField.entryModes[2].groups: use either "values" or "groups", not both',
+      ]),
+    );
+    // The number 2 and the "+2" modifier show differently, so both are fine.
+    expect(problems.where((p) => p.contains('"2"')), isEmpty);
   });
 }

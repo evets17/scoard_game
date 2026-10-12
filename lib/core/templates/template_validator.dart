@@ -24,6 +24,9 @@ const templateEntryModeTypes = {'valuePicker'};
 /// Keeps a value picker small enough to fit on a phone without scrolling.
 const maximumPickerValues = 24;
 
+/// Keeps tile text readable on a small tile, for example "+10" or "Bust".
+const maximumTileTextLength = 6;
+
 final _idPattern = RegExp(r'^[a-z0-9]+(-[a-z0-9]+)*$');
 final _colorPattern = RegExp(r'^#[0-9A-Fa-f]{6}$');
 final _versionPattern = RegExp(r'^\d+\.\d+\.\d+$');
@@ -269,7 +272,7 @@ void _validateFields(_ObjectReader template) {
 }
 
 void _validateEntryMode(_ObjectReader mode, Set<String> seenModeIds) {
-  mode.allowOnlyKeys(const {'type', 'id', 'label', 'values'});
+  mode.allowOnlyKeys(const {'type', 'id', 'label', 'values', 'groups', 'total'});
   mode.oneOf('type', templateEntryModeTypes, required: true);
 
   final id = mode.identifier('id', required: true);
@@ -278,31 +281,101 @@ void _validateEntryMode(_ObjectReader mode, Set<String> seenModeIds) {
   }
   mode.text('label', required: true);
 
-  final values = mode.list('values', required: true);
-  if (values == null) {
+  final hasValues = mode.has('values');
+  final hasGroups = mode.has('groups');
+  if (hasValues == hasGroups) {
+    mode.problem(
+      hasValues ? 'groups' : 'values',
+      'use either "values" or "groups", not ${hasValues ? 'both' : 'neither'}',
+    );
     return;
   }
-  if (values.isEmpty) {
-    mode.problem('values', 'needs at least one value');
-  } else if (values.length > maximumPickerValues) {
-    mode.problem('values', 'has ${values.length} values; the most is $maximumPickerValues');
+
+  // Tiles are told apart by what they show, so "2" and "+2" can both exist.
+  final seenTiles = <String>{};
+  var tileCount = 0;
+
+  void validateTiles(List<_ObjectReader> tiles) {
+    for (final tile in tiles) {
+      if (!tile.isObject) {
+        continue;
+      }
+      tileCount += 1;
+      tile.allowOnlyKeys(const {'value', 'label', 'color', 'text'});
+      final value = tile.integer('value', required: true);
+      final text = tile.text('text');
+      if (text != null && text.length > maximumTileTextLength) {
+        tile.problem('text', 'must be at most $maximumTileTextLength characters');
+      }
+      final shown = text ?? (value == null ? null : '$value');
+      if (shown != null && !seenTiles.add(shown)) {
+        tile.problem(text == null ? 'value' : 'text', 'duplicate tile "$shown"');
+      }
+      tile.text('label');
+      final color = tile.text('color');
+      if (color != null && !_colorPattern.hasMatch(color)) {
+        tile.problem('color', '"$color" must look like #3A7BD5');
+      }
+    }
   }
 
-  final seenValues = <int>{};
-  for (final option in values) {
-    if (!option.isObject) {
-      continue;
+  final groupIds = <String>{};
+  if (hasValues) {
+    final values = mode.list('values', required: true);
+    if (values != null) {
+      if (values.isEmpty) {
+        mode.problem('values', 'needs at least one value');
+      }
+      validateTiles(values);
     }
-    option.allowOnlyKeys(const {'value', 'label', 'color'});
-    final value = option.integer('value', required: true);
-    if (value != null && !seenValues.add(value)) {
-      option.problem('value', 'duplicate value $value');
+    if (mode.has('total')) {
+      mode.problem('total', 'needs "groups"; without groups the tiles are added up');
     }
-    option.text('label');
-    final color = option.text('color');
-    if (color != null && !_colorPattern.hasMatch(color)) {
-      option.problem('color', '"$color" must look like #3A7BD5');
+  } else {
+    final groups = mode.list('groups', required: true) ?? const [];
+    if (groups.isEmpty) {
+      mode.problem('groups', 'needs at least one group');
     }
+    for (final group in groups) {
+      if (!group.isObject) {
+        continue;
+      }
+      group.allowOnlyKeys(const {'id', 'values'});
+      final groupId = group.identifier('id', required: true);
+      if (groupId != null && !groupIds.add(groupId)) {
+        group.problem('id', 'duplicate group id "$groupId"');
+      }
+      final values = group.list('values', required: true);
+      if (values != null) {
+        if (values.isEmpty) {
+          group.problem('values', 'needs at least one value');
+        }
+        validateTiles(values);
+      }
+    }
+
+    final total = mode.text('total');
+    if (total != null) {
+      try {
+        final problems = checkFormula(
+          Formula.parse(total),
+          fieldIds: groupIds,
+          context: FormulaContext.picker,
+        );
+        for (final problem in problems) {
+          mode.problem('total', problem.toString());
+        }
+      } on FormulaSyntaxError catch (error) {
+        mode.problem('total', error.toString());
+      }
+    }
+  }
+
+  if (tileCount > maximumPickerValues) {
+    mode.problem(
+      hasValues ? 'values' : 'groups',
+      'has $tileCount tiles; the most is $maximumPickerValues',
+    );
   }
 }
 

@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scoard_game/bootstrap/app_bootstrap.dart';
 import 'package:scoard_game/ui/app/scoard_game_app.dart';
@@ -6,6 +7,11 @@ import '../../support/test_templates.dart';
 
 void main() {
   Future<void> openApp(WidgetTester tester) async {
+    // Tall enough to list every template without scrolling.
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
     final environment = await AppBootstrap.initialize(
       templateCatalog: loadTestTemplateCatalog(),
     );

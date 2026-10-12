@@ -1,15 +1,23 @@
 import 'package:scoard_game/core/formulas/formula_parser.dart';
 
-/// The values a formula can see while it is evaluated for one player.
-abstract interface class FormulaScope {
-  /// This player's value for a field, or a built-in value.
+/// The values a formula can see while it is evaluated. A field formula sees
+/// one player's fields and the other players; a picker total sees its tile
+/// groups.
+abstract class FormulaScope {
+  /// A field's value, a built-in value, or a tile group's total.
   int valueOf(String name);
 
   /// The other players' values for a field.
-  List<int> otherValuesOf(String fieldId);
+  List<int> otherValuesOf(String fieldId) => const [];
 
   /// How many other players there are.
-  int get otherPlayerCount;
+  int get otherPlayerCount => 0;
+
+  /// How many tiles were picked from a group.
+  int countIn(String groupId) => 0;
+
+  /// How many different tiles were picked from a group.
+  int distinctIn(String groupId) => 0;
 }
 
 /// Evaluates a checked formula. Arithmetic is whole-number; division rounds
@@ -83,6 +91,10 @@ int _call(String name, List<FormulaNode> arguments, FormulaScope scope) {
       return others().fold(0, (sum, value) => sum + value);
     case 'countOthers':
       return scope.otherPlayerCount;
+    case 'countIn':
+      return scope.countIn((arguments.single as FieldNameNode).name);
+    case 'distinctIn':
+      return scope.distinctIn((arguments.single as FieldNameNode).name);
     default:
       throw StateError('Unknown function $name');
   }

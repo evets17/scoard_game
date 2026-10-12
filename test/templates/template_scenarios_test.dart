@@ -11,12 +11,14 @@ import 'package:scoard_game/application/models/scoring/preset_prompt_definition.
 import 'package:scoard_game/application/models/scoring/preset_prompt_kind.dart';
 import 'package:scoard_game/application/models/scoring/scoring_model.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
+import 'package:scoard_game/application/models/scoring/value_picker_definition.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_participant_values.dart';
 import 'package:scoard_game/application/models/sessions/round_score_round_values.dart';
 import 'package:scoard_game/core/scoring/calculate_quick_score_result.dart';
 import 'package:scoard_game/core/scoring/calculate_round_score_result.dart';
 import 'package:scoard_game/core/scoring/resolve_preset_options.dart';
 import 'package:scoard_game/core/scoring/score_engine.dart';
+import 'package:scoard_game/core/scoring/value_picker_total.dart';
 import 'package:scoard_game/core/templates/template_catalog.dart';
 
 const _templateDirectory = 'assets/templates';
@@ -74,6 +76,10 @@ void main() {
         scenarioFile.checkCoverage();
       });
 
+      for (final check in scenarioFile.pickerTotals) {
+        test('picker total: ${check.name}', check.run);
+      }
+
       for (final scenario in scenarioFile.scenarios) {
         test(scenario.name, () => scenario.run(template));
       }
@@ -97,11 +103,12 @@ List<File> _jsonFilesIn(String directory) {
 String _relative(File file) => file.path.replaceAll(r'\', '/');
 
 class _ScenarioFile {
-  _ScenarioFile(this.path, this.template, this.scenarios);
+  _ScenarioFile(this.path, this.template, this.scenarios, this.pickerTotals);
 
   final String path;
   final ScoringPreset template;
   final List<_Scenario> scenarios;
+  final List<_PickerTotalCheck> pickerTotals;
 
   static _ScenarioFile parse(
     String path,
@@ -109,7 +116,7 @@ class _ScenarioFile {
     ScoringPreset template,
   ) {
     final reader = _Reader(path, json);
-    reader.onlyKeys(const {'templateId', 'scenarios'});
+    reader.onlyKeys(const {'templateId', 'scenarios', 'pickerTotals'});
     final templateId = reader.string('templateId');
     if (templateId != template.id) {
       reader.fail('templateId', '"$templateId" should be "${template.id}"');
@@ -120,16 +127,42 @@ class _ScenarioFile {
       reader.fail('scenarios', 'needs at least one scenario');
     }
 
-    return _ScenarioFile(path, template, [
-      for (var index = 0; index < rawScenarios.length; index++)
-        _Scenario.parse(
-          _Reader('$path: scenarios[$index]', rawScenarios[index]),
-          template,
-        ),
-    ]);
+    final rawPickerTotals =
+        reader.has('pickerTotals') ? reader.list('pickerTotals') : const [];
+
+    return _ScenarioFile(
+      path,
+      template,
+      [
+        for (var index = 0; index < rawScenarios.length; index++)
+          _Scenario.parse(
+            _Reader('$path: scenarios[$index]', rawScenarios[index]),
+            template,
+          ),
+      ],
+      [
+        for (var index = 0; index < rawPickerTotals.length; index++)
+          _PickerTotalCheck.parse(
+            _Reader('$path: pickerTotals[$index]', rawPickerTotals[index]),
+            template,
+          ),
+      ],
+    );
   }
 
   void checkCoverage() {
+    for (final field in template.scoreFields) {
+      for (final picker in field.valuePickers) {
+        final checked = pickerTotals.any((check) => check.picker == picker);
+        if (picker.total != null && !checked) {
+          fail(
+            '$path: add a pickerTotals check for value picker "${picker.id}", '
+            'which has a total formula.',
+          );
+        }
+      }
+    }
+
     final hasTie = scenarios.any((scenario) => scenario.expectsTieForFirst);
     if (!hasTie) {
       fail('$path: add a scenario whose expected winners include a tie.');
@@ -149,6 +182,55 @@ class _ScenarioFile {
         );
       }
     }
+  }
+}
+
+/// Checks a value picker's total formula: tap these tiles, expect this score.
+class _PickerTotalCheck {
+  _PickerTotalCheck(this.name, this.picker, this.tappedIndexes, this.expected);
+
+  final String name;
+  final ValuePickerDefinition picker;
+  final List<int> tappedIndexes;
+  final int expected;
+
+  static _PickerTotalCheck parse(_Reader reader, ScoringPreset template) {
+    reader.onlyKeys(const {'name', 'picker', 'taps', 'expected'});
+    final name = reader.string('name');
+    final pickerId = reader.string('picker');
+    final picker = template.scoreFields
+        .expand((field) => field.valuePickers)
+        .where((picker) => picker.id == pickerId)
+        .firstOrNull;
+    if (picker == null) {
+      reader.fail('picker', '"$pickerId" is not a value picker in this template');
+    }
+
+    // Tiles are named by what they show, for example "8", "+4", or "×2".
+    final tappedIndexes = reader.list('taps').map((tap) {
+      final index = picker.options.indexWhere(
+        (option) => option.displayText == tap,
+      );
+      if (index < 0) {
+        reader.fail(
+          'taps',
+          '"$tap" is not a tile; tiles are: '
+              '${picker.options.map((option) => option.displayText).join(', ')}',
+        );
+      }
+      return index;
+    }).toList();
+
+    return _PickerTotalCheck(
+      name,
+      picker,
+      tappedIndexes,
+      reader.integer('expected'),
+    );
+  }
+
+  void run() {
+    expect(valuePickerTotal(picker, tappedIndexes), expected);
   }
 }
 
