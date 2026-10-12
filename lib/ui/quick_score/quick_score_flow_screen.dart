@@ -867,18 +867,31 @@ class _QuickScoreEntryStep extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: PlayerReorderableList(
-            playerIds: players.map((player) => player.id).toList(growable: false),
-            canReorder: canReorder,
-            onReorder: onReorder,
-            itemBuilder: (context, index) {
-              final player = players[index];
-              return NumericScoreField(
-                label: player.displayName,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = NumericScoreField.shouldUseCompact(
+                context,
+                rowCount: players.length,
+                availableHeight: constraints.maxHeight,
                 fieldDefinition: fieldDefinition,
-                controller: controllers[player.id]!,
-                onLabelTap: () => onPlayerTap(player),
-                onEditorClosed: onScoreEditorClosed,
+              );
+
+              return PlayerReorderableList(
+                playerIds:
+                    players.map((player) => player.id).toList(growable: false),
+                canReorder: canReorder,
+                onReorder: onReorder,
+                itemBuilder: (context, index) {
+                  final player = players[index];
+                  return NumericScoreField(
+                    label: player.displayName,
+                    fieldDefinition: fieldDefinition,
+                    controller: controllers[player.id]!,
+                    compact: compact,
+                    onLabelTap: () => onPlayerTap(player),
+                    onEditorClosed: onScoreEditorClosed,
+                  );
+                },
               );
             },
           ),

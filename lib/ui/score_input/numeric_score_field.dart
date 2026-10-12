@@ -12,6 +12,7 @@ class NumericScoreField extends StatefulWidget {
     this.valueLabelMinimumDigits = 0,
     this.onLabelTap,
     this.onEditorClosed,
+    this.compact = false,
     super.key,
   });
 
@@ -23,9 +24,88 @@ class NumericScoreField extends StatefulWidget {
   final VoidCallback? onLabelTap;
   final VoidCallback? onEditorClosed;
 
+  /// Tighter spacing for long player lists.
+  final bool compact;
+
+  /// Whether [rowCount] rows at normal spacing would overflow
+  /// [availableHeight]. Deciding from the normal height (not the current one)
+  /// keeps the choice from flipping back and forth.
+  static bool shouldUseCompact(
+    BuildContext context, {
+    required int rowCount,
+    required double availableHeight,
+    required ScoreFieldDefinition fieldDefinition,
+    bool hasValueLabel = false,
+  }) {
+    final rowHeight = _normalRowHeight(
+      context,
+      fieldDefinition: fieldDefinition,
+      hasValueLabel: hasValueLabel,
+    );
+    return rowCount * rowHeight > availableHeight;
+  }
+
+  // Worked out from the row's own text styles so larger system text counts.
+  // Long names that wrap make rows taller than this, which only means a
+  // slightly overflowing list keeps normal spacing.
+  static double _normalRowHeight(
+    BuildContext context, {
+    required ScoreFieldDefinition fieldDefinition,
+    required bool hasValueLabel,
+  }) {
+    final theme = Theme.of(context);
+    final textScaler = MediaQuery.textScalerOf(context);
+
+    double lineHeight(TextStyle? style) {
+      final painter = TextPainter(
+        text: TextSpan(text: '0', style: style),
+        textDirection: Directionality.of(context),
+        textScaler: textScaler,
+      )..layout();
+      return painter.height;
+    }
+
+    final contentHeights = [
+      lineHeight(_labelTextStyle(theme)),
+      lineHeight(_scoreTextStyle(theme)) + _scoreVerticalPadding * 2,
+      if (fieldDefinition.enableQuickAdjust) _compactIconButtonSize,
+      if (hasValueLabel)
+        lineHeight(_valueLabelTextStyle(theme)) + _valueLabelVerticalPadding * 2,
+    ];
+    final contentHeight = contentHeights.reduce((a, b) => a > b ? a : b);
+
+    return contentHeight +
+        _normalSpacing.verticalPadding * 2 +
+        _normalSpacing.bottomMargin;
+  }
+
   @override
   State<NumericScoreField> createState() => _NumericScoreFieldState();
 }
+
+typedef _RowSpacing = ({double verticalPadding, double bottomMargin});
+
+const _RowSpacing _normalSpacing = (verticalPadding: 10, bottomMargin: 12);
+const _RowSpacing _compactSpacing = (verticalPadding: 2, bottomMargin: 4);
+const double _scoreVerticalPadding = 6;
+const double _valueLabelVerticalPadding = 8;
+const double _compactIconButtonSize = 40;
+
+TextStyle? _labelTextStyle(ThemeData theme) =>
+    theme.textTheme.titleLarge?.copyWith(fontSize: 22);
+
+TextStyle? _scoreTextStyle(ThemeData theme) =>
+    theme.textTheme.displaySmall?.copyWith(
+      fontSize: 34,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+
+TextStyle? _valueLabelTextStyle(ThemeData theme) =>
+    theme.textTheme.titleLarge?.copyWith(
+      fontSize: 20,
+      color: theme.colorScheme.onSurfaceVariant,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
 
 class _NumericScoreFieldState extends State<NumericScoreField> {
   @override
@@ -62,31 +142,25 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
     final currentValue = int.tryParse(widget.controller.text.trim()) ??
         (widget.fieldDefinition.initialIntegerValue ?? 0);
     final valueLabel = widget.valueLabelBuilder?.call(currentValue);
-    final scoreTextStyle = theme.textTheme.displaySmall?.copyWith(
-      fontSize: 34,
-      fontFeatures: const [FontFeature.tabularFigures()],
-    );
-    final valueLabelTextStyle = theme.textTheme.titleLarge?.copyWith(
-      fontSize: 20,
-      color: theme.colorScheme.onSurfaceVariant,
-      fontFeatures: const [FontFeature.tabularFigures()],
-    );
+    final scoreTextStyle = _scoreTextStyle(theme);
+    final valueLabelTextStyle = _valueLabelTextStyle(theme);
+    final spacing = widget.compact ? _compactSpacing : _normalSpacing;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: spacing.bottomMargin),
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: spacing.verticalPadding,
+        ),
         child: Row(
           children: [
             Expanded(
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: widget.onLabelTap,
-                child: Text(
-                  widget.label,
-                  style: theme.textTheme.titleLarge?.copyWith(fontSize: 22),
-                ),
+                child: Text(widget.label, style: _labelTextStyle(theme)),
               ),
             ),
             Row(
@@ -114,7 +188,10 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
                       ),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: _scoreVerticalPadding,
+                      ),
                       child: Text(
                         '$currentValue',
                         textAlign: TextAlign.center,
@@ -143,7 +220,10 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
                     horizontalPadding: 20,
                   ),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: _valueLabelVerticalPadding,
+                ),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),

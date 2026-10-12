@@ -1014,22 +1014,35 @@ class _RoundScoreEntryStep extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Expanded(
-          child: PlayerReorderableList(
-            playerIds: displayedPlayers
-                .map((player) => player.id)
-                .toList(growable: false),
-            canReorder: sortMode == PlayerSortMode.playOrder,
-            onReorder: onReorder,
-            itemBuilder: (context, index) {
-              final player = displayedPlayers[index];
-              return NumericScoreField(
-                label: player.displayName,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = NumericScoreField.shouldUseCompact(
+                context,
+                rowCount: displayedPlayers.length,
+                availableHeight: constraints.maxHeight,
                 fieldDefinition: fieldDefinition,
-                controller: controllers[player.id]!,
-                onLabelTap: () => onPlayerTap(player),
-                valueLabelMinimumDigits: 3,
-                valueLabelBuilder: (currentValue) =>
-                    '${((priorRoundTotals[player.id] ?? 0) + currentValue)}',
+                hasValueLabel: true,
+              );
+
+              return PlayerReorderableList(
+                playerIds: displayedPlayers
+                    .map((player) => player.id)
+                    .toList(growable: false),
+                canReorder: sortMode == PlayerSortMode.playOrder,
+                onReorder: onReorder,
+                itemBuilder: (context, index) {
+                  final player = displayedPlayers[index];
+                  return NumericScoreField(
+                    label: player.displayName,
+                    fieldDefinition: fieldDefinition,
+                    controller: controllers[player.id]!,
+                    compact: compact,
+                    onLabelTap: () => onPlayerTap(player),
+                    valueLabelMinimumDigits: 3,
+                    valueLabelBuilder: (currentValue) =>
+                        '${((priorRoundTotals[player.id] ?? 0) + currentValue)}',
+                  );
+                },
               );
             },
           ),
