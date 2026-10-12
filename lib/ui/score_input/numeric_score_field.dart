@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
 import 'package:scoard_game/ui/score_input/numeric_value_picker.dart';
+import 'package:scoard_game/ui/score_input/score_entry_mode.dart';
 import 'package:scoard_game/ui/score_input/score_value_edit_action.dart';
 
 class NumericScoreField extends StatefulWidget {
@@ -13,6 +14,7 @@ class NumericScoreField extends StatefulWidget {
     this.onLabelTap,
     this.onEditorClosed,
     this.compact = false,
+    this.entryMemory,
     super.key,
   });
 
@@ -26,6 +28,9 @@ class NumericScoreField extends StatefulWidget {
 
   /// Tighter spacing for long player lists.
   final bool compact;
+
+  /// Shared by the rows of one game so the entry sheet remembers its mode.
+  final ScoreEntryMemory? entryMemory;
 
   /// Whether [rowCount] rows at normal spacing would overflow
   /// [availableHeight]. Deciding from the normal height (not the current one)
@@ -248,6 +253,7 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
       currentValue: currentValue,
       allowReplace: widget.fieldDefinition.allowReplace,
       allowAdjust: widget.fieldDefinition.allowAdjust,
+      entryMemory: widget.entryMemory,
     );
 
     if (request == null) {

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:scoard_game/core/scoring/score_expression.dart';
+import 'package:scoard_game/ui/score_input/quick_pick_grid.dart';
+import 'package:scoard_game/ui/score_input/score_entry_mode.dart';
 import 'package:scoard_game/ui/score_input/score_value_edit_action.dart';
 import 'package:scoard_game/ui/score_input/score_value_edit_request.dart';
 
@@ -9,6 +11,7 @@ Future<ScoreValueEditRequest?> showNumericValuePicker(
   required int currentValue,
   required bool allowReplace,
   required bool allowAdjust,
+  ScoreEntryMemory? entryMemory,
 }) {
   return showModalBottomSheet<ScoreValueEditRequest>(
     context: context,
@@ -18,6 +21,7 @@ Future<ScoreValueEditRequest?> showNumericValuePicker(
       currentValue: currentValue,
       allowReplace: allowReplace,
       allowAdjust: allowAdjust,
+      entryMemory: entryMemory ?? ScoreEntryMemory(),
     ),
   );
 }
@@ -28,12 +32,14 @@ class _NumericValuePicker extends StatefulWidget {
     required this.currentValue,
     required this.allowReplace,
     required this.allowAdjust,
+    required this.entryMemory,
   });
 
   final String title;
   final int currentValue;
   final bool allowReplace;
   final bool allowAdjust;
+  final ScoreEntryMemory entryMemory;
 
   @override
   State<_NumericValuePicker> createState() => _NumericValuePickerState();
@@ -42,21 +48,27 @@ class _NumericValuePicker extends StatefulWidget {
 class _NumericValuePickerState extends State<_NumericValuePicker> {
   static const _divideByZeroMessage = 'Can\'t divide by zero.';
 
+  late ScoreEntryMode _mode = widget.entryMemory.mode;
   ScoreExpression _expression = const ScoreExpression();
+  int? _quickPickValue;
   String? _errorText;
+
+  int? get _entryValue => switch (_mode) {
+        ScoreEntryMode.calculator => _expression.value,
+        ScoreEntryMode.quickPick => _quickPickValue,
+      };
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
-    final resultValue = _expression.value;
-    final adjustedResultValue =
-        resultValue == null ? null : widget.currentValue + resultValue;
+    final entryValue = _entryValue;
+    final adjustedValue =
+        entryValue == null ? null : widget.currentValue + entryValue;
     final errorText = _errorText ??
-        (_expression.dividesByZero ? _divideByZeroMessage : null);
-    final valueTextStyle = theme.textTheme.displaySmall?.copyWith(
-      fontSize: 38,
-    );
+        (_mode == ScoreEntryMode.calculator && _expression.dividesByZero
+            ? _divideByZeroMessage
+            : null);
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(20, 20, 20, viewInsets + 20),
@@ -64,93 +76,73 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.title, style: theme.textTheme.titleLarge),
-          const SizedBox(height: 6),
-          Text(
-            'Current score: ${widget.currentValue}',
-            style: theme.textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: errorText == null
-                    ? theme.dividerColor
-                    : theme.colorScheme.error,
-              ),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        widget.allowAdjust && !widget.allowReplace
-                            ? 'Adjustment amount'
-                            : 'Score value',
-                        style: theme.textTheme.bodyMedium,
-                      ),
+                    Text(
+                      widget.title,
+                      style: theme.textTheme.titleLarge,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    if (!_expression.isEmpty)
-                      TextButton(
-                        onPressed: _clear,
-                        style: TextButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                        ),
-                        child: const Text('Clear'),
-                      ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Current score: ${widget.currentValue}',
+                      style: theme.textTheme.bodyMedium,
+                    ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                // The calculation line only appears once an operator is used.
-                // The sheet is anchored to the bottom, so it grows upward and
-                // the keys stay where they are.
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 150),
-                  alignment: Alignment.bottomLeft,
-                  child: _expression.hasOperator
-                      ? Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Text(
-                            _expression.displayText,
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        )
-                      : const SizedBox(width: double.infinity),
-                ),
-                Text(
-                  _expression.hasOperator
-                      ? '= ${resultValue ?? '?'}'
-                      : _expression.displayText,
-                  style: valueTextStyle,
-                ),
-              ],
-            ),
-          ),
-          if (errorText != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              errorText,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.error,
               ),
-            ),
-          ],
-          const SizedBox(height: 18),
-          _Numpad(
-            onDigitPressed: (digit) => _update(_expression.appendDigit(digit)),
-            onOperatorPressed: (operator) =>
-                _update(_expression.applyOperator(operator)),
-            onBackspacePressed: () => _update(_expression.backspace()),
-            onToggleSignPressed: () => _update(_expression.toggleSign()),
+              SegmentedButton<ScoreEntryMode>(
+                segments: [
+                  for (final mode in ScoreEntryMode.values)
+                    ButtonSegment(
+                      value: mode,
+                      icon: Icon(mode.icon),
+                      tooltip: mode.label,
+                    ),
+                ],
+                selected: {_mode},
+                showSelectedIcon: false,
+                onSelectionChanged: (selection) => _setMode(selection.single),
+              ),
+            ],
           ),
+          const SizedBox(height: 16),
+          if (_mode == ScoreEntryMode.calculator) ...[
+            _CalculatorDisplay(
+              expression: _expression,
+              label: widget.allowAdjust && !widget.allowReplace
+                  ? 'Adjustment amount'
+                  : 'Score value',
+              hasError: errorText != null,
+              onClear: () => _updateExpression(const ScoreExpression()),
+            ),
+            if (errorText != null) _ErrorText(errorText),
+            const SizedBox(height: 18),
+            _Numpad(
+              onDigitPressed: (digit) =>
+                  _updateExpression(_expression.appendDigit(digit)),
+              onOperatorPressed: (operator) =>
+                  _updateExpression(_expression.applyOperator(operator)),
+              onBackspacePressed: () =>
+                  _updateExpression(_expression.backspace()),
+              onToggleSignPressed: () =>
+                  _updateExpression(_expression.toggleSign()),
+            ),
+          ] else ...[
+            QuickPickGrid(
+              selectedValue: _quickPickValue,
+              initialColumn: widget.entryMemory.quickPickColumn,
+              onSelected: (value) => setState(() {
+                _errorText = null;
+                _quickPickValue = value;
+              }),
+            ),
+            if (errorText != null) _ErrorText(errorText),
+          ],
           const SizedBox(height: 18),
           Wrap(
             spacing: 10,
@@ -160,16 +152,16 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
                 FilledButton(
                   onPressed: () => _submit(ScoreValueEditAction.replace),
                   child: Text(
-                    resultValue == null ? 'Replace' : 'Replace -> $resultValue',
+                    entryValue == null ? 'Replace' : 'Replace -> $entryValue',
                   ),
                 ),
               if (widget.allowAdjust)
                 FilledButton.tonal(
                   onPressed: () => _submit(ScoreValueEditAction.add),
                   child: Text(
-                    adjustedResultValue == null
+                    adjustedValue == null
                         ? 'Add to Existing'
-                        : 'Adjust -> $adjustedResultValue',
+                        : 'Adjust -> $adjustedValue',
                   ),
                 ),
             ],
@@ -183,34 +175,144 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
     );
   }
 
-  void _submit(ScoreValueEditAction action) {
-    final resultValue = _expression.value;
+  void _setMode(ScoreEntryMode mode) {
+    widget.entryMemory.mode = mode;
+    setState(() {
+      _mode = mode;
+      _errorText = null;
+    });
+  }
 
-    if (resultValue == null) {
+  void _submit(ScoreValueEditAction action) {
+    final entryValue = _entryValue;
+
+    if (entryValue == null) {
       setState(() {
-        _errorText = _expression.dividesByZero
-            ? _divideByZeroMessage
-            : 'Enter a whole number.';
+        _errorText = switch (_mode) {
+          ScoreEntryMode.calculator => _expression.dividesByZero
+              ? _divideByZeroMessage
+              : 'Enter a whole number.',
+          ScoreEntryMode.quickPick => 'Pick a number.',
+        };
       });
       return;
+    }
+
+    if (_mode == ScoreEntryMode.quickPick) {
+      widget.entryMemory.quickPickColumn = QuickPickGrid.columnOf(entryValue);
     }
 
     Navigator.of(context).pop(
       ScoreValueEditRequest(
         action: action,
-        value: resultValue,
+        value: entryValue,
       ),
     );
   }
 
-  void _update(ScoreExpression expression) {
+  void _updateExpression(ScoreExpression expression) {
     setState(() {
       _errorText = null;
       _expression = expression;
     });
   }
+}
 
-  void _clear() => _update(const ScoreExpression());
+class _CalculatorDisplay extends StatelessWidget {
+  const _CalculatorDisplay({
+    required this.expression,
+    required this.label,
+    required this.hasError,
+    required this.onClear,
+  });
+
+  final ScoreExpression expression;
+  final String label;
+  final bool hasError;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: hasError ? theme.colorScheme.error : theme.dividerColor,
+        ),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(label, style: theme.textTheme.bodyMedium),
+              ),
+              if (!expression.isEmpty)
+                TextButton(
+                  onPressed: onClear,
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  child: const Text('Clear'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // The calculation line only appears once an operator is used. The
+          // sheet is anchored to the bottom, so it grows upward and the keys
+          // stay where they are.
+          AnimatedSize(
+            duration: const Duration(milliseconds: 150),
+            alignment: Alignment.bottomLeft,
+            child: expression.hasOperator
+                ? Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      expression.displayText,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
+          Text(
+            expression.hasOperator
+                ? '= ${expression.value ?? '?'}'
+                : expression.displayText,
+            style: theme.textTheme.displaySmall?.copyWith(fontSize: 38),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorText extends StatelessWidget {
+  const _ErrorText(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Text(
+        text,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.error,
+        ),
+      ),
+    );
+  }
 }
 
 class _Numpad extends StatelessWidget {

@@ -60,6 +60,12 @@ class ScoringHelpScreen extends StatelessWidget {
                   text:
                       'Use + − × ÷ to tally several numbers, like 3 + 4 + 5. It works left to right like a running total, so 3 + 4 × 2 is 14. Division rounds down.',
                 ),
+              if (fieldDefinition.enableTapToEdit)
+                const _HelpTip(
+                  icon: Icons.grid_view_rounded,
+                  text:
+                      'Tap the grid button at the top of the score sheet for Quick pick: tap a number instead of typing it. Swipe sideways for negatives and higher numbers. Your choice is remembered for the rest of the game.',
+                ),
               if (fieldDefinition.enableTapToEdit &&
                   fieldDefinition.allowReplace)
                 const _HelpTip(

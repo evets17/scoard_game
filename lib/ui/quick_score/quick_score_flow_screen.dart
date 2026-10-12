@@ -29,6 +29,7 @@ import 'package:scoard_game/ui/players/player_editor_sheet.dart';
 import 'package:scoard_game/ui/players/player_reorderable_list.dart';
 import 'package:scoard_game/ui/players/player_sort_menu_button.dart';
 import 'package:scoard_game/ui/score_input/numeric_score_field.dart';
+import 'package:scoard_game/ui/score_input/score_entry_mode.dart';
 
 class QuickScoreFlowScreen extends StatefulWidget {
   const QuickScoreFlowScreen({
@@ -70,6 +71,7 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
   final List<String> _selectedPlayerIds = <String>[];
   List<QuickScoreAvailablePlayer> _selectedPlayers = const [];
   final Map<String, TextEditingController> _scoreControllers = {};
+  final ScoreEntryMemory _scoreEntryMemory = ScoreEntryMemory();
   ScoringPreset? _preset;
   List<PresetPromptAnswer> _promptAnswers = const [];
   QuickScoreResult? _result;
@@ -169,6 +171,7 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
                 canReorder: _sortMode == PlayerSortMode.playOrder,
                 fieldDefinition: _preset!.scoreFields.first,
                 controllers: _scoreControllers,
+                entryMemory: _scoreEntryMemory,
                 onPlayerTap: (player) => _handlePlayerTap(setupModel, player),
                 onReorder: _reorderPlayers,
                 onScoreEditorClosed: _refreshScoreSort,
@@ -843,6 +846,7 @@ class _QuickScoreEntryStep extends StatelessWidget {
     required this.players,
     required this.fieldDefinition,
     required this.controllers,
+    required this.entryMemory,
     required this.canReorder,
     required this.onPlayerTap,
     required this.onReorder,
@@ -854,6 +858,7 @@ class _QuickScoreEntryStep extends StatelessWidget {
   final List<QuickScoreAvailablePlayer> players;
   final ScoreFieldDefinition fieldDefinition;
   final Map<String, TextEditingController> controllers;
+  final ScoreEntryMemory entryMemory;
   final bool canReorder;
   final ValueChanged<QuickScoreAvailablePlayer> onPlayerTap;
   final ReorderCallback onReorder;
@@ -888,6 +893,7 @@ class _QuickScoreEntryStep extends StatelessWidget {
                     fieldDefinition: fieldDefinition,
                     controller: controllers[player.id]!,
                     compact: compact,
+                    entryMemory: entryMemory,
                     onLabelTap: () => onPlayerTap(player),
                     onEditorClosed: onScoreEditorClosed,
                   );

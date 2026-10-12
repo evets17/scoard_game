@@ -31,6 +31,7 @@ import 'package:scoard_game/ui/players/player_editor_sheet.dart';
 import 'package:scoard_game/ui/players/player_reorderable_list.dart';
 import 'package:scoard_game/ui/players/player_sort_menu_button.dart';
 import 'package:scoard_game/ui/score_input/numeric_score_field.dart';
+import 'package:scoard_game/ui/score_input/score_entry_mode.dart';
 
 class RoundScoreFlowScreen extends StatefulWidget {
   const RoundScoreFlowScreen({
@@ -71,6 +72,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
   _RoundScoreStep _step = _RoundScoreStep.setup;
   final List<String> _selectedPlayerIds = <String>[];
   final Map<String, TextEditingController> _scoreControllers = {};
+  final ScoreEntryMemory _scoreEntryMemory = ScoreEntryMemory();
   final List<RoundScoreRoundValues> _savedRounds = <RoundScoreRoundValues>[];
   List<QuickScoreAvailablePlayer> _selectedPlayers = const [];
   ScoringPreset? _preset;
@@ -170,6 +172,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
                   promptAnswers: _promptAnswers,
                 ).winnerRule,
                 controllers: _scoreControllers,
+                entryMemory: _scoreEntryMemory,
                 savedRounds: _savedRounds,
                 onPlayerTap: (player) => _handlePlayerTap(setupModel, player),
                 onReorder: _reorderPlayers,
@@ -961,6 +964,7 @@ class _RoundScoreEntryStep extends StatelessWidget {
     required this.sortMode,
     required this.winnerRule,
     required this.controllers,
+    required this.entryMemory,
     required this.savedRounds,
     required this.onPlayerTap,
     required this.onReorder,
@@ -974,6 +978,7 @@ class _RoundScoreEntryStep extends StatelessWidget {
   final ScoreFieldDefinition fieldDefinition;
   final List<QuickScoreAvailablePlayer> players;
   final Map<String, TextEditingController> controllers;
+  final ScoreEntryMemory entryMemory;
   final PlayerSortMode sortMode;
   final WinnerRule winnerRule;
   final List<RoundScoreRoundValues> savedRounds;
@@ -1037,6 +1042,7 @@ class _RoundScoreEntryStep extends StatelessWidget {
                     fieldDefinition: fieldDefinition,
                     controller: controllers[player.id]!,
                     compact: compact,
+                    entryMemory: entryMemory,
                     onLabelTap: () => onPlayerTap(player),
                     valueLabelMinimumDigits: 3,
                     valueLabelBuilder: (currentValue) =>
