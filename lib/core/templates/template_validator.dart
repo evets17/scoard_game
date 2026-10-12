@@ -44,6 +44,7 @@ List<TemplateProblem> validateTemplateJson(
     'id',
     'version',
     'name',
+    'subtitle',
     'description',
     'source',
     'players',
@@ -72,6 +73,7 @@ List<TemplateProblem> validateTemplateJson(
   }
 
   template.text('name', required: true);
+  template.text('subtitle');
   template.text('description', required: true);
   template.text('source');
   template.oneOf('scoringModel', templateScoringModels, required: true);

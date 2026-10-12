@@ -14,6 +14,7 @@ dependencies:
   path_provider: ^2.1.5
   shared_preferences: ^2.5.3
   sqlite3_flutter_libs: ^0.5.39
+  url_launcher: ^6.3.3
   wakelock_plus: ^1.7.0
 
 dev_dependencies:

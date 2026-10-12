@@ -22,13 +22,26 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Quick Score'), findsOneWidget);
+    expect(find.text('One final score per player'), findsOneWidget);
     expect(find.text('Round Score'), findsOneWidget);
     expect(find.text('Skyjo'), findsOneWidget);
 
     await tester.tap(find.text('Skyjo'));
     await tester.pumpAndSettle();
 
-    // Skyjo has no prompts, so it goes straight to choosing players.
+    // Skyjo has no options, but still opens its game page.
+    expect(
+      find.text(
+        'Add up each round\'s cards. Lowest total wins once someone reaches 100.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('2–8 players'), findsOneWidget);
+    expect(find.text('Options'), findsNothing);
+
+    await tester.tap(find.text('Start'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Skyjo'), findsOneWidget);
     await tester.tap(find.text('Avery').first);
     await tester.pumpAndSettle();

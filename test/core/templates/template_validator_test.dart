@@ -91,6 +91,7 @@ void main() {
     final problems = problemsFor((template) {
       template['schemaVersion'] = 2;
       template['version'] = 'one';
+      template['subtitle'] = '  ';
       template['scoringModel'] = 'categories';
       child(template, 'players')['minimum'] = 1.5;
       child(child(template, 'scoreField'), 'entry')['adjust'] = 'yes';
@@ -101,6 +102,7 @@ void main() {
       containsAll([
         'schemaVersion: unsupported version 2; expected 1',
         'version: "one" must look like 1.0.0',
+        'subtitle: must not be empty',
         'scoringModel: unsupported value "categories"; expected one of: finalScore, rounds',
         'players.minimum: must be a whole number',
         'scoreField.entry.adjust: must be true or false',

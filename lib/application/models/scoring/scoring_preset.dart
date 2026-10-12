@@ -8,7 +8,8 @@ class ScoringPreset {
   const ScoringPreset({
     required this.id,
     required this.displayName,
-    required this.chooserDescription,
+    required this.description,
+    this.subtitle,
     required this.scoringModel,
     required this.minimumPlayers,
     required this.winnerRule,
@@ -21,7 +22,12 @@ class ScoringPreset {
 
   final String id;
   final String displayName;
-  final String chooserDescription;
+  /// Short line shown under the name in Score a Game, for example to tell
+  /// apart two templates for the same game.
+  final String? subtitle;
+
+  /// Longer explanation shown on the game page.
+  final String description;
   final ScoringModel scoringModel;
   final int minimumPlayers;
 

@@ -57,9 +57,10 @@ That validates every bundled template and runs every scenario. A template is don
 | `schemaVersion` | yes | integer | Must be `1`. |
 | `id` | yes | string | Lowercase letters, digits, and single hyphens (`skyjo`, `love-letter`). Unique across all templates. Must match the file name. Never change it once games have been saved with it. |
 | `version` | yes | string | `major.minor.patch`, for example `1.0.0`. |
-| `name` | yes | string | Non-empty. Shown in Score a Game and in game history. |
-| `description` | yes | string | Non-empty. One or two sentences shown in Score a Game. |
-| `source` | no | string | Where the scoring rules came from, for example `"Skyjo rulebook, scoring section"` or a URL. |
+| `name` | yes | string | Non-empty. Shown in Score a Game, on the game page, and in game history. |
+| `subtitle` | no | string | Non-empty. One short line under the name in Score a Game, for example `"Alternate rules"` to tell two templates for the same game apart. |
+| `description` | yes | string | Non-empty. Shown on the game page, which opens after the game is picked. |
+| `source` | no | string | Where the scoring rules came from, for example `"Skyjo rulebook, scoring section"` or a URL. Shown on the game page; a URL becomes a link. |
 | `players` | yes | object | See below. |
 | `scoringModel` | yes | string | `finalScore` or `rounds`. See below. |
 | `winner` | yes | string | `highestScore` or `lowestScore`. |
@@ -80,11 +81,11 @@ Any key not listed here is an error.
 | Key | Required | Type | Rules |
 |---|---|---|---|
 | `minimum` | yes | integer | At least 1. The setup screen needs this many players before scoring starts. |
-| `maximum` | no | integer | Not less than `minimum`. Informational only: the app does not block larger games. |
+| `maximum` | no | integer | Not less than `minimum`. Shown on the game page. Informational only: the app does not block larger games. |
 
 ### `prompts`
 
-Each entry is a question shown before scoring starts.
+Each entry is an option shown on the game page before scoring starts.
 
 | Key | Required | Type | Rules |
 |---|---|---|---|

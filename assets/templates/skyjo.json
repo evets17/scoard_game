@@ -3,7 +3,7 @@
   "id": "skyjo",
   "version": "1.0.0",
   "name": "Skyjo",
-  "description": "Add up each round's cards. Lowest total wins once someone reaches 100.",
+  "description": "Add up each round's cards. Lowest total wins. Game ends once someone reaches 100.",
   "source": "Skyjo rulebook (Magilano), scoring section",
   "players": { "minimum": 2, "maximum": 8 },
   "scoringModel": "rounds",

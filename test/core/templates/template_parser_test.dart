@@ -67,9 +67,10 @@ void main() {
       digits: 3,
     );
     expect(
-      preset.chooserDescription,
+      preset.description,
       'Use this when each player only needs one final score entered.',
     );
+    expect(preset.subtitle, 'One final score per player');
   });
 
   test('Round Score parses to the same preset the app always had', () {
@@ -84,9 +85,10 @@ void main() {
       digits: 2,
     );
     expect(
-      preset.chooserDescription,
+      preset.description,
       'Use this when each round has one score per player and totals add up over time.',
     );
+    expect(preset.subtitle, 'Scores add up each round');
   });
 
   test('optional entry settings default like the original field definition', () {

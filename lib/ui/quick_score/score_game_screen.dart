@@ -5,7 +5,7 @@ import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/core/templates/template_catalog.dart';
 import 'package:scoard_game/ui/navigation/app_routes.dart';
 import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
-import 'package:scoard_game/ui/preset_options/preset_options_screen.dart';
+import 'package:scoard_game/ui/game_page/game_page_screen.dart';
 
 class ScoreGameScreen extends StatelessWidget {
   const ScoreGameScreen({required this.templateCatalog, super.key});
@@ -23,7 +23,7 @@ class ScoreGameScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'How do you want to score this game?',
+            'What are you playing?',
             style: theme.textTheme.bodyLarge,
           ),
           const SizedBox(height: 16),
@@ -47,19 +47,12 @@ class ScoreGameScreen extends StatelessWidget {
   Future<void> _startPreset(BuildContext context, ScoringPreset preset) async {
     final routeName = _routeFor(preset.scoringModel);
 
-    if (preset.promptDefinitions.isEmpty) {
-      await Navigator.of(context).pushNamed(
-        routeName,
-        arguments: ScoringSessionStartConfiguration(presetId: preset.id),
-      );
-      return;
-    }
-
+    // Every game opens its game page first, whether or not it has options.
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => PresetOptionsScreen(
+        builder: (_) => GamePageScreen(
           preset: preset,
-          onContinue: (answers) {
+          onStart: (answers) {
             Navigator.of(context).pushReplacementNamed(
               routeName,
               arguments: ScoringSessionStartConfiguration(
@@ -110,11 +103,13 @@ class _PresetOptionCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(preset.displayName, style: theme.textTheme.titleLarge),
-                    const SizedBox(height: 6),
-                    Text(
-                      preset.chooserDescription,
-                      style: theme.textTheme.bodyMedium,
-                    ),
+                    if (preset.subtitle != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        preset.subtitle!,
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ],
                   ],
                 ),
               ),

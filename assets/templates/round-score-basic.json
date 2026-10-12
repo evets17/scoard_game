@@ -3,6 +3,7 @@
   "id": "round-score-basic",
   "version": "1.0.0",
   "name": "Round Score",
+  "subtitle": "Scores add up each round",
   "description": "Use this when each round has one score per player and totals add up over time.",
   "players": { "minimum": 2 },
   "scoringModel": "rounds",

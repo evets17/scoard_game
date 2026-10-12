@@ -18,7 +18,8 @@ ScoringPreset parseTemplateJson(Map<String, Object?> json) {
     id: json['id']! as String,
     version: json['version']! as String,
     displayName: json['name']! as String,
-    chooserDescription: json['description']! as String,
+    subtitle: json['subtitle'] as String?,
+    description: json['description']! as String,
     source: json['source'] as String?,
     scoringModel: switch (json['scoringModel']) {
       'rounds' => ScoringModel.rounds,
