@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "quick-final-score-basic",
+  "version": "1.0.0",
+  "name": "Quick Score",
+  "description": "Use this when each player only needs one final score entered.",
+  "players": { "minimum": 2 },
+  "scoringModel": "finalScore",
+  "winner": "highestScore",
+  "prompts": [
+    {
+      "id": "low-score-wins",
+      "type": "boolean",
+      "label": "Low Score Wins",
+      "help": "Turn this on for games where the lowest total is the winner.",
+      "default": false,
+      "effect": "lowScoreWins"
+    }
+  ],
+  "scoreField": {
+    "id": "final-score",
+    "label": "Score",
+    "initialValue": 0,
+    "minimumDisplayDigits": 3,
+    "entry": { "tapToEdit": true, "quickAdjust": true, "replace": true, "adjust": true }
+  }
+}

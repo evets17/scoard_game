@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scoard_game/core/scoring/built_in_templates/round_score_basic_preset.dart';
 import 'package:scoard_game/ui/score_input/numeric_score_field.dart';
 
+import '../../support/test_templates.dart';
+
 void main() {
-  final fieldDefinition = roundScoreBasicPreset.scoreFields.first;
+  final fieldDefinition = loadTestTemplateCatalog().byId('round-score-basic').scoreFields.first;
 
   Future<BuildContext> pumpRow(
     WidgetTester tester, {

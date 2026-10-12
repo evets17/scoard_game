@@ -20,7 +20,6 @@ import 'package:scoard_game/application/services/sessions/delete_active_session.
 import 'package:scoard_game/application/services/sessions/save_quick_score_active_session.dart';
 import 'package:scoard_game/application/services/sessions/save_quick_score_session.dart';
 import 'package:scoard_game/core/players/order_players.dart';
-import 'package:scoard_game/core/scoring/built_in_templates/built_in_scoring_presets.dart';
 import 'package:scoard_game/core/scoring/resolve_preset_options.dart';
 import 'package:scoard_game/ui/help/scoring_help_screen.dart';
 import 'package:scoard_game/ui/navigation/app_routes.dart';
@@ -44,7 +43,7 @@ class QuickScoreFlowScreen extends StatefulWidget {
     required this.saveQuickScoreSession,
     required this.saveQuickScoreActiveSession,
     required this.deleteActiveSession,
-    this.initialPresetId,
+    required this.preset,
     this.initialPromptAnswers = const [],
     this.initialActiveSession,
     super.key,
@@ -58,7 +57,8 @@ class QuickScoreFlowScreen extends StatefulWidget {
   final SaveQuickScoreSession saveQuickScoreSession;
   final SaveQuickScoreActiveSession saveQuickScoreActiveSession;
   final DeleteActiveSession deleteActiveSession;
-  final String? initialPresetId;
+  /// The scoring template being played.
+  final ScoringPreset preset;
   final List<PresetPromptAnswer> initialPromptAnswers;
   final QuickScoreActiveSession? initialActiveSession;
 
@@ -92,11 +92,9 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
   @override
   void initState() {
     super.initState();
+    _preset = widget.preset;
     _setupModelFuture = widget.loadQuickScoreSetupModel(
-      presetId:
-          widget.initialActiveSession?.presetId ??
-          widget.initialPresetId ??
-          'quick-final-score-basic',
+      presetId: widget.preset.id,
     );
     _restoreInitialSession();
     _lifecycleListener = AppLifecycleListener(
@@ -120,7 +118,7 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
   @override
   Widget build(BuildContext context) {
     final title = switch (_step) {
-      _QuickScoreStep.setup => 'Quick Score',
+      _QuickScoreStep.setup => widget.preset.displayName,
       _QuickScoreStep.entry => 'Enter Scores',
       _QuickScoreStep.result => 'Result',
     };
@@ -299,7 +297,7 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
       }
 
       setState(() {
-        _setupModelFuture = widget.loadQuickScoreSetupModel();
+        _setupModelFuture = widget.loadQuickScoreSetupModel(presetId: widget.preset.id);
         if (!_selectedPlayerIds.contains(createdPlayer.id)) {
           _selectedPlayerIds.add(createdPlayer.id);
         }
@@ -564,7 +562,6 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
     }
 
     _currentSessionId = session.sessionId;
-    _preset = getBuiltInScoringPresetById(session.presetId);
     _promptAnswers = session.promptAnswers;
     _selectedPlayers = session.participantValues
         .map(

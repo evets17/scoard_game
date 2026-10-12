@@ -22,7 +22,6 @@ import 'package:scoard_game/application/services/sessions/delete_active_session.
 import 'package:scoard_game/application/services/sessions/save_round_score_active_session.dart';
 import 'package:scoard_game/application/services/sessions/save_round_score_session.dart';
 import 'package:scoard_game/core/players/order_players.dart';
-import 'package:scoard_game/core/scoring/built_in_templates/built_in_scoring_presets.dart';
 import 'package:scoard_game/core/scoring/resolve_preset_options.dart';
 import 'package:scoard_game/ui/help/scoring_help_screen.dart';
 import 'package:scoard_game/ui/navigation/app_routes.dart';
@@ -46,7 +45,7 @@ class RoundScoreFlowScreen extends StatefulWidget {
     required this.saveRoundScoreSession,
     required this.saveRoundScoreActiveSession,
     required this.deleteActiveSession,
-    this.initialPresetId,
+    required this.preset,
     this.initialPromptAnswers = const [],
     this.initialActiveSession,
     super.key,
@@ -60,7 +59,8 @@ class RoundScoreFlowScreen extends StatefulWidget {
   final SaveRoundScoreSession saveRoundScoreSession;
   final SaveRoundScoreActiveSession saveRoundScoreActiveSession;
   final DeleteActiveSession deleteActiveSession;
-  final String? initialPresetId;
+  /// The scoring template being played.
+  final ScoringPreset preset;
   final List<PresetPromptAnswer> initialPromptAnswers;
   final RoundScoreActiveSession? initialActiveSession;
 
@@ -96,11 +96,9 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
   @override
   void initState() {
     super.initState();
+    _preset = widget.preset;
     _setupModelFuture = widget.loadRoundScoreSetupModel(
-      presetId:
-          widget.initialActiveSession?.presetId ??
-          widget.initialPresetId ??
-          'round-score-basic',
+      presetId: widget.preset.id,
     );
     _restoreInitialSession();
     _lifecycleListener = AppLifecycleListener(
@@ -124,7 +122,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
   @override
   Widget build(BuildContext context) {
     final title = switch (_step) {
-      _RoundScoreStep.setup => 'Round Score',
+      _RoundScoreStep.setup => widget.preset.displayName,
       _RoundScoreStep.roundEntry => 'Round $_currentRoundNumber',
       _RoundScoreStep.result => 'Final Result',
     };
@@ -318,7 +316,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
       }
 
       setState(() {
-        _setupModelFuture = widget.loadRoundScoreSetupModel();
+        _setupModelFuture = widget.loadRoundScoreSetupModel(presetId: widget.preset.id);
         if (!_selectedPlayerIds.contains(createdPlayer.id)) {
           _selectedPlayerIds.add(createdPlayer.id);
         }
@@ -768,7 +766,6 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
     }
 
     _currentSessionId = session.sessionId;
-    _preset = getBuiltInScoringPresetById(session.presetId);
     _promptAnswers = session.promptAnswers;
     _selectedPlayers = session.selectedPlayers;
     _selectedPlayerIds.addAll(session.selectedPlayers.map((player) => player.id));

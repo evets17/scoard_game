@@ -3,29 +3,32 @@ import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart
 import 'package:scoard_game/application/models/sessions/quick_score_participant_values.dart';
 import 'package:scoard_game/application/services/sessions/save_quick_score_session.dart';
 import 'package:scoard_game/bootstrap/app_bootstrap.dart';
-import 'package:scoard_game/core/scoring/built_in_templates/quick_final_score_basic_preset.dart';
+
+import '../../support/test_templates.dart';
 
 void main() {
   test('save quick score session ranks players and persists a summary', () async {
-    final environment = await AppBootstrap.initialize();
+    final environment = await AppBootstrap.initialize(
+      templateCatalog: loadTestTemplateCatalog(),
+    );
 
     final result = await environment.saveQuickScoreSession(
-      preset: quickFinalScoreBasicPreset,
+      preset: loadTestTemplateCatalog().byId('quick-final-score-basic'),
       participantValues: const [
         QuickScoreParticipantValues(
           playerId: 'player-avery',
           displayName: 'Avery',
-          enteredValues: {finalScoreFieldId: 18},
+          enteredValues: {'final-score': 18},
         ),
         QuickScoreParticipantValues(
           playerId: 'player-jules',
           displayName: 'Jules',
-          enteredValues: {finalScoreFieldId: 26},
+          enteredValues: {'final-score': 26},
         ),
         QuickScoreParticipantValues(
           playerId: 'player-mina',
           displayName: 'Mina',
-          enteredValues: {finalScoreFieldId: 26},
+          enteredValues: {'final-score': 26},
         ),
       ],
     );
@@ -41,16 +44,18 @@ void main() {
   });
 
   test('save quick score session requires at least two players', () async {
-    final environment = await AppBootstrap.initialize();
+    final environment = await AppBootstrap.initialize(
+      templateCatalog: loadTestTemplateCatalog(),
+    );
 
     expect(
       () => environment.saveQuickScoreSession(
-        preset: quickFinalScoreBasicPreset,
+        preset: loadTestTemplateCatalog().byId('quick-final-score-basic'),
         participantValues: const [
           QuickScoreParticipantValues(
             playerId: 'player-avery',
             displayName: 'Avery',
-            enteredValues: {finalScoreFieldId: 18},
+            enteredValues: {'final-score': 18},
           ),
         ],
       ),
@@ -59,37 +64,39 @@ void main() {
   });
 
   test('saving with the same quick score session id updates the existing result', () async {
-    final environment = await AppBootstrap.initialize();
+    final environment = await AppBootstrap.initialize(
+      templateCatalog: loadTestTemplateCatalog(),
+    );
 
     final firstResult = await environment.saveQuickScoreSession(
-      preset: quickFinalScoreBasicPreset,
+      preset: loadTestTemplateCatalog().byId('quick-final-score-basic'),
       participantValues: const [
         QuickScoreParticipantValues(
           playerId: 'player-avery',
           displayName: 'Avery',
-          enteredValues: {finalScoreFieldId: 10},
+          enteredValues: {'final-score': 10},
         ),
         QuickScoreParticipantValues(
           playerId: 'player-jules',
           displayName: 'Jules',
-          enteredValues: {finalScoreFieldId: 12},
+          enteredValues: {'final-score': 12},
         ),
       ],
     );
 
     final updatedResult = await environment.saveQuickScoreSession(
-      preset: quickFinalScoreBasicPreset,
+      preset: loadTestTemplateCatalog().byId('quick-final-score-basic'),
       sessionId: firstResult.sessionId,
       participantValues: const [
         QuickScoreParticipantValues(
           playerId: 'player-avery',
           displayName: 'Avery',
-          enteredValues: {finalScoreFieldId: 18},
+          enteredValues: {'final-score': 18},
         ),
         QuickScoreParticipantValues(
           playerId: 'player-jules',
           displayName: 'Jules',
-          enteredValues: {finalScoreFieldId: 12},
+          enteredValues: {'final-score': 12},
         ),
       ],
     );
@@ -104,10 +111,12 @@ void main() {
   });
 
   test('save quick score session supports low score wins from prompted options', () async {
-    final environment = await AppBootstrap.initialize();
+    final environment = await AppBootstrap.initialize(
+      templateCatalog: loadTestTemplateCatalog(),
+    );
 
     final result = await environment.saveQuickScoreSession(
-      preset: quickFinalScoreBasicPreset,
+      preset: loadTestTemplateCatalog().byId('quick-final-score-basic'),
       promptAnswers: const [
         PresetPromptAnswer.boolean(id: 'low-score-wins', value: true),
       ],
@@ -115,12 +124,12 @@ void main() {
         QuickScoreParticipantValues(
           playerId: 'player-avery',
           displayName: 'Avery',
-          enteredValues: {finalScoreFieldId: 18},
+          enteredValues: {'final-score': 18},
         ),
         QuickScoreParticipantValues(
           playerId: 'player-jules',
           displayName: 'Jules',
-          enteredValues: {finalScoreFieldId: 12},
+          enteredValues: {'final-score': 12},
         ),
       ],
     );

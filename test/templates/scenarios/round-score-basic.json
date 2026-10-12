@@ -1,0 +1,45 @@
+{
+  "templateId": "round-score-basic",
+  "scenarios": [
+    {
+      "name": "Totals add up across rounds and the highest wins",
+      "players": ["avery", "jules", "mina"],
+      "rounds": [
+        { "avery": 10, "jules": 20, "mina": 5 },
+        { "avery": 15, "jules": 5, "mina": 5 },
+        { "avery": 12, "jules": 18, "mina": 0 }
+      ],
+      "expected": {
+        "totals": { "avery": 37, "jules": 43, "mina": 10 },
+        "winners": ["jules"],
+        "placements": { "jules": 1, "avery": 2, "mina": 3 }
+      }
+    },
+    {
+      "name": "Low Score Wins makes the lowest total the winner",
+      "players": ["avery", "jules", "mina"],
+      "prompts": { "low-score-wins": true },
+      "rounds": [
+        { "avery": 10, "jules": 20, "mina": 5 },
+        { "avery": 15, "jules": 5, "mina": 5 }
+      ],
+      "expected": {
+        "totals": { "avery": 25, "jules": 25, "mina": 10 },
+        "winners": ["mina"],
+        "placements": { "mina": 1, "avery": 2, "jules": 2 }
+      }
+    },
+    {
+      "name": "Equal totals tie for first",
+      "players": ["avery", "jules"],
+      "rounds": [
+        { "avery": 7, "jules": 3 },
+        { "avery": -2, "jules": 2 }
+      ],
+      "expected": {
+        "totals": { "avery": 5, "jules": 5 },
+        "winners": ["avery", "jules"]
+      }
+    }
+  ]
+}

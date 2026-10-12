@@ -1,0 +1,56 @@
+{
+  "templateId": "skyjo",
+  "scenarios": [
+    {
+      "name": "Lowest total wins after several rounds",
+      "players": ["avery", "jules", "mina"],
+      "rounds": [
+        { "avery": 10, "jules": 20, "mina": 31 },
+        { "avery": 15, "jules": 5, "mina": 12 },
+        { "avery": 12, "jules": 18, "mina": 40 }
+      ],
+      "expected": {
+        "totals": { "avery": 37, "jules": 43, "mina": 83 },
+        "winners": ["avery"],
+        "placements": { "avery": 1, "jules": 2, "mina": 3 }
+      }
+    },
+    {
+      "name": "Negative rounds lower a total",
+      "players": ["avery", "jules"],
+      "rounds": [
+        { "avery": -2, "jules": 4 },
+        { "avery": -6, "jules": 0 }
+      ],
+      "expected": {
+        "totals": { "avery": -8, "jules": 4 },
+        "winners": ["avery"]
+      }
+    },
+    {
+      "name": "A doubled round is entered as the doubled score",
+      "players": ["avery", "jules"],
+      "rounds": [
+        { "avery": 24, "jules": 9 },
+        { "avery": 30, "jules": 60 }
+      ],
+      "expected": {
+        "totals": { "avery": 54, "jules": 69 },
+        "winners": ["avery"]
+      }
+    },
+    {
+      "name": "Equal lowest totals tie for first",
+      "players": ["avery", "jules", "mina"],
+      "rounds": [
+        { "avery": 30, "jules": 25, "mina": 50 },
+        { "avery": 70, "jules": 75, "mina": 60 }
+      ],
+      "expected": {
+        "totals": { "avery": 100, "jules": 100, "mina": 110 },
+        "winners": ["avery", "jules"],
+        "placements": { "avery": 1, "jules": 1, "mina": 3 }
+      }
+    }
+  ]
+}

@@ -4,14 +4,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:scoard_game/bootstrap/app_bootstrap.dart';
 import 'package:scoard_game/ui/round_score/round_score_flow_screen.dart';
 
+import '../../support/test_templates.dart';
+
 void main() {
   Future<void> openSetup(WidgetTester tester) async {
-    final environment = await AppBootstrap.initialize();
+    final environment = await AppBootstrap.initialize(
+      templateCatalog: loadTestTemplateCatalog(),
+    );
 
     await tester.pumpWidget(
       MaterialApp(
         home: RoundScoreFlowScreen(
           loadRoundScoreSetupModel: environment.loadRoundScoreSetupModel,
+          preset: environment.templateCatalog.byId('round-score-basic'),
           createPlayer: environment.createPlayer,
           renamePlayer: environment.renamePlayer,
           stayAwakeController: environment.stayAwakeController,

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "skyjo",
+  "version": "1.0.0",
+  "name": "Skyjo",
+  "description": "Add up each round's cards. Lowest total wins once someone reaches 100.",
+  "source": "Skyjo rulebook (Magilano), scoring section",
+  "players": { "minimum": 2, "maximum": 8 },
+  "scoringModel": "rounds",
+  "winner": "lowestScore",
+  "scoreField": {
+    "id": "round-score",
+    "label": "Round Score",
+    "initialValue": 0,
+    "minimumDisplayDigits": 2,
+    "entry": { "tapToEdit": true, "quickAdjust": true, "replace": true, "adjust": true }
+  }
+}

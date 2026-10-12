@@ -4,14 +4,17 @@ import 'package:scoard_game/application/models/sessions/quick_score_participant_
 import 'package:scoard_game/application/models/sessions/round_score_round_values.dart';
 import 'package:scoard_game/application/services/sessions/save_round_score_session.dart';
 import 'package:scoard_game/bootstrap/app_bootstrap.dart';
-import 'package:scoard_game/core/scoring/built_in_templates/round_score_basic_preset.dart';
+
+import '../../support/test_templates.dart';
 
 void main() {
   test('save round score session calculates cumulative totals over multiple rounds', () async {
-    final environment = await AppBootstrap.initialize();
+    final environment = await AppBootstrap.initialize(
+      templateCatalog: loadTestTemplateCatalog(),
+    );
 
     final result = await environment.saveRoundScoreSession(
-      preset: roundScoreBasicPreset,
+      preset: loadTestTemplateCatalog().byId('round-score-basic'),
       rounds: const [
         RoundScoreRoundValues(
           roundNumber: 1,
@@ -19,12 +22,12 @@ void main() {
             QuickScoreParticipantValues(
               playerId: 'player-avery',
               displayName: 'Avery',
-              enteredValues: {roundScoreFieldId: 10},
+              enteredValues: {'round-score': 10},
             ),
             QuickScoreParticipantValues(
               playerId: 'player-jules',
               displayName: 'Jules',
-              enteredValues: {roundScoreFieldId: 15},
+              enteredValues: {'round-score': 15},
             ),
           ],
         ),
@@ -34,12 +37,12 @@ void main() {
             QuickScoreParticipantValues(
               playerId: 'player-avery',
               displayName: 'Avery',
-              enteredValues: {roundScoreFieldId: 12},
+              enteredValues: {'round-score': 12},
             ),
             QuickScoreParticipantValues(
               playerId: 'player-jules',
               displayName: 'Jules',
-              enteredValues: {roundScoreFieldId: 8},
+              enteredValues: {'round-score': 8},
             ),
           ],
         ),
@@ -55,11 +58,13 @@ void main() {
   });
 
   test('save round score session requires at least one round', () async {
-    final environment = await AppBootstrap.initialize();
+    final environment = await AppBootstrap.initialize(
+      templateCatalog: loadTestTemplateCatalog(),
+    );
 
     expect(
       () => environment.saveRoundScoreSession(
-        preset: roundScoreBasicPreset,
+        preset: loadTestTemplateCatalog().byId('round-score-basic'),
         rounds: const [],
       ),
       throwsA(isA<RoundScoreValidationException>()),
@@ -67,10 +72,12 @@ void main() {
   });
 
   test('save round score session supports low score wins from prompted options', () async {
-    final environment = await AppBootstrap.initialize();
+    final environment = await AppBootstrap.initialize(
+      templateCatalog: loadTestTemplateCatalog(),
+    );
 
     final result = await environment.saveRoundScoreSession(
-      preset: roundScoreBasicPreset,
+      preset: loadTestTemplateCatalog().byId('round-score-basic'),
       promptAnswers: const [
         PresetPromptAnswer.boolean(id: 'low-score-wins', value: true),
       ],
@@ -81,12 +88,12 @@ void main() {
             QuickScoreParticipantValues(
               playerId: 'player-avery',
               displayName: 'Avery',
-              enteredValues: {roundScoreFieldId: 18},
+              enteredValues: {'round-score': 18},
             ),
             QuickScoreParticipantValues(
               playerId: 'player-jules',
               displayName: 'Jules',
-              enteredValues: {roundScoreFieldId: 12},
+              enteredValues: {'round-score': 12},
             ),
           ],
         ),

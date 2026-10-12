@@ -2,9 +2,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:scoard_game/bootstrap/app_bootstrap.dart';
 import 'package:scoard_game/application/services/players/create_player.dart';
 
+import '../../support/test_templates.dart';
+
 void main() {
   test('player flow supports create, archive, and unarchive', () async {
-    final environment = await AppBootstrap.initialize();
+    final environment = await AppBootstrap.initialize(
+      templateCatalog: loadTestTemplateCatalog(),
+    );
 
     final initialModel = await environment.loadPlayersScreenModel();
     expect(initialModel.activePlayers, isNotEmpty);
@@ -45,7 +49,9 @@ void main() {
   });
 
   test('exact duplicate player names are blocked', () async {
-    final environment = await AppBootstrap.initialize();
+    final environment = await AppBootstrap.initialize(
+      templateCatalog: loadTestTemplateCatalog(),
+    );
 
     expect(
       () => environment.createPlayer(displayName: 'Avery'),

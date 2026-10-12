@@ -6,6 +6,8 @@ import 'package:scoard_game/ui/settings/settings_screen.dart';
 import 'package:scoard_game/ui/settings/stay_awake_controller.dart';
 import 'package:scoard_game/ui/theme/app_theme_controller.dart';
 
+import '../../support/test_templates.dart';
+
 void main() {
   late List<bool> wakeLockCalls;
   late List<bool> savedSettings;
@@ -58,13 +60,16 @@ void main() {
   testWidgets('score entry keeps the screen on until the game is over', (
     tester,
   ) async {
-    final environment = await AppBootstrap.initialize();
+    final environment = await AppBootstrap.initialize(
+      templateCatalog: loadTestTemplateCatalog(),
+    );
     final controller = createController(enabled: true);
 
     await tester.pumpWidget(
       MaterialApp(
         home: RoundScoreFlowScreen(
           loadRoundScoreSetupModel: environment.loadRoundScoreSetupModel,
+          preset: environment.templateCatalog.byId('round-score-basic'),
           createPlayer: environment.createPlayer,
           renamePlayer: environment.renamePlayer,
           stayAwakeController: controller,

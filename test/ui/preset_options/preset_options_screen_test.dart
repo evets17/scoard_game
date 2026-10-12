@@ -4,6 +4,7 @@ import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart
 import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_input_kind.dart';
+import 'package:scoard_game/application/models/scoring/scoring_model.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/application/models/scoring/winner_rule.dart';
 import 'package:scoard_game/ui/preset_options/preset_options_screen.dart';
@@ -21,6 +22,7 @@ void main() {
             id: 'test-preset',
             displayName: 'Test Preset',
             chooserDescription: 'Test description',
+            scoringModel: ScoringModel.finalScore,
             minimumPlayers: 2,
             winnerRule: WinnerRule.highestScoreWins,
             promptDefinitions: const [

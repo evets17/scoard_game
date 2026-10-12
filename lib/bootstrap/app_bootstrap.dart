@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:scoard_game/application/repositories/player_repository.dart';
 import 'package:scoard_game/application/repositories/session_repository.dart';
 import 'package:scoard_game/application/repositories/setup_preferences_repository.dart';
@@ -22,6 +24,7 @@ import 'package:scoard_game/application/services/sessions/save_round_score_activ
 import 'package:scoard_game/application/services/sessions/save_round_score_session.dart';
 import 'package:scoard_game/application/services/sessions/save_quick_score_session.dart';
 import 'package:scoard_game/bootstrap/app_environment.dart';
+import 'package:scoard_game/core/templates/template_catalog.dart';
 import 'package:scoard_game/infrastructure/memory/memory_game_repository.dart';
 import 'package:scoard_game/infrastructure/memory/memory_player_repository.dart';
 import 'package:scoard_game/infrastructure/memory/memory_session_repository.dart';
@@ -32,15 +35,18 @@ import 'package:scoard_game/infrastructure/persistence/preferences/stay_awake_pr
 import 'package:scoard_game/infrastructure/persistence/preferences/theme_preference_store.dart';
 import 'package:scoard_game/infrastructure/persistence/repositories/persistent_player_repository.dart';
 import 'package:scoard_game/infrastructure/persistence/repositories/persistent_session_repository.dart';
+import 'package:scoard_game/infrastructure/templates/bundled_template_files.dart';
 import 'package:scoard_game/ui/settings/stay_awake_controller.dart';
 import 'package:scoard_game/ui/theme/app_theme_controller.dart';
 
 class AppBootstrap {
   static Future<AppEnvironment> initialize({
     bool usePersistentStorage = false,
+    TemplateCatalog? templateCatalog,
   }) async {
     await Future<void>.microtask(() {});
 
+    final catalog = templateCatalog ?? await _loadTemplateCatalog();
     final gameRepository = MemoryGameRepository.seeded();
     final PlayerRepository playerRepository;
     final SessionRepository sessionRepository;
@@ -82,6 +88,7 @@ class AppBootstrap {
       ),
       themeController: themeController,
       stayAwakeController: stayAwakeController,
+      templateCatalog: catalog,
       loadPlayersScreenModel: LoadPlayersScreenModel(
         playerRepository: playerRepository,
       ),
@@ -97,6 +104,7 @@ class AppBootstrap {
         setupPreferences: setupPreferences,
       ),
       loadQuickScoreSetupModel: LoadQuickScoreSetupModel(
+        templateCatalog: catalog,
         playerRepository: playerRepository,
         sessionRepository: sessionRepository,
         setupPreferences: setupPreferences,
@@ -105,6 +113,7 @@ class AppBootstrap {
         sessionRepository: sessionRepository,
       ),
       loadRoundScoreSetupModel: LoadRoundScoreSetupModel(
+        templateCatalog: catalog,
         playerRepository: playerRepository,
         sessionRepository: sessionRepository,
         setupPreferences: setupPreferences,
@@ -129,4 +138,19 @@ class AppBootstrap {
       ),
     );
   }
+}
+/// Loads the bundled scoring templates. A broken template stops a debug
+/// build so it gets fixed; release builds leave it out and carry on.
+Future<TemplateCatalog> _loadTemplateCatalog() async {
+  final result = loadTemplateCatalog(await loadBundledTemplateFiles(rootBundle));
+
+  if (result.hasProblems) {
+    final message = 'Invalid scoring templates:\n${result.describeProblems()}';
+    if (kDebugMode) {
+      throw StateError(message);
+    }
+    debugPrint(message);
+  }
+
+  return result.catalog;
 }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:scoard_game/application/models/scoring/scoring_model.dart';
+import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/application/models/sessions/scoring_session_start_configuration.dart';
 import 'package:scoard_game/bootstrap/app_environment.dart';
 import 'package:scoard_game/ui/home/home_screen.dart';
@@ -56,6 +58,7 @@ class ScoardGameApp extends StatelessWidget {
                 renamePlayer: environment.renamePlayer,
                 stayAwakeController: environment.stayAwakeController,
                 rememberSetupPlayerGroup: environment.rememberSetupPlayerGroup,
+                templateCatalog: environment.templateCatalog,
               ),
             AppRoutes.players: (_) => PlayersScreen(
                   loadPlayersScreenModel: environment.loadPlayersScreenModel,
@@ -68,7 +71,9 @@ class ScoardGameApp extends StatelessWidget {
                   deletePlayerGroup: environment.deletePlayerGroup,
                   setPlayerGroups: environment.setPlayerGroups,
                 ),
-            AppRoutes.newGame: (_) => const ScoreGameScreen(),
+            AppRoutes.newGame: (_) => ScoreGameScreen(
+                  templateCatalog: environment.templateCatalog,
+                ),
             AppRoutes.playStats: (_) => const PlaceholderScreen(
                   title: 'Play Stats',
                   description:
@@ -87,9 +92,8 @@ class ScoardGameApp extends StatelessWidget {
               case AppRoutes.quickScore:
                 final configuration = arguments is ScoringSessionStartConfiguration
                     ? arguments
-                    : const ScoringSessionStartConfiguration(
-                        presetId: 'quick-final-score-basic',
-                      );
+                    : null;
+                final preset = _presetFor(configuration, ScoringModel.finalScore);
                 return MaterialPageRoute<void>(
                   settings: settings,
                   builder: (_) => QuickScoreFlowScreen(
@@ -102,16 +106,15 @@ class ScoardGameApp extends StatelessWidget {
                     saveQuickScoreActiveSession:
                         environment.saveQuickScoreActiveSession,
                     deleteActiveSession: environment.deleteActiveSession,
-                    initialPresetId: configuration.presetId,
-                    initialPromptAnswers: configuration.promptAnswers,
+                    preset: preset,
+                    initialPromptAnswers: configuration?.promptAnswers ?? const [],
                   ),
                 );
               case AppRoutes.roundScore:
                 final configuration = arguments is ScoringSessionStartConfiguration
                     ? arguments
-                    : const ScoringSessionStartConfiguration(
-                        presetId: 'round-score-basic',
-                      );
+                    : null;
+                final preset = _presetFor(configuration, ScoringModel.rounds);
                 return MaterialPageRoute<void>(
                   settings: settings,
                   builder: (_) => RoundScoreFlowScreen(
@@ -124,8 +127,8 @@ class ScoardGameApp extends StatelessWidget {
                     saveRoundScoreActiveSession:
                         environment.saveRoundScoreActiveSession,
                     deleteActiveSession: environment.deleteActiveSession,
-                    initialPresetId: configuration.presetId,
-                    initialPromptAnswers: configuration.promptAnswers,
+                    preset: preset,
+                    initialPromptAnswers: configuration?.promptAnswers ?? const [],
                   ),
                 );
             }
@@ -136,5 +139,17 @@ class ScoardGameApp extends StatelessWidget {
         );
       },
     );
+  }
+
+  /// The chosen template, or the first one of the right kind when a route is
+  /// opened without one.
+  ScoringPreset _presetFor(
+    ScoringSessionStartConfiguration? configuration,
+    ScoringModel scoringModel,
+  ) {
+    final catalog = environment.templateCatalog;
+    final chosen =
+        configuration == null ? null : catalog.maybeById(configuration.presetId);
+    return chosen ?? catalog.firstFor(scoringModel);
   }
 }

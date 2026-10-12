@@ -3,13 +3,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:scoard_game/bootstrap/app_bootstrap.dart';
 import 'package:scoard_game/ui/players/players_screen.dart';
 
+import '../../support/test_templates.dart';
+
 void main() {
   Future<void> openPlayers(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
 
-    final environment = await AppBootstrap.initialize();
+    final environment = await AppBootstrap.initialize(
+      templateCatalog: loadTestTemplateCatalog(),
+    );
 
     await tester.pumpWidget(
       MaterialApp(

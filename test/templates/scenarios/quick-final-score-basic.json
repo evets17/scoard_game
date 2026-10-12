@@ -1,0 +1,40 @@
+{
+  "templateId": "quick-final-score-basic",
+  "scenarios": [
+    {
+      "name": "Highest score wins by default",
+      "players": ["avery", "jules", "mina"],
+      "scores": { "avery": 30, "jules": 25, "mina": 12 },
+      "expected": {
+        "totals": { "avery": 30, "jules": 25, "mina": 12 },
+        "winners": ["avery"],
+        "placements": { "avery": 1, "jules": 2, "mina": 3 }
+      }
+    },
+    {
+      "name": "Low Score Wins makes the lowest score the winner",
+      "players": ["avery", "jules", "mina"],
+      "prompts": { "low-score-wins": true },
+      "scores": { "avery": 30, "jules": 25, "mina": 12 },
+      "expected": {
+        "winners": ["mina"],
+        "placements": { "mina": 1, "jules": 2, "avery": 3 }
+      }
+    },
+    {
+      "name": "Tied first place shares the win and skips second",
+      "players": ["avery", "jules", "mina"],
+      "scores": { "avery": 20, "jules": 20, "mina": 5 },
+      "expected": {
+        "winners": ["avery", "jules"],
+        "placements": { "avery": 1, "jules": 1, "mina": 3 }
+      }
+    },
+    {
+      "name": "Negative scores rank below zero",
+      "players": ["avery", "jules"],
+      "scores": { "avery": -4, "jules": 0 },
+      "expected": { "winners": ["jules"] }
+    }
+  ]
+}

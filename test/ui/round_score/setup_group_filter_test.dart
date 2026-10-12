@@ -4,6 +4,8 @@ import 'package:scoard_game/bootstrap/app_bootstrap.dart';
 import 'package:scoard_game/bootstrap/app_environment.dart';
 import 'package:scoard_game/ui/round_score/round_score_flow_screen.dart';
 
+import '../../support/test_templates.dart';
+
 void main() {
   Future<void> openSetup(WidgetTester tester, AppEnvironment environment) async {
     tester.view.physicalSize = const Size(1080, 2400);
@@ -16,6 +18,7 @@ void main() {
         key: UniqueKey(),
         home: RoundScoreFlowScreen(
           loadRoundScoreSetupModel: environment.loadRoundScoreSetupModel,
+          preset: environment.templateCatalog.byId('round-score-basic'),
           createPlayer: environment.createPlayer,
           renamePlayer: environment.renamePlayer,
           stayAwakeController: environment.stayAwakeController,
@@ -32,7 +35,9 @@ void main() {
   Finder chip(String label) => find.widgetWithText(ChoiceChip, label);
 
   testWidgets('no group chips until a group exists', (tester) async {
-    final environment = await AppBootstrap.initialize();
+    final environment = await AppBootstrap.initialize(
+      templateCatalog: loadTestTemplateCatalog(),
+    );
     await openSetup(tester, environment);
 
     expect(chip('All'), findsNothing);
@@ -41,7 +46,9 @@ void main() {
   testWidgets('a group chip filters available players and is remembered', (
     tester,
   ) async {
-    final environment = await AppBootstrap.initialize();
+    final environment = await AppBootstrap.initialize(
+      templateCatalog: loadTestTemplateCatalog(),
+    );
     final family = await environment.createPlayerGroup(name: 'Family');
     await environment.setPlayerGroups(
       playerId: 'player-mina',

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "round-score-basic",
+  "version": "1.0.0",
+  "name": "Round Score",
+  "description": "Use this when each round has one score per player and totals add up over time.",
+  "players": { "minimum": 2 },
+  "scoringModel": "rounds",
+  "winner": "highestScore",
+  "prompts": [
+    {
+      "id": "low-score-wins",
+      "type": "boolean",
+      "label": "Low Score Wins",
+      "help": "Turn this on for games where the lowest total is the winner.",
+      "default": false,
+      "effect": "lowScoreWins"
+    }
+  ],
+  "scoreField": {
+    "id": "round-score",
+    "label": "Round Score",
+    "initialValue": 0,
+    "minimumDisplayDigits": 2,
+    "entry": { "tapToEdit": true, "quickAdjust": true, "replace": true, "adjust": true }
+  }
+}

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:scoard_game/application/models/app_summaries.dart';
+import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/application/repositories/session_repository.dart';
 import 'package:scoard_game/application/services/players/create_player.dart';
 import 'package:scoard_game/application/services/players/rename_player.dart';
@@ -13,6 +14,7 @@ import 'package:scoard_game/application/services/sessions/save_quick_score_activ
 import 'package:scoard_game/application/services/sessions/save_quick_score_session.dart';
 import 'package:scoard_game/application/services/sessions/save_round_score_active_session.dart';
 import 'package:scoard_game/application/services/sessions/save_round_score_session.dart';
+import 'package:scoard_game/core/templates/template_catalog.dart';
 import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
 import 'package:scoard_game/ui/quick_score/quick_score_flow_screen.dart';
 import 'package:scoard_game/ui/round_score/round_score_flow_screen.dart';
@@ -34,6 +36,7 @@ class ActiveGamesScreen extends StatefulWidget {
     required this.renamePlayer,
     required this.stayAwakeController,
     required this.rememberSetupPlayerGroup,
+    required this.templateCatalog,
     super.key,
   });
 
@@ -51,6 +54,7 @@ class ActiveGamesScreen extends StatefulWidget {
   final RenamePlayer renamePlayer;
   final StayAwakeController stayAwakeController;
   final RememberSetupPlayerGroup rememberSetupPlayerGroup;
+  final TemplateCatalog templateCatalog;
 
   @override
   State<ActiveGamesScreen> createState() => _ActiveGamesScreenState();
@@ -153,6 +157,19 @@ class _ActiveGamesScreenState extends State<ActiveGamesScreen> {
     );
   }
 
+  /// The saved game's template, or null with a message if it is gone.
+  ScoringPreset? _templateFor(String templateId) {
+    final template = widget.templateCatalog.maybeById(templateId);
+    if (template == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This game\'s scoring template is no longer available.'),
+        ),
+      );
+    }
+    return template;
+  }
+
   Future<void> _resumeSession(
     ActiveSessionSummary session, {
     bool replaceCurrent = false,
@@ -167,8 +184,13 @@ class _ActiveGamesScreenState extends State<ActiveGamesScreen> {
         if (activeSession == null || !mounted) {
           return;
         }
+        final preset = _templateFor(activeSession.presetId);
+        if (preset == null) {
+          return;
+        }
 
         destination = QuickScoreFlowScreen(
+          preset: preset,
           loadQuickScoreSetupModel: widget.loadQuickScoreSetupModel,
           createPlayer: widget.createPlayer,
           renamePlayer: widget.renamePlayer,
@@ -186,8 +208,13 @@ class _ActiveGamesScreenState extends State<ActiveGamesScreen> {
         if (activeSession == null || !mounted) {
           return;
         }
+        final preset = _templateFor(activeSession.presetId);
+        if (preset == null) {
+          return;
+        }
 
         destination = RoundScoreFlowScreen(
+          preset: preset,
           loadRoundScoreSetupModel: widget.loadRoundScoreSetupModel,
           createPlayer: widget.createPlayer,
           renamePlayer: widget.renamePlayer,

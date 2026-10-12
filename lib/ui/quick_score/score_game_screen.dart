@@ -1,17 +1,20 @@
 import 'package:scoard_game/application/models/sessions/scoring_session_start_configuration.dart';
 import 'package:flutter/material.dart';
+import 'package:scoard_game/application/models/scoring/scoring_model.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
-import 'package:scoard_game/core/scoring/built_in_templates/built_in_scoring_presets.dart';
+import 'package:scoard_game/core/templates/template_catalog.dart';
 import 'package:scoard_game/ui/navigation/app_routes.dart';
 import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
 import 'package:scoard_game/ui/preset_options/preset_options_screen.dart';
 
 class ScoreGameScreen extends StatelessWidget {
-  const ScoreGameScreen({super.key});
+  const ScoreGameScreen({required this.templateCatalog, super.key});
+
+  final TemplateCatalog templateCatalog;
 
   @override
   Widget build(BuildContext context) {
-    const presets = builtInScoreGamePresets;
+    final presets = templateCatalog.templates;
     final theme = Theme.of(context);
 
     return AppScreenScaffold(
@@ -42,7 +45,7 @@ class ScoreGameScreen extends StatelessWidget {
   }
 
   Future<void> _startPreset(BuildContext context, ScoringPreset preset) async {
-    final routeName = _routeForPreset(preset.id);
+    final routeName = _routeFor(preset.scoringModel);
 
     if (preset.promptDefinitions.isEmpty) {
       await Navigator.of(context).pushNamed(
@@ -70,15 +73,11 @@ class ScoreGameScreen extends StatelessWidget {
     );
   }
 
-  String _routeForPreset(String presetId) {
-    switch (presetId) {
-      case 'quick-final-score-basic':
-        return AppRoutes.quickScore;
-      case 'round-score-basic':
-        return AppRoutes.roundScore;
-      default:
-        return AppRoutes.quickScore;
-    }
+  String _routeFor(ScoringModel scoringModel) {
+    return switch (scoringModel) {
+      ScoringModel.finalScore => AppRoutes.quickScore,
+      ScoringModel.rounds => AppRoutes.roundScore,
+    };
   }
 }
 
