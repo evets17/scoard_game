@@ -137,4 +137,33 @@ void main() {
     await tester.pumpAndSettle();
     expect(displayedOrder(tester, players), ['Avery', 'Jules', 'Mina']);
   });
+
+  testWidgets('picking score sort mid-round sorts by the current totals', (
+    tester,
+  ) async {
+    await startGame(tester, players);
+
+    // Round 1: Avery (second) scores 2.
+    await tester.tap(find.byTooltip('Increase score').at(1));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Increase score').at(1));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    await chooseSort(tester, 'Score');
+    expect(displayedOrder(tester, players), ['Avery', 'Mina', 'Jules']);
+
+    // Jules (last) scores 3 in the same round; rows hold still.
+    for (var tap = 0; tap < 3; tap++) {
+      await tester.tap(find.byTooltip('Increase score').at(2));
+      await tester.pump();
+    }
+    await tester.pumpAndSettle();
+    expect(displayedOrder(tester, players), ['Avery', 'Mina', 'Jules']);
+
+    // Picking Score again re-sorts by the latest totals.
+    await chooseSort(tester, 'Name');
+    await chooseSort(tester, 'Score');
+    expect(displayedOrder(tester, players), ['Jules', 'Avery', 'Mina']);
+  });
 }

@@ -138,7 +138,7 @@ class ScoringHelpScreen extends StatelessWidget {
               _HelpTip(
                 icon: Icons.pause_circle_outline_rounded,
                 text: isRoundScoring
-                    ? 'Score sort uses totals from earlier rounds, so players stay in place while you enter this round.'
+                    ? 'Score sort orders players by total when you pick it and again at each new round. Players stay in place while you enter a round.'
                     : 'Score sort updates after you finish typing a score, not on every - or + tap.',
               ),
             ],

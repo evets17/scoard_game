@@ -91,6 +91,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
   int _currentRoundNumber = 1;
   AppLifecycleListener? _lifecycleListener;
   PlayerSortMode _sortMode = PlayerSortMode.playOrder;
+  Map<String, int> _scoreSortSnapshot = const {};
 
   @override
   void initState() {
@@ -192,6 +193,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
                   controllers: _scoreControllers,
                   entryMemory: _scoreEntryMemory,
                   savedRounds: _savedRounds,
+                  scoreSortSnapshot: _scoreSortSnapshot,
                   onPlayerTap: (player) => _handlePlayerTap(setupModel, player),
                   onReorder: _reorderPlayers,
                   onBack: () => setState(() => _step = _RoundScoreStep.setup),
@@ -211,8 +213,48 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
   }
 
   void _setSortMode(PlayerSortMode sortMode) {
-    setState(() => _sortMode = sortMode);
+    setState(() {
+      _sortMode = sortMode;
+      _scoreSortSnapshot = _currentTotals();
+    });
     unawaited(_autosaveCurrentSession());
+  }
+
+  // Running totals including what is entered for the current round. Score
+  // sorting uses a snapshot of these, taken when Score is picked and when the
+  // round changes, so rows hold still while a round is being entered.
+  Map<String, int> _currentTotals() {
+    final fieldDefinition = _preset!.scoreFields.first;
+    final totals = <String, int>{};
+
+    void add(String playerId, int value) {
+      totals.update(playerId, (total) => total + value, ifAbsent: () => value);
+    }
+
+    for (final round in _savedRounds) {
+      if (round.roundNumber == _currentRoundNumber) {
+        continue;
+      }
+      for (final participant in round.participantValues) {
+        add(
+          participant.playerId,
+          participant.enteredValues[fieldDefinition.id] ?? 0,
+        );
+      }
+    }
+
+    for (final player in _selectedPlayers) {
+      add(
+        player.id,
+        _parseEnteredScore(
+              rawValue: _scoreControllers[player.id]?.text.trim() ?? '',
+              fieldDefinition: fieldDefinition,
+            ) ??
+            0,
+      );
+    }
+
+    return totals;
   }
 
   void _reorderPlayers(int oldIndex, int newIndex) {
@@ -424,6 +466,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
               )
             : participant,
       );
+      _scoreSortSnapshot = _currentTotals();
       _setupModelFuture = widget.loadRoundScoreSetupModel(
         presetId: _preset!.id,
       );
@@ -516,6 +559,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
       _upsertRound(round);
       _currentRoundNumber += 1;
       _loadRoundIntoInputs(_currentRoundNumber);
+      _scoreSortSnapshot = _currentTotals();
     });
 
     unawaited(_autosaveCurrentSession());
@@ -534,6 +578,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
     setState(() {
       _currentRoundNumber -= 1;
       _loadRoundIntoInputs(_currentRoundNumber);
+      _scoreSortSnapshot = _currentTotals();
     });
 
     unawaited(_autosaveCurrentSession());
@@ -745,6 +790,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
     }
 
     _sortMode = session.sortMode;
+    _scoreSortSnapshot = _currentTotals();
     _step = _RoundScoreStep.roundEntry;
   }
 
@@ -1010,6 +1056,7 @@ class _RoundScoreEntryStep extends StatelessWidget {
     required this.controllers,
     required this.entryMemory,
     required this.savedRounds,
+    required this.scoreSortSnapshot,
     required this.onPlayerTap,
     required this.onReorder,
     required this.onBack,
@@ -1026,6 +1073,7 @@ class _RoundScoreEntryStep extends StatelessWidget {
   final PlayerSortMode sortMode;
   final WinnerRule winnerRule;
   final List<RoundScoreRoundValues> savedRounds;
+  final Map<String, int> scoreSortSnapshot;
   final ValueChanged<QuickScoreAvailablePlayer> onPlayerTap;
   final ReorderCallback onReorder;
   final VoidCallback onBack;
@@ -1036,13 +1084,11 @@ class _RoundScoreEntryStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final priorRoundTotals = _calculatePriorRoundTotals();
-    // Score sorting uses earlier rounds only, so rows stay put while this
-    // round is being entered.
     final displayedPlayers = orderPlayersForDisplay(
       players,
       sortMode: sortMode,
       winnerRule: winnerRule,
-      scoresByPlayerId: priorRoundTotals,
+      scoresByPlayerId: scoreSortSnapshot,
     );
 
     return Column(
