@@ -54,6 +54,12 @@ class ScoringHelpScreen extends StatelessWidget {
                   icon: Icons.touch_app_outlined,
                   text: 'Tap a score to type a new value.',
                 ),
+              if (fieldDefinition.enableTapToEdit)
+                const _HelpTip(
+                  icon: Icons.calculate_outlined,
+                  text:
+                      'Use + − × ÷ to tally several numbers, like 3 + 4 + 5. It works left to right like a running total, so 3 + 4 × 2 is 14. Division rounds down.',
+                ),
               if (fieldDefinition.enableTapToEdit &&
                   fieldDefinition.allowReplace)
                 const _HelpTip(

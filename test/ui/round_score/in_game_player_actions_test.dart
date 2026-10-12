@@ -40,6 +40,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Help'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Rounds'), 200);
     expect(find.text('Rounds'), findsOneWidget);
 
     await tester.scrollUntilVisible(find.text('Players'), 200);

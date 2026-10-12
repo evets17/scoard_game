@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:scoard_game/core/scoring/score_expression.dart';
 import 'package:scoard_game/ui/score_input/score_value_edit_action.dart';
 import 'package:scoard_game/ui/score_input/score_value_edit_request.dart';
 
@@ -39,21 +40,25 @@ class _NumericValuePicker extends StatefulWidget {
 }
 
 class _NumericValuePickerState extends State<_NumericValuePicker> {
-  String _rawDigits = '';
-  bool _isNegative = false;
+  static const _divideByZeroMessage = 'Can\'t divide by zero.';
+
+  ScoreExpression _expression = const ScoreExpression();
   String? _errorText;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
-    final parsedValue = _parsedValue;
-    final replaceResultValue = parsedValue;
-    final adjustedResultValue = parsedValue == null
-        ? null
-        : widget.currentValue + parsedValue;
+    final resultValue = _expression.value;
+    final adjustedResultValue =
+        resultValue == null ? null : widget.currentValue + resultValue;
+    final errorText = _errorText ??
+        (_expression.dividesByZero ? _divideByZeroMessage : null);
+    final valueTextStyle = theme.textTheme.displaySmall?.copyWith(
+      fontSize: 38,
+    );
 
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(20, 20, 20, viewInsets + 20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -71,7 +76,7 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
             decoration: BoxDecoration(
               border: Border.all(
-                color: _errorText == null
+                color: errorText == null
                     ? theme.dividerColor
                     : theme.colorScheme.error,
               ),
@@ -90,7 +95,7 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
                         style: theme.textTheme.bodyMedium,
                       ),
                     ),
-                    if (_rawDigits.isNotEmpty || _isNegative)
+                    if (!_expression.isEmpty)
                       TextButton(
                         onPressed: _clear,
                         style: TextButton.styleFrom(
@@ -102,19 +107,37 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
                   ],
                 ),
                 const SizedBox(height: 8),
+                // The calculation line only appears once an operator is used.
+                // The sheet is anchored to the bottom, so it grows upward and
+                // the keys stay where they are.
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 150),
+                  alignment: Alignment.bottomLeft,
+                  child: _expression.hasOperator
+                      ? Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            _expression.displayText,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        )
+                      : const SizedBox(width: double.infinity),
+                ),
                 Text(
-                  _displayValue,
-                  style: theme.textTheme.displaySmall?.copyWith(
-                    fontSize: 38,
-                  ),
+                  _expression.hasOperator
+                      ? '= ${resultValue ?? '?'}'
+                      : _expression.displayText,
+                  style: valueTextStyle,
                 ),
               ],
             ),
           ),
-          if (_errorText != null) ...[
+          if (errorText != null) ...[
             const SizedBox(height: 8),
             Text(
-              _errorText!,
+              errorText,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.error,
               ),
@@ -122,9 +145,11 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
           ],
           const SizedBox(height: 18),
           _Numpad(
-            onDigitPressed: _appendDigit,
-            onBackspacePressed: _backspace,
-            onToggleSignPressed: _toggleSign,
+            onDigitPressed: (digit) => _update(_expression.appendDigit(digit)),
+            onOperatorPressed: (operator) =>
+                _update(_expression.applyOperator(operator)),
+            onBackspacePressed: () => _update(_expression.backspace()),
+            onToggleSignPressed: () => _update(_expression.toggleSign()),
           ),
           const SizedBox(height: 18),
           Wrap(
@@ -135,9 +160,7 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
                 FilledButton(
                   onPressed: () => _submit(ScoreValueEditAction.replace),
                   child: Text(
-                    replaceResultValue == null
-                        ? 'Replace'
-                        : 'Replace -> $replaceResultValue',
+                    resultValue == null ? 'Replace' : 'Replace -> $resultValue',
                   ),
                 ),
               if (widget.allowAdjust)
@@ -161,125 +184,96 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
   }
 
   void _submit(ScoreValueEditAction action) {
-    final parsedValue = _parsedValue;
+    final resultValue = _expression.value;
 
-    if (parsedValue == null) {
-      setState(() => _errorText = 'Enter a whole number.');
+    if (resultValue == null) {
+      setState(() {
+        _errorText = _expression.dividesByZero
+            ? _divideByZeroMessage
+            : 'Enter a whole number.';
+      });
       return;
     }
 
     Navigator.of(context).pop(
       ScoreValueEditRequest(
         action: action,
-        value: parsedValue,
+        value: resultValue,
       ),
     );
   }
 
-  int? get _parsedValue {
-    if (_rawDigits.isEmpty) {
-      return null;
-    }
-
-    final magnitude = int.tryParse(_rawDigits);
-    if (magnitude == null) {
-      return null;
-    }
-
-    return _isNegative ? -magnitude : magnitude;
-  }
-
-  String get _displayValue {
-    if (_rawDigits.isEmpty) {
-      return _isNegative ? '-0' : '0';
-    }
-
-    return _isNegative ? '-$_rawDigits' : _rawDigits;
-  }
-
-  void _appendDigit(String digit) {
+  void _update(ScoreExpression expression) {
     setState(() {
       _errorText = null;
-      if (_rawDigits == '0') {
-        _rawDigits = digit;
-      } else {
-        _rawDigits += digit;
-      }
+      _expression = expression;
     });
   }
 
-  void _backspace() {
-    setState(() {
-      _errorText = null;
-      if (_rawDigits.isNotEmpty) {
-        _rawDigits = _rawDigits.substring(0, _rawDigits.length - 1);
-      }
-    });
-  }
-
-  void _clear() {
-    setState(() {
-      _errorText = null;
-      _rawDigits = '';
-      _isNegative = false;
-    });
-  }
-
-  void _toggleSign() {
-    setState(() {
-      _errorText = null;
-      _isNegative = !_isNegative;
-    });
-  }
+  void _clear() => _update(const ScoreExpression());
 }
 
 class _Numpad extends StatelessWidget {
   const _Numpad({
     required this.onDigitPressed,
+    required this.onOperatorPressed,
     required this.onBackspacePressed,
     required this.onToggleSignPressed,
   });
 
   final ValueChanged<String> onDigitPressed;
+  final ValueChanged<ScoreOperator> onOperatorPressed;
   final VoidCallback onBackspacePressed;
   final VoidCallback onToggleSignPressed;
 
   @override
   Widget build(BuildContext context) {
+    _NumpadKey digit(String value) =>
+        _NumpadKey(label: value, onPressed: () => onDigitPressed(value));
+    _NumpadKey operator(ScoreOperator value) => _NumpadKey(
+          label: value.symbol,
+          isOperator: true,
+          onPressed: () => onOperatorPressed(value),
+        );
+
     return Column(
       children: [
         _NumpadRow(
           children: [
-            _NumpadKey(label: '7', onPressed: () => onDigitPressed('7')),
-            _NumpadKey(label: '8', onPressed: () => onDigitPressed('8')),
-            _NumpadKey(label: '9', onPressed: () => onDigitPressed('9')),
+            digit('7'),
+            digit('8'),
+            digit('9'),
+            operator(ScoreOperator.divide),
           ],
         ),
         const SizedBox(height: 10),
         _NumpadRow(
           children: [
-            _NumpadKey(label: '4', onPressed: () => onDigitPressed('4')),
-            _NumpadKey(label: '5', onPressed: () => onDigitPressed('5')),
-            _NumpadKey(label: '6', onPressed: () => onDigitPressed('6')),
+            digit('4'),
+            digit('5'),
+            digit('6'),
+            operator(ScoreOperator.multiply),
           ],
         ),
         const SizedBox(height: 10),
         _NumpadRow(
           children: [
-            _NumpadKey(label: '1', onPressed: () => onDigitPressed('1')),
-            _NumpadKey(label: '2', onPressed: () => onDigitPressed('2')),
-            _NumpadKey(label: '3', onPressed: () => onDigitPressed('3')),
+            digit('1'),
+            digit('2'),
+            digit('3'),
+            operator(ScoreOperator.subtract),
           ],
         ),
         const SizedBox(height: 10),
         _NumpadRow(
           children: [
             _NumpadKey(label: '+/-', onPressed: onToggleSignPressed),
-            _NumpadKey(label: '0', onPressed: () => onDigitPressed('0')),
+            digit('0'),
             _NumpadKey(
               icon: Icons.backspace_outlined,
               onPressed: onBackspacePressed,
             ),
+            operator(ScoreOperator.add),
           ],
         ),
       ],
@@ -313,19 +307,30 @@ class _NumpadKey extends StatelessWidget {
   const _NumpadKey({
     this.label,
     this.icon,
+    this.isOperator = false,
     required this.onPressed,
   });
 
   final String? label;
   final IconData? icon;
+  final bool isOperator;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return SizedBox(
       height: 56,
       child: FilledButton.tonal(
         onPressed: onPressed,
+        style: isOperator
+            ? FilledButton.styleFrom(
+                backgroundColor: colorScheme.primaryContainer,
+                foregroundColor: colorScheme.onPrimaryContainer,
+                textStyle: const TextStyle(fontSize: 24),
+              )
+            : null,
         child: icon != null ? Icon(icon) : Text(label!),
       ),
     );
