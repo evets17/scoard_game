@@ -13,6 +13,7 @@ import 'package:scoard_game/application/services/players/set_player_groups.dart'
 import 'package:scoard_game/application/services/players/unarchive_player.dart';
 import 'package:scoard_game/application/services/scoring/load_quick_score_setup_model.dart';
 import 'package:scoard_game/application/services/scoring/load_round_score_setup_model.dart';
+import 'package:scoard_game/application/services/scoring/load_score_game_choices.dart';
 import 'package:scoard_game/application/services/scoring/remember_setup_player_group.dart';
 import 'package:scoard_game/application/services/sessions/delete_active_session.dart';
 import 'package:scoard_game/application/services/sessions/load_quick_score_active_session.dart';
@@ -34,6 +35,7 @@ class AppEnvironment {
     required this.themeController,
     required this.stayAwakeController,
     required this.templateCatalog,
+    required this.loadScoreGameChoices,
     required this.loadPlayersScreenModel,
     required this.createPlayer,
     required this.renamePlayer,
@@ -62,6 +64,7 @@ class AppEnvironment {
   final AppThemeController themeController;
   final StayAwakeController stayAwakeController;
   final TemplateCatalog templateCatalog;
+  final LoadScoreGameChoices loadScoreGameChoices;
   final LoadPlayersScreenModel loadPlayersScreenModel;
   final CreatePlayer createPlayer;
   final RenamePlayer renamePlayer;

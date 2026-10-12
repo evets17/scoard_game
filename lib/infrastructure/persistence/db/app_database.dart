@@ -650,6 +650,39 @@ class AppDatabase extends _$AppDatabase {
         .go();
   }
 
+  /// The latest finished game for each template, across both scoring styles.
+  Future<Map<String, DateTime>> loadLastCompletedAtByTemplateId() async {
+    final lastCompletedAt = <String, DateTime>{};
+
+    void record(String? templateId, DateTime? completedAt) {
+      if (templateId == null || completedAt == null) {
+        return;
+      }
+      final existing = lastCompletedAt[templateId];
+      if (existing == null || completedAt.isAfter(existing)) {
+        lastCompletedAt[templateId] = completedAt;
+      }
+    }
+
+    final quickLatest = quickScoreSessionsTable.completedAt.max();
+    final quickQuery = selectOnly(quickScoreSessionsTable)
+      ..addColumns([quickScoreSessionsTable.templateId, quickLatest])
+      ..groupBy([quickScoreSessionsTable.templateId]);
+    for (final row in await quickQuery.get()) {
+      record(row.read(quickScoreSessionsTable.templateId), row.read(quickLatest));
+    }
+
+    final roundLatest = roundScoreSessionsTable.completedAt.max();
+    final roundQuery = selectOnly(roundScoreSessionsTable)
+      ..addColumns([roundScoreSessionsTable.templateId, roundLatest])
+      ..groupBy([roundScoreSessionsTable.templateId]);
+    for (final row in await roundQuery.get()) {
+      record(row.read(roundScoreSessionsTable.templateId), row.read(roundLatest));
+    }
+
+    return lastCompletedAt;
+  }
+
   /// The latest finished game for each player, across both scoring styles.
   Future<Map<String, DateTime>> loadLastCompletedAtByPlayerId() async {
     final lastCompletedAt = <String, DateTime>{};

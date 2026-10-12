@@ -198,6 +198,22 @@ class PersistentSessionRepository implements SessionRepository {
   }
 
   @override
+  Future<Map<String, DateTime>> loadLastPlayedAtByTemplateId() async {
+    final lastPlayedAt = await _appDatabase.loadLastCompletedAtByTemplateId();
+
+    // Games in progress count too, as of their last save.
+    final activeSessions = await _appDatabase.loadActiveSessions(limit: 1000);
+    for (final session in activeSessions) {
+      final existing = lastPlayedAt[session.templateId];
+      if (existing == null || session.updatedAt.isAfter(existing)) {
+        lastPlayedAt[session.templateId] = session.updatedAt;
+      }
+    }
+
+    return lastPlayedAt;
+  }
+
+  @override
   Future<Map<String, DateTime>> loadLastPlayedAtByPlayerId() async {
     final lastPlayedAt = await _appDatabase.loadLastCompletedAtByPlayerId();
 

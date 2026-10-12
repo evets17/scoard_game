@@ -81,4 +81,48 @@ void main() {
     expect(find.text('Avery'), findsOneWidget);
     expect(find.text('52'), findsOneWidget);
   });
+
+  testWidgets('general templates list first; games move up once played', (
+    tester,
+  ) async {
+    await openApp(tester);
+
+    double topOf(String name) => tester.getTopLeft(find.text(name).first).dy;
+
+    await tester.tap(find.text('Score a Game'));
+    await tester.pumpAndSettle();
+
+    // Neither game has been played, so they are listed by name.
+    expect(topOf('Quick Score'), lessThan(topOf('Round Score')));
+    expect(topOf('Round Score'), lessThan(topOf('Games')));
+    expect(topOf('Games'), lessThan(topOf('Cornhole')));
+    expect(topOf('Cornhole'), lessThan(topOf('Skyjo')));
+
+    // Play a quick game of Skyjo.
+    await tester.tap(find.text('Skyjo'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Avery').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jules').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Increase score').first);
+    await tester.pump();
+    await tester.tap(find.text('Next Round >>'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Game Over'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Score a Game'));
+    await tester.pumpAndSettle();
+
+    // The general templates stay on top; Skyjo now leads the games.
+    expect(topOf('Round Score'), lessThan(topOf('Games')));
+    expect(topOf('Skyjo'), lessThan(topOf('Cornhole')));
+  });
 }

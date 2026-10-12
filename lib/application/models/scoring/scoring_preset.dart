@@ -11,6 +11,7 @@ class ScoringPreset {
     required this.displayName,
     required this.description,
     this.subtitle,
+    this.isGeneral = false,
     required this.scoringModel,
     required this.minimumPlayers,
     required this.winnerRule,
@@ -29,6 +30,10 @@ class ScoringPreset {
   /// Short line shown under the name in Score a Game, for example to tell
   /// apart two templates for the same game.
   final String? subtitle;
+
+  /// A general scoring style rather than a specific game. Listed first in
+  /// Score a Game.
+  final bool isGeneral;
 
   /// Longer explanation shown on the game page.
   final String description;

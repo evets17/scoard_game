@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "name": "Quick Score",
   "subtitle": "One final score per player",
+  "general": true,
   "description": "Use this when each player only needs one final score entered.",
   "players": { "minimum": 2 },
   "scoringModel": "finalScore",

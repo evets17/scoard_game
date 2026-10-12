@@ -59,6 +59,7 @@ That validates every bundled template and runs every scenario. A template is don
 | `version` | yes | string | `major.minor.patch`, for example `1.0.0`. |
 | `name` | yes | string | Non-empty. Shown in Score a Game, on the game page, and in game history. |
 | `subtitle` | no | string | Non-empty. One short line under the name in Score a Game, for example `"Alternate rules"` to tell two templates for the same game apart. |
+| `general` | no | boolean | Default `false`. `true` marks a general scoring style rather than a specific game (Quick Score, Round Score). General templates are listed first in Score a Game; games follow, most recently played first. |
 | `description` | yes | string | Non-empty. Shown on the game page, which opens after the game is picked. |
 | `source` | no | string | Where the scoring rules came from, for example `"Skyjo rulebook, scoring section"` or a URL. Shown on the game page; a URL becomes a link. |
 | `players` | yes | object | See below. |

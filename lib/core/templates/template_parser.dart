@@ -32,6 +32,7 @@ ScoringPreset parseTemplateJson(Map<String, Object?> json) {
     version: json['version']! as String,
     displayName: json['name']! as String,
     subtitle: json['subtitle'] as String?,
+    isGeneral: (json['general'] as bool?) ?? false,
     description: json['description']! as String,
     source: json['source'] as String?,
     scoringModel: switch (json['scoringModel']) {

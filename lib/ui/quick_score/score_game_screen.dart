@@ -2,44 +2,72 @@ import 'package:scoard_game/application/models/sessions/scoring_session_start_co
 import 'package:flutter/material.dart';
 import 'package:scoard_game/application/models/scoring/scoring_model.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
-import 'package:scoard_game/core/templates/template_catalog.dart';
+import 'package:scoard_game/application/services/scoring/load_score_game_choices.dart';
+import 'package:scoard_game/core/templates/order_templates.dart';
 import 'package:scoard_game/ui/navigation/app_routes.dart';
 import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
 import 'package:scoard_game/ui/game_page/game_page_screen.dart';
 
-class ScoreGameScreen extends StatelessWidget {
-  const ScoreGameScreen({required this.templateCatalog, super.key});
+class ScoreGameScreen extends StatefulWidget {
+  const ScoreGameScreen({required this.loadScoreGameChoices, super.key});
 
-  final TemplateCatalog templateCatalog;
+  final LoadScoreGameChoices loadScoreGameChoices;
+
+  @override
+  State<ScoreGameScreen> createState() => _ScoreGameScreenState();
+}
+
+class _ScoreGameScreenState extends State<ScoreGameScreen> {
+  late final Future<ScoreGameChoices> _choicesFuture =
+      widget.loadScoreGameChoices();
 
   @override
   Widget build(BuildContext context) {
-    final presets = templateCatalog.templates;
     final theme = Theme.of(context);
 
     return AppScreenScaffold(
       title: 'Score a Game',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'What are you playing?',
-            style: theme.textTheme.bodyLarge,
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: ListView(
-              children: presets
-                  .map(
-                    (preset) => _PresetOptionCard(
-                      preset: preset,
-                      onTap: () => _startPreset(context, preset),
-                    ),
-                  )
-                  .toList(growable: false),
-            ),
-          ),
-        ],
+      child: FutureBuilder<ScoreGameChoices>(
+        future: _choicesFuture,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const Center(child: Text('Games could not load right now.'));
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator.adaptive());
+          }
+
+          final choices = snapshot.requireData;
+          Widget card(ScoringPreset preset) => _PresetOptionCard(
+                preset: preset,
+                onTap: () => _startPreset(context, preset),
+              );
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'What are you playing?',
+                style: theme.textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  children: [
+                    ...choices.general.map(card),
+                    if (choices.general.isNotEmpty &&
+                        choices.games.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text('Games', style: theme.textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                    ],
+                    ...choices.games.map(card),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

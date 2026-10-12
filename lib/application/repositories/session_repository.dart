@@ -46,4 +46,7 @@ abstract class SessionRepository {
 
   /// When each player last took part in a game, finished or in progress.
   Future<Map<String, DateTime>> loadLastPlayedAtByPlayerId();
+
+  /// When each scoring template was last used, finished or in progress.
+  Future<Map<String, DateTime>> loadLastPlayedAtByTemplateId();
 }
