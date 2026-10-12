@@ -1,3 +1,4 @@
+import 'package:scoard_game/application/models/scoring/calculated_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_behavior.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
@@ -9,11 +10,22 @@ import 'package:scoard_game/application/models/scoring/winner_rule.dart';
 
 /// Builds a [ScoringPreset] from a template that has already passed
 /// `validateTemplateJson`.
+///
+/// Version 1's `scoreField` and version 2's `fields` and `score` produce the
+/// same model: entered fields, calculated fields, and which one is the score.
 ScoringPreset parseTemplateJson(Map<String, Object?> json) {
   final players = json['players']! as Map<String, Object?>;
-  final scoreField = json['scoreField']! as Map<String, Object?>;
-  final entry = (scoreField['entry'] as Map<String, Object?>?) ?? const {};
   final prompts = (json['prompts'] as List<Object?>?) ?? const [];
+  final fields = [
+    if (json['fields'] case final List<Object?> fields)
+      for (final field in fields) field! as Map<String, Object?>
+    else
+      json['scoreField']! as Map<String, Object?>,
+  ];
+  final enteredFields =
+      fields.where((field) => !field.containsKey('formula')).toList();
+  final calculatedFields =
+      fields.where((field) => field.containsKey('formula')).toList();
 
   return ScoringPreset(
     id: json['id']! as String,
@@ -35,24 +47,37 @@ ScoringPreset parseTemplateJson(Map<String, Object?> json) {
     promptDefinitions: prompts
         .map((prompt) => _parsePrompt(prompt! as Map<String, Object?>))
         .toList(growable: false),
-    scoreFields: [
-      ScoreFieldDefinition(
-        id: scoreField['id']! as String,
-        label: scoreField['label']! as String,
-        inputKind: ScoreInputKind.integer,
-        isEntered: true,
-        contributesToFinalResult: true,
-        initialIntegerValue: scoreField['initialValue'] as int?,
-        minimumDisplayDigits: (scoreField['minimumDisplayDigits'] as int?) ?? 1,
-        enableTapToEdit: (entry['tapToEdit'] as bool?) ?? false,
-        enableQuickAdjust: (entry['quickAdjust'] as bool?) ?? false,
-        allowReplace: (entry['replace'] as bool?) ?? true,
-        allowAdjust: (entry['adjust'] as bool?) ?? false,
-        valuePickers: ((scoreField['entryModes'] as List<Object?>?) ?? const [])
-            .map((mode) => _parseValuePicker(mode! as Map<String, Object?>))
-            .toList(growable: false),
-      ),
+    scoreFields: enteredFields.map(_parseEnteredField).toList(growable: false),
+    calculatedFields: [
+      for (final field in calculatedFields)
+        CalculatedFieldDefinition(
+          id: field['id']! as String,
+          label: field['label']! as String,
+          formula: field['formula']! as String,
+        ),
     ],
+    scoreFieldId: json['score'] as String?,
+  );
+}
+
+ScoreFieldDefinition _parseEnteredField(Map<String, Object?> field) {
+  final entry = (field['entry'] as Map<String, Object?>?) ?? const {};
+
+  return ScoreFieldDefinition(
+    id: field['id']! as String,
+    label: field['label']! as String,
+    inputKind: ScoreInputKind.integer,
+    isEntered: true,
+    contributesToFinalResult: true,
+    initialIntegerValue: field['initialValue'] as int?,
+    minimumDisplayDigits: (field['minimumDisplayDigits'] as int?) ?? 1,
+    enableTapToEdit: (entry['tapToEdit'] as bool?) ?? false,
+    enableQuickAdjust: (entry['quickAdjust'] as bool?) ?? false,
+    allowReplace: (entry['replace'] as bool?) ?? true,
+    allowAdjust: (entry['adjust'] as bool?) ?? false,
+    valuePickers: ((field['entryModes'] as List<Object?>?) ?? const [])
+        .map((mode) => _parseValuePicker(mode! as Map<String, Object?>))
+        .toList(growable: false),
   );
 }
 

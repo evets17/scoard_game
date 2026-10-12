@@ -21,6 +21,7 @@ import 'package:scoard_game/application/services/sessions/save_quick_score_activ
 import 'package:scoard_game/application/services/sessions/save_quick_score_session.dart';
 import 'package:scoard_game/core/players/order_players.dart';
 import 'package:scoard_game/core/scoring/resolve_preset_options.dart';
+import 'package:scoard_game/core/scoring/score_engine.dart';
 import 'package:scoard_game/ui/help/scoring_help_screen.dart';
 import 'package:scoard_game/ui/navigation/app_routes.dart';
 import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
@@ -225,14 +226,23 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
 
   Map<String, int> _currentScores() {
     final fieldDefinition = _preset!.scoreFields.first;
-    return {
-      for (final player in _selectedPlayers)
-        player.id: _parseEnteredScore(
-              rawValue: _scoreControllers[player.id]?.text.trim() ?? '',
-              fieldDefinition: fieldDefinition,
-            ) ??
-            0,
-    };
+    return ScoreEngine.of(_preset!).scores(
+      [
+        for (final player in _selectedPlayers)
+          QuickScoreParticipantValues(
+            playerId: player.id,
+            displayName: player.displayName,
+            enteredValues: {
+              fieldDefinition.id: _parseEnteredScore(
+                    rawValue: _scoreControllers[player.id]?.text.trim() ?? '',
+                    fieldDefinition: fieldDefinition,
+                  ) ??
+                  0,
+            },
+          ),
+      ],
+      roundNumber: 1,
+    );
   }
 
   void _reorderPlayers(int oldIndex, int newIndex) {

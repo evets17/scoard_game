@@ -3,6 +3,7 @@ import 'package:scoard_game/application/models/results/quick_score_result.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/application/models/scoring/winner_rule.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_participant_values.dart';
+import 'package:scoard_game/core/scoring/score_engine.dart';
 
 QuickScoreResult calculateQuickScoreResult({
   required String sessionId,
@@ -11,17 +12,20 @@ QuickScoreResult calculateQuickScoreResult({
   required WinnerRule winnerRule,
   required List<QuickScoreParticipantValues> participantValues,
 }) {
-  final scoreFieldId = preset.scoreFields.firstWhere(
-    (field) => field.contributesToFinalResult,
-  ).id;
+  final scores = ScoreEngine.of(preset).scores(
+    participantValues,
+    roundNumber: 1,
+  );
+  int scoreFor(QuickScoreParticipantValues participant) =>
+      scores[participant.playerId] ?? 0;
 
   final sortedParticipants = participantValues.toList(growable: false)
     ..sort((left, right) {
       final scoreComparison = switch (winnerRule) {
-        WinnerRule.highestScoreWins => _scoreFor(right, scoreFieldId)
-            .compareTo(_scoreFor(left, scoreFieldId)),
-        WinnerRule.lowestScoreWins => _scoreFor(left, scoreFieldId)
-            .compareTo(_scoreFor(right, scoreFieldId)),
+        WinnerRule.highestScoreWins => scoreFor(right)
+            .compareTo(scoreFor(left)),
+        WinnerRule.lowestScoreWins => scoreFor(left)
+            .compareTo(scoreFor(right)),
       };
 
       if (scoreComparison != 0) {
@@ -36,11 +40,11 @@ QuickScoreResult calculateQuickScoreResult({
 
   for (var index = 0; index < sortedParticipants.length; index++) {
     final participant = sortedParticipants[index];
-    final score = _scoreFor(participant, scoreFieldId);
+    final score = scoreFor(participant);
 
     if (index > 0) {
       final previousParticipant = sortedParticipants[index - 1];
-      final previousScore = _scoreFor(previousParticipant, scoreFieldId);
+      final previousScore = scoreFor(previousParticipant);
 
       if (score != previousScore) {
         placement = index + 1;
@@ -48,7 +52,7 @@ QuickScoreResult calculateQuickScoreResult({
     }
 
     final sameScoreCount = sortedParticipants
-        .where((otherParticipant) => _scoreFor(otherParticipant, scoreFieldId) == score)
+        .where((otherParticipant) => scoreFor(otherParticipant) == score)
         .length;
 
     playerResults.add(
@@ -70,8 +74,4 @@ QuickScoreResult calculateQuickScoreResult({
     winnerRule: winnerRule,
     playerResults: playerResults,
   );
-}
-
-int _scoreFor(QuickScoreParticipantValues participant, String scoreFieldId) {
-  return participant.enteredValues[scoreFieldId] ?? 0;
 }

@@ -16,6 +16,7 @@ import 'package:scoard_game/application/models/sessions/round_score_round_values
 import 'package:scoard_game/core/scoring/calculate_quick_score_result.dart';
 import 'package:scoard_game/core/scoring/calculate_round_score_result.dart';
 import 'package:scoard_game/core/scoring/resolve_preset_options.dart';
+import 'package:scoard_game/core/scoring/score_engine.dart';
 import 'package:scoard_game/core/templates/template_catalog.dart';
 
 const _templateDirectory = 'assets/templates';
@@ -161,6 +162,7 @@ class _Scenario {
     required this.expectedTotals,
     required this.expectedWinners,
     required this.expectedPlacements,
+    required this.expectedRoundScores,
   });
 
   final String name;
@@ -171,6 +173,9 @@ class _Scenario {
   final Map<String, int>? expectedTotals;
   final Set<String>? expectedWinners;
   final Map<String, int>? expectedPlacements;
+
+  /// Each round's score per player, for rounds templates.
+  final List<Map<String, int>>? expectedRoundScores;
 
   bool get expectsTieForFirst {
     if ((expectedWinners?.length ?? 0) > 1) {
@@ -259,11 +264,33 @@ class _Scenario {
     }
 
     final expected = reader.object('expected');
-    expected.onlyKeys(const {'totals', 'winners', 'placements'});
+    expected.onlyKeys(const {'totals', 'winners', 'placements', 'roundScores'});
     if (!expected.has('totals') &&
         !expected.has('winners') &&
-        !expected.has('placements')) {
-      expected.fail('', 'needs totals, winners, or placements');
+        !expected.has('placements') &&
+        !expected.has('roundScores')) {
+      expected.fail('', 'needs totals, winners, placements, or roundScores');
+    }
+
+    List<Map<String, int>>? roundScores;
+    if (expected.has('roundScores')) {
+      if (rounds == null) {
+        expected.fail('roundScores', 'only applies to rounds templates');
+      }
+      final rawRoundScores = expected.list('roundScores');
+      if (rawRoundScores.length != rounds.length) {
+        expected.fail(
+          'roundScores',
+          'has ${rawRoundScores.length} rounds but the scenario has '
+              '${rounds.length}',
+        );
+      }
+      roundScores = [
+        for (var index = 0; index < rawRoundScores.length; index++)
+          scoresByPlayer(
+            expected.child('roundScores[$index]', rawRoundScores[index]),
+          ),
+      ];
     }
 
     Map<String, int>? perPlayer(String key) {
@@ -296,6 +323,7 @@ class _Scenario {
       expectedTotals: perPlayer('totals'),
       expectedWinners: winners,
       expectedPlacements: perPlayer('placements'),
+      expectedRoundScores: roundScores,
     );
   }
 
@@ -385,6 +413,24 @@ class _Scenario {
     }
     if (expectedPlacements != null) {
       expect(placements, expectedPlacements, reason: 'placements');
+    }
+    final expectedRounds = expectedRoundScores;
+    if (expectedRounds != null) {
+      final engine = ScoreEngine.of(template);
+      for (var index = 0; index < expectedRounds.length; index++) {
+        final roundScores = engine.scores(
+          [
+            for (final player in players)
+              valuesFor(player, rounds![index][player]!),
+          ],
+          roundNumber: index + 1,
+        );
+        expect(
+          roundScores,
+          expectedRounds[index],
+          reason: 'round ${index + 1} scores',
+        );
+      }
     }
   }
 }

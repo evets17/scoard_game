@@ -89,7 +89,7 @@ void main() {
 
   test('wrong types and unsupported values are rejected', () {
     final problems = problemsFor((template) {
-      template['schemaVersion'] = 2;
+      template['schemaVersion'] = 3;
       template['version'] = 'one';
       template['subtitle'] = '  ';
       template['scoringModel'] = 'categories';
@@ -100,7 +100,7 @@ void main() {
     expect(
       problems,
       containsAll([
-        'schemaVersion: unsupported version 2; expected 1',
+        'schemaVersion: unsupported version 3; expected one of: 1, 2',
         'version: "one" must look like 1.0.0',
         'subtitle: must not be empty',
         'scoringModel: unsupported value "categories"; expected one of: finalScore, rounds',

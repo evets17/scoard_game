@@ -1,0 +1,71 @@
+{
+  "templateId": "cornhole",
+  "scenarios": [
+    {
+      "name": "The side with more points scores the difference",
+      "players": ["blue", "red"],
+      "rounds": [
+        { "blue": 7, "red": 4 },
+        { "blue": 3, "red": 9 }
+      ],
+      "expected": {
+        "roundScores": [
+          { "blue": 3, "red": 0 },
+          { "blue": 0, "red": 6 }
+        ],
+        "totals": { "blue": 3, "red": 6 },
+        "winners": ["red"]
+      }
+    },
+    {
+      "name": "Equal innings cancel out completely",
+      "players": ["blue", "red"],
+      "rounds": [
+        { "blue": 5, "red": 5 },
+        { "blue": 0, "red": 0 }
+      ],
+      "expected": {
+        "roundScores": [
+          { "blue": 0, "red": 0 },
+          { "blue": 0, "red": 0 }
+        ],
+        "totals": { "blue": 0, "red": 0 }
+      }
+    },
+    {
+      "name": "A game played out to 21",
+      "players": ["blue", "red"],
+      "rounds": [
+        { "blue": 9, "red": 3 },
+        { "blue": 4, "red": 8 },
+        { "blue": 12, "red": 0 },
+        { "blue": 6, "red": 6 },
+        { "blue": 5, "red": 2 }
+      ],
+      "expected": {
+        "roundScores": [
+          { "blue": 6, "red": 0 },
+          { "blue": 0, "red": 4 },
+          { "blue": 12, "red": 0 },
+          { "blue": 0, "red": 0 },
+          { "blue": 3, "red": 0 }
+        ],
+        "totals": { "blue": 21, "red": 4 },
+        "winners": ["blue"],
+        "placements": { "blue": 1, "red": 2 }
+      }
+    },
+    {
+      "name": "Level totals tie for first",
+      "players": ["blue", "red"],
+      "rounds": [
+        { "blue": 6, "red": 3 },
+        { "blue": 2, "red": 5 }
+      ],
+      "expected": {
+        "totals": { "blue": 3, "red": 3 },
+        "winners": ["blue", "red"]
+      }
+    }
+  ]
+}

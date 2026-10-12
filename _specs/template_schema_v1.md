@@ -2,7 +2,7 @@
 
 This is the reference for writing a Scoard Game scoring template. A template describes how one game is scored. The app reads it, validates it, and scores the game with it, with no code changes.
 
-Version 1 covers games that need **one score per player**, entered either once at the end (`finalScore`) or once per round (`rounds`). Games that need several scoring categories per player are not supported yet.
+Version 1 covers games that need **one score per player**, entered either once at the end (`finalScore`) or once per round (`rounds`), where the entered number is the score. When the score has to be calculated (for example from the other players' results), use [version 2](template_schema_v2.md). Games that need several scoring categories per player are not supported yet.
 
 ---
 

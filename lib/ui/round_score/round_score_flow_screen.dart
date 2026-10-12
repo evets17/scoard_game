@@ -23,6 +23,7 @@ import 'package:scoard_game/application/services/sessions/save_round_score_activ
 import 'package:scoard_game/application/services/sessions/save_round_score_session.dart';
 import 'package:scoard_game/core/players/order_players.dart';
 import 'package:scoard_game/core/scoring/resolve_preset_options.dart';
+import 'package:scoard_game/core/scoring/score_engine.dart';
 import 'package:scoard_game/ui/help/scoring_help_screen.dart';
 import 'package:scoard_game/ui/navigation/app_routes.dart';
 import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
@@ -190,7 +191,9 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
                   ).winnerRule,
                   controllers: _scoreControllers,
                   entryMemory: _scoreEntryMemory,
-                  savedRounds: _savedRounds,
+                  priorRoundTotals: _priorRoundTotals(),
+                  currentRoundScores: _currentRoundScores(),
+                  scoreIsCalculated: _preset!.calculatedFields.isNotEmpty,
                   scoreSortSnapshot: _scoreSortSnapshot,
                   onPlayerTap: (player) => _handlePlayerTap(setupModel, player),
                   onReorder: _reorderPlayers,
@@ -222,37 +225,60 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
   // sorting uses a snapshot of these, taken when Score is picked and when the
   // round changes, so rows hold still while a round is being entered.
   Map<String, int> _currentTotals() {
-    final fieldDefinition = _preset!.scoreFields.first;
-    final totals = <String, int>{};
+    final priorTotals = _priorRoundTotals();
+    final roundScores = _currentRoundScores();
+    return {
+      for (final player in _selectedPlayers)
+        player.id: (priorTotals[player.id] ?? 0) + (roundScores[player.id] ?? 0),
+    };
+  }
 
-    void add(String playerId, int value) {
-      totals.update(playerId, (total) => total + value, ifAbsent: () => value);
-    }
+  /// Each player's total from every saved round except the one on screen.
+  Map<String, int> _priorRoundTotals() {
+    final engine = ScoreEngine.of(_preset!);
+    final totals = <String, int>{};
 
     for (final round in _savedRounds) {
       if (round.roundNumber == _currentRoundNumber) {
         continue;
       }
-      for (final participant in round.participantValues) {
-        add(
-          participant.playerId,
-          participant.enteredValues[fieldDefinition.id] ?? 0,
+      final scores = engine.scores(
+        round.participantValues,
+        roundNumber: round.roundNumber,
+      );
+      for (final entry in scores.entries) {
+        totals.update(
+          entry.key,
+          (total) => total + entry.value,
+          ifAbsent: () => entry.value,
         );
       }
     }
 
-    for (final player in _selectedPlayers) {
-      add(
-        player.id,
-        _parseEnteredScore(
-              rawValue: _scoreControllers[player.id]?.text.trim() ?? '',
-              fieldDefinition: fieldDefinition,
-            ) ??
-            0,
-      );
-    }
-
     return totals;
+  }
+
+  /// Each player's score for the round on screen, from what is entered so
+  /// far. With a calculated score this can depend on the other players.
+  Map<String, int> _currentRoundScores() {
+    final fieldDefinition = _preset!.scoreFields.first;
+    return ScoreEngine.of(_preset!).scores(
+      [
+        for (final player in _selectedPlayers)
+          QuickScoreParticipantValues(
+            playerId: player.id,
+            displayName: player.displayName,
+            enteredValues: {
+              fieldDefinition.id: _parseEnteredScore(
+                    rawValue: _scoreControllers[player.id]?.text.trim() ?? '',
+                    fieldDefinition: fieldDefinition,
+                  ) ??
+                  0,
+            },
+          ),
+      ],
+      roundNumber: _currentRoundNumber,
+    );
   }
 
   void _reorderPlayers(int oldIndex, int newIndex) {
@@ -798,6 +824,11 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
   }
 
   void _handleScoreChanged() {
+    // A calculated score can depend on other players' entries, so every
+    // row's total has to refresh, not just the one that changed.
+    if (mounted && (_preset?.calculatedFields.isNotEmpty ?? false)) {
+      setState(() {});
+    }
     unawaited(_autosaveCurrentSession());
   }
 
@@ -1052,7 +1083,9 @@ class _RoundScoreEntryStep extends StatelessWidget {
     required this.winnerRule,
     required this.controllers,
     required this.entryMemory,
-    required this.savedRounds,
+    required this.priorRoundTotals,
+    required this.currentRoundScores,
+    required this.scoreIsCalculated,
     required this.scoreSortSnapshot,
     required this.onPlayerTap,
     required this.onReorder,
@@ -1069,7 +1102,14 @@ class _RoundScoreEntryStep extends StatelessWidget {
   final ScoreEntryMemory entryMemory;
   final PlayerSortMode sortMode;
   final WinnerRule winnerRule;
-  final List<RoundScoreRoundValues> savedRounds;
+  /// Totals from every round except this one.
+  final Map<String, int> priorRoundTotals;
+
+  /// Scores for this round from what is entered so far.
+  final Map<String, int> currentRoundScores;
+
+  /// Whether the score comes from a formula rather than the entry.
+  final bool scoreIsCalculated;
   final Map<String, int> scoreSortSnapshot;
   final ValueChanged<QuickScoreAvailablePlayer> onPlayerTap;
   final ReorderCallback onReorder;
@@ -1080,7 +1120,7 @@ class _RoundScoreEntryStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final priorRoundTotals = _calculatePriorRoundTotals();
+
     final displayedPlayers = orderPlayersForDisplay(
       players,
       sortMode: sortMode,
@@ -1132,8 +1172,10 @@ class _RoundScoreEntryStep extends StatelessWidget {
                     entryMemory: entryMemory,
                     onLabelTap: () => onPlayerTap(player),
                     valueLabelMinimumDigits: 3,
+                    // An entered score updates from the row's own value; a
+                    // calculated one comes from the whole round.
                     valueLabelBuilder: (currentValue) =>
-                        '${((priorRoundTotals[player.id] ?? 0) + currentValue)}',
+                        '${(priorRoundTotals[player.id] ?? 0) + (scoreIsCalculated ? (currentRoundScores[player.id] ?? 0) : currentValue)}',
                   );
                 },
               );
@@ -1153,26 +1195,6 @@ class _RoundScoreEntryStep extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  Map<String, int> _calculatePriorRoundTotals() {
-    final totals = <String, int>{};
-
-    for (final round in savedRounds) {
-      if (round.roundNumber == currentRoundNumber) {
-        continue;
-      }
-
-      for (final participant in round.participantValues) {
-        totals.update(
-          participant.playerId,
-          (score) => score + (participant.enteredValues[fieldDefinition.id] ?? 0),
-          ifAbsent: () => participant.enteredValues[fieldDefinition.id] ?? 0,
-        );
-      }
-    }
-
-    return totals;
   }
 }
 

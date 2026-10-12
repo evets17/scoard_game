@@ -3,6 +3,7 @@ import 'package:scoard_game/application/models/results/round_score_result.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/application/models/scoring/winner_rule.dart';
 import 'package:scoard_game/application/models/sessions/round_score_round_values.dart';
+import 'package:scoard_game/core/scoring/score_engine.dart';
 
 RoundScoreResult calculateRoundScoreResult({
   required String sessionId,
@@ -11,19 +12,22 @@ RoundScoreResult calculateRoundScoreResult({
   required WinnerRule winnerRule,
   required List<RoundScoreRoundValues> rounds,
 }) {
-  final scoreFieldId = preset.scoreFields.firstWhere(
-    (field) => field.contributesToFinalResult,
-  ).id;
+  final engine = ScoreEngine.of(preset);
   final cumulativeScores = <String, int>{};
   final displayNames = <String, String>{};
 
   for (final round in rounds) {
+    final roundScores = engine.scores(
+      round.participantValues,
+      roundNumber: round.roundNumber,
+    );
     for (final participant in round.participantValues) {
       displayNames[participant.playerId] = participant.displayName;
+      final roundScore = roundScores[participant.playerId] ?? 0;
       cumulativeScores.update(
         participant.playerId,
-        (score) => score + (participant.enteredValues[scoreFieldId] ?? 0),
-        ifAbsent: () => participant.enteredValues[scoreFieldId] ?? 0,
+        (score) => score + roundScore,
+        ifAbsent: () => roundScore,
       );
     }
   }

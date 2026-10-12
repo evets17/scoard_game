@@ -1,10 +1,15 @@
-/// Checks a decoded template file against schema version 1.
+/// Checks a decoded template file against the template schema.
 ///
-/// See `_specs/template_schema_v1.md`. Every problem is reported, not just
-/// the first, so a template can be fixed in one pass.
+/// See `_specs/template_schema_v1.md` and `template_schema_v2.md`. Every
+/// problem is reported, not just the first, so a template can be fixed in
+/// one pass.
 library;
 
-const supportedTemplateSchemaVersion = 1;
+import 'package:scoard_game/core/formulas/formula_checker.dart';
+import 'package:scoard_game/core/formulas/formula_parser.dart';
+import 'package:scoard_game/core/scoring/score_engine.dart';
+
+const supportedTemplateSchemaVersions = {1, 2};
 
 const templateScoringModels = {'finalScore', 'rounds'};
 const templateWinnerRules = {'highestScore', 'lowestScore'};
@@ -46,7 +51,18 @@ List<TemplateProblem> validateTemplateJson(
     return problems;
   }
 
-  template.allowOnlyKeys(const {
+  final schemaVersion = template.integer('schemaVersion', required: true);
+  if (schemaVersion != null &&
+      !supportedTemplateSchemaVersions.contains(schemaVersion)) {
+    template.problem(
+      'schemaVersion',
+      'unsupported version $schemaVersion; expected one of: '
+          '${supportedTemplateSchemaVersions.join(', ')}',
+    );
+  }
+  final isVersion2 = schemaVersion == 2;
+
+  template.allowOnlyKeys({
     'schemaVersion',
     'id',
     'version',
@@ -58,16 +74,8 @@ List<TemplateProblem> validateTemplateJson(
     'scoringModel',
     'winner',
     'prompts',
-    'scoreField',
+    if (isVersion2) ...{'fields', 'score'} else 'scoreField',
   });
-
-  final schemaVersion = template.integer('schemaVersion', required: true);
-  if (schemaVersion != null && schemaVersion != supportedTemplateSchemaVersion) {
-    template.problem(
-      'schemaVersion',
-      'unsupported version $schemaVersion; expected $supportedTemplateSchemaVersion',
-    );
-  }
 
   final id = template.identifier('id', required: true);
   if (id != null && expectedId != null && id != expectedId) {
@@ -110,55 +118,152 @@ List<TemplateProblem> validateTemplateJson(
     }
   }
 
-  final scoreField = template.object('scoreField', required: true);
-  if (scoreField != null) {
-    scoreField.allowOnlyKeys(const {
-      'id',
-      'label',
-      'initialValue',
-      'minimumDisplayDigits',
-      'entry',
-      'entryModes',
-    });
-    scoreField.identifier('id', required: true);
-    scoreField.text('label', required: true);
-    scoreField.integer('initialValue');
-    final digits = scoreField.integer('minimumDisplayDigits');
-    if (digits != null && digits < 1) {
-      scoreField.problem('minimumDisplayDigits', 'must be at least 1');
-    }
-
-    var tapToEdit = false;
-    final entry = scoreField.object('entry');
-    if (entry != null) {
-      const entryKeys = {'tapToEdit', 'quickAdjust', 'replace', 'adjust'};
-      entry.allowOnlyKeys(entryKeys);
-      for (final key in entryKeys) {
-        final value = entry.boolean(key);
-        if (key == 'tapToEdit') {
-          tapToEdit = value ?? false;
-        }
-      }
-    }
-
-    final entryModes = scoreField.list('entryModes');
-    if (entryModes != null && entryModes.isNotEmpty && !tapToEdit) {
-      scoreField.problem(
-        'entryModes',
-        'need entry.tapToEdit to be true, or the entry sheet never opens',
-      );
-    }
-    if (entryModes != null) {
-      final seenModeIds = <String>{};
-      for (final mode in entryModes) {
-        if (mode.isObject) {
-          _validateEntryMode(mode, seenModeIds);
-        }
-      }
+  if (isVersion2) {
+    _validateFields(template);
+  } else {
+    final scoreField = template.object('scoreField', required: true);
+    if (scoreField != null) {
+      _validateEnteredField(scoreField);
     }
   }
 
   return problems;
+}
+
+/// A field whose value players enter. Returns its id if it is valid.
+String? _validateEnteredField(_ObjectReader field) {
+  field.allowOnlyKeys(const {
+    'id',
+    'label',
+    'initialValue',
+    'minimumDisplayDigits',
+    'entry',
+    'entryModes',
+  });
+  final id = field.identifier('id', required: true);
+  field.text('label', required: true);
+  field.integer('initialValue');
+  final digits = field.integer('minimumDisplayDigits');
+  if (digits != null && digits < 1) {
+    field.problem('minimumDisplayDigits', 'must be at least 1');
+  }
+
+  var tapToEdit = false;
+  final entry = field.object('entry');
+  if (entry != null) {
+    const entryKeys = {'tapToEdit', 'quickAdjust', 'replace', 'adjust'};
+    entry.allowOnlyKeys(entryKeys);
+    for (final key in entryKeys) {
+      final value = entry.boolean(key);
+      if (key == 'tapToEdit') {
+        tapToEdit = value ?? false;
+      }
+    }
+  }
+
+  final entryModes = field.list('entryModes');
+  if (entryModes != null && entryModes.isNotEmpty && !tapToEdit) {
+    field.problem(
+      'entryModes',
+      'need entry.tapToEdit to be true, or the entry sheet never opens',
+    );
+  }
+  if (entryModes != null) {
+    final seenModeIds = <String>{};
+    for (final mode in entryModes) {
+      if (mode.isObject) {
+        _validateEntryMode(mode, seenModeIds);
+      }
+    }
+  }
+
+  return id;
+}
+
+/// Version 2: `fields` (entered and calculated) and `score`.
+void _validateFields(_ObjectReader template) {
+  final fields = template.list('fields', required: true);
+  final scoreId = template.identifier('score', required: true);
+  if (fields == null) {
+    return;
+  }
+
+  final fieldIds = <String>{};
+  final calculated = <({_ObjectReader reader, String id, Formula formula})>[];
+  var enteredCount = 0;
+
+  void addId(_ObjectReader field, String? id) {
+    if (id != null && !fieldIds.add(id)) {
+      field.problem('id', 'duplicate field id "$id"');
+    }
+  }
+
+  for (final field in fields) {
+    if (!field.isObject) {
+      continue;
+    }
+
+    if (!field.has('formula')) {
+      enteredCount += 1;
+      addId(field, _validateEnteredField(field));
+      continue;
+    }
+
+    field.allowOnlyKeys(const {'id', 'label', 'formula'});
+    final id = field.identifier('id', required: true);
+    field.text('label', required: true);
+    final source = field.text('formula', required: true);
+    addId(field, id);
+    if (id == null || source == null) {
+      continue;
+    }
+    try {
+      calculated.add((reader: field, id: id, formula: Formula.parse(source)));
+    } on FormulaSyntaxError catch (error) {
+      field.problem('formula', error.toString());
+    }
+  }
+
+  if (enteredCount != 1) {
+    template.problem(
+      'fields',
+      'needs exactly one entered field (a field without a formula); '
+          'found $enteredCount',
+    );
+  }
+
+  // Names and functions first; loops only make sense once names are right.
+  final dependencies = <String, Set<String>>{};
+  var formulasAreSound = true;
+  for (final field in calculated) {
+    final reads = <String>{};
+    final problems = checkFormula(
+      field.formula,
+      fieldIds: fieldIds,
+      dependencies: reads,
+    );
+    for (final problem in problems) {
+      field.reader.problem('formula', problem.toString());
+    }
+    formulasAreSound = formulasAreSound && problems.isEmpty;
+    dependencies[field.id] = reads;
+  }
+
+  if (formulasAreSound) {
+    try {
+      orderCalculatedFields(dependencies);
+    } on CircularFormulaError catch (error) {
+      final start = calculated.firstWhere((field) => field.id == error.loop.first);
+      start.reader.problem('formula', error.toString());
+    }
+  }
+
+  if (scoreId != null && fieldIds.isNotEmpty && !fieldIds.contains(scoreId)) {
+    template.problem(
+      'score',
+      '"$scoreId" is not one of the fields: ${fieldIds.join(', ')}',
+    );
+  }
 }
 
 void _validateEntryMode(_ObjectReader mode, Set<String> seenModeIds) {
@@ -237,6 +342,8 @@ class _ObjectReader {
   final List<TemplateProblem> _problems;
 
   bool get isObject => _value is Map<String, Object?>;
+
+  bool has(String key) => _map.containsKey(key);
 
   Map<String, Object?> get _map => _value! as Map<String, Object?>;
 
