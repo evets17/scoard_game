@@ -108,4 +108,16 @@ void main() {
     expect(field.allowAdjust, isFalse);
     expect(preset.winnerRule, WinnerRule.lowestScoreWins);
   });
+
+  test('Skyjo offers a Cards picker from -2 to 12', () {
+    final picker = loadBundled('skyjo').scoreFields.single.valuePickers.single;
+
+    expect(picker.id, 'cards');
+    expect(picker.label, 'Cards');
+    expect(
+      picker.options.map((option) => option.value),
+      [for (var value = -2; value <= 12; value++) value],
+    );
+    expect(picker.options.first.color, '#3949AB');
+  });
 }

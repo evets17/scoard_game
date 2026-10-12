@@ -61,6 +61,13 @@ class ScoringHelpScreen extends StatelessWidget {
                       'Use + − × ÷ to tally several numbers, like 3 + 4 + 5. It works left to right like a running total, so 3 + 4 × 2 is 14. Division rounds down.',
                 ),
               if (fieldDefinition.enableTapToEdit)
+                for (final picker in fieldDefinition.valuePickers)
+                  _HelpTip(
+                    icon: Icons.style_outlined,
+                    text:
+                        '${picker.label}: tap each one in front of the player and they add up. Tap one in the picked row to take it back.',
+                  ),
+              if (fieldDefinition.enableTapToEdit)
                 const _HelpTip(
                   icon: Icons.grid_view_rounded,
                   text:

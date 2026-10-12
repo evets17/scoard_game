@@ -4,6 +4,7 @@ import 'package:scoard_game/application/models/scoring/score_field_definition.da
 import 'package:scoard_game/application/models/scoring/score_input_kind.dart';
 import 'package:scoard_game/application/models/scoring/scoring_model.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
+import 'package:scoard_game/application/models/scoring/value_picker_definition.dart';
 import 'package:scoard_game/application/models/scoring/winner_rule.dart';
 
 /// Builds a [ScoringPreset] from a template that has already passed
@@ -47,8 +48,28 @@ ScoringPreset parseTemplateJson(Map<String, Object?> json) {
         enableQuickAdjust: (entry['quickAdjust'] as bool?) ?? false,
         allowReplace: (entry['replace'] as bool?) ?? true,
         allowAdjust: (entry['adjust'] as bool?) ?? false,
+        valuePickers: ((scoreField['entryModes'] as List<Object?>?) ?? const [])
+            .map((mode) => _parseValuePicker(mode! as Map<String, Object?>))
+            .toList(growable: false),
       ),
     ],
+  );
+}
+
+ValuePickerDefinition _parseValuePicker(Map<String, Object?> mode) {
+  final values = mode['values']! as List<Object?>;
+
+  return ValuePickerDefinition(
+    id: mode['id']! as String,
+    label: mode['label']! as String,
+    options: values.map((rawOption) {
+      final option = rawOption! as Map<String, Object?>;
+      return ValuePickerOption(
+        value: option['value']! as int,
+        label: option['label'] as String?,
+        color: option['color'] as String?,
+      );
+    }).toList(growable: false),
   );
 }
 

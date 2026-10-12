@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:scoard_game/application/models/scoring/value_picker_definition.dart';
 import 'package:scoard_game/core/scoring/score_expression.dart';
 import 'package:scoard_game/ui/score_input/quick_pick_grid.dart';
 import 'package:scoard_game/ui/score_input/score_entry_mode.dart';
 import 'package:scoard_game/ui/score_input/score_value_edit_action.dart';
 import 'package:scoard_game/ui/score_input/score_value_edit_request.dart';
+import 'package:scoard_game/ui/score_input/value_picker_pad.dart';
 
 Future<ScoreValueEditRequest?> showNumericValuePicker(
   BuildContext context, {
@@ -12,6 +14,7 @@ Future<ScoreValueEditRequest?> showNumericValuePicker(
   required bool allowReplace,
   required bool allowAdjust,
   ScoreEntryMemory? entryMemory,
+  List<ValuePickerDefinition> valuePickers = const [],
 }) {
   return showModalBottomSheet<ScoreValueEditRequest>(
     context: context,
@@ -22,6 +25,7 @@ Future<ScoreValueEditRequest?> showNumericValuePicker(
       allowReplace: allowReplace,
       allowAdjust: allowAdjust,
       entryMemory: entryMemory ?? ScoreEntryMemory(),
+      valuePickers: valuePickers,
     ),
   );
 }
@@ -33,6 +37,7 @@ class _NumericValuePicker extends StatefulWidget {
     required this.allowReplace,
     required this.allowAdjust,
     required this.entryMemory,
+    required this.valuePickers,
   });
 
   final String title;
@@ -41,6 +46,9 @@ class _NumericValuePicker extends StatefulWidget {
   final bool allowAdjust;
   final ScoreEntryMemory entryMemory;
 
+  /// Template-defined modes, offered before the built-in ones.
+  final List<ValuePickerDefinition> valuePickers;
+
   @override
   State<_NumericValuePicker> createState() => _NumericValuePickerState();
 }
@@ -48,15 +56,50 @@ class _NumericValuePicker extends StatefulWidget {
 class _NumericValuePickerState extends State<_NumericValuePicker> {
   static const _divideByZeroMessage = 'Can\'t divide by zero.';
 
-  late ScoreEntryMode _mode = widget.entryMemory.mode;
+  // Modes are keyed by name: a built-in mode's name, or "picker:<id>".
+  late String _modeKey = _initialModeKey();
   ScoreExpression _expression = const ScoreExpression();
   int? _quickPickValue;
+  List<int> _pickedValues = const [];
   String? _errorText;
 
-  int? get _entryValue => switch (_mode) {
-        ScoreEntryMode.calculator => _expression.value,
-        ScoreEntryMode.quickPick => _quickPickValue,
-      };
+  static String _pickerKey(String id) => 'picker:$id';
+
+  String _initialModeKey() {
+    final memory = widget.entryMemory;
+    final rememberedPickerId = memory.valuePickerId;
+    if (rememberedPickerId != null &&
+        widget.valuePickers.any((picker) => picker.id == rememberedPickerId)) {
+      return _pickerKey(rememberedPickerId);
+    }
+    if (memory.mode != null) {
+      return memory.mode!.name;
+    }
+    if (widget.valuePickers.isNotEmpty) {
+      return _pickerKey(widget.valuePickers.first.id);
+    }
+    return ScoreEntryMode.calculator.name;
+  }
+
+  bool get _isCalculator => _modeKey == ScoreEntryMode.calculator.name;
+
+  bool get _isQuickPick => _modeKey == ScoreEntryMode.quickPick.name;
+
+  ValuePickerDefinition? get _activePicker => widget.valuePickers
+      .where((picker) => _pickerKey(picker.id) == _modeKey)
+      .firstOrNull;
+
+  int? get _entryValue {
+    if (_isCalculator) {
+      return _expression.value;
+    }
+    if (_isQuickPick) {
+      return _quickPickValue;
+    }
+    return _pickedValues.isEmpty
+        ? null
+        : _pickedValues.fold<int>(0, (sum, value) => sum + value);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,9 +109,10 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
     final adjustedValue =
         entryValue == null ? null : widget.currentValue + entryValue;
     final errorText = _errorText ??
-        (_mode == ScoreEntryMode.calculator && _expression.dividesByZero
+        (_isCalculator && _expression.dividesByZero
             ? _divideByZeroMessage
             : null);
+    final activePicker = _activePicker;
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(20, 20, 20, viewInsets + 20),
@@ -95,23 +139,43 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
                   ],
                 ),
               ),
-              SegmentedButton<ScoreEntryMode>(
+              SegmentedButton<String>(
                 segments: [
+                  for (final picker in widget.valuePickers)
+                    ButtonSegment(
+                      value: _pickerKey(picker.id),
+                      icon: const Icon(Icons.style_outlined),
+                      tooltip: picker.label,
+                    ),
                   for (final mode in ScoreEntryMode.values)
                     ButtonSegment(
-                      value: mode,
+                      value: mode.name,
                       icon: Icon(mode.icon),
                       tooltip: mode.label,
                     ),
                 ],
-                selected: {_mode},
+                selected: {_modeKey},
                 showSelectedIcon: false,
                 onSelectionChanged: (selection) => _setMode(selection.single),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          if (_mode == ScoreEntryMode.calculator) ...[
+          if (activePicker != null) ...[
+            ValuePickerPad(
+              definition: activePicker,
+              picked: _pickedValues,
+              onAdd: (value) => setState(() {
+                _errorText = null;
+                _pickedValues = [..._pickedValues, value];
+              }),
+              onRemoveAt: (index) => setState(() {
+                _errorText = null;
+                _pickedValues = [..._pickedValues]..removeAt(index);
+              }),
+            ),
+            if (errorText != null) _ErrorText(errorText),
+          ] else if (_isCalculator) ...[
             _CalculatorDisplay(
               expression: _expression,
               label: widget.allowAdjust && !widget.allowReplace
@@ -175,10 +239,24 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
     );
   }
 
-  void _setMode(ScoreEntryMode mode) {
-    widget.entryMemory.mode = mode;
+  void _setMode(String modeKey) {
+    final memory = widget.entryMemory;
+    final picker = widget.valuePickers
+        .where((picker) => _pickerKey(picker.id) == modeKey)
+        .firstOrNull;
+    if (picker != null) {
+      memory.valuePickerId = picker.id;
+      memory.mode = null;
+    } else {
+      memory.mode = ScoreEntryMode.values.byName(modeKey);
+      memory.valuePickerId = null;
+    }
+
     setState(() {
-      _mode = mode;
+      if (modeKey != _modeKey) {
+        _pickedValues = const [];
+      }
+      _modeKey = modeKey;
       _errorText = null;
     });
   }
@@ -188,17 +266,20 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
 
     if (entryValue == null) {
       setState(() {
-        _errorText = switch (_mode) {
-          ScoreEntryMode.calculator => _expression.dividesByZero
+        if (_isCalculator) {
+          _errorText = _expression.dividesByZero
               ? _divideByZeroMessage
-              : 'Enter a whole number.',
-          ScoreEntryMode.quickPick => 'Pick a number.',
-        };
+              : 'Enter a whole number.';
+        } else if (_isQuickPick) {
+          _errorText = 'Pick a number.';
+        } else {
+          _errorText = 'Tap at least one value.';
+        }
       });
       return;
     }
 
-    if (_mode == ScoreEntryMode.quickPick) {
+    if (_isQuickPick) {
       widget.entryMemory.quickPickColumn = QuickPickGrid.columnOf(entryValue);
     }
 

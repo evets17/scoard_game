@@ -113,6 +113,7 @@ A prompt without an `effect` is asked and saved with the game but does not chang
 | `initialValue` | no | integer | The score a player starts at. |
 | `minimumDisplayDigits` | no | integer | At least 1. Default 1. Reserves width so scores don't shift as they grow. |
 | `entry` | no | object | See below. |
+| `entryModes` | no | array | Extra ways to enter a score in the entry sheet. See below. |
 
 ### `scoreField.entry`
 
@@ -124,6 +125,42 @@ All keys are optional booleans.
 | `quickAdjust` | `false` | Shows - and + buttons beside the score. |
 | `replace` | `true` | The entry sheet offers Replace. |
 | `adjust` | `false` | The entry sheet offers Add to Existing. |
+
+### `scoreField.entryModes`
+
+Each entry adds a mode to the score entry sheet, offered before the built-in calculator and quick pick. Needs `entry.tapToEdit`. The sheet opens in the first of these until the players switch modes, and then remembers their choice for the rest of the game.
+
+Version 1 supports one type, `valuePicker`: tiles for the values that can be in front of a player, such as cards. Each tap adds a value; the score is the total of everything tapped. Use it when a round's or game's score is a plain sum of items.
+
+```json
+"entryModes": [
+  {
+    "type": "valuePicker",
+    "id": "cards",
+    "label": "Cards",
+    "values": [
+      { "value": -2, "color": "#3949AB" },
+      { "value": 0, "color": "#4FC3F7" },
+      { "value": 3, "label": "Hole" }
+    ]
+  }
+]
+```
+
+| Key | Required | Type | Rules |
+|---|---|---|---|
+| `type` | yes | string | `valuePicker`. |
+| `id` | yes | string | Same format as the template `id`. Unique within the field. |
+| `label` | yes | string | Non-empty. Names the mode, for example `"Cards"`. |
+| `values` | yes | array | 1 to 24 entries, so the tiles fit on a phone. |
+
+Each of `values`:
+
+| Key | Required | Type | Rules |
+|---|---|---|---|
+| `value` | yes | integer | Unique within the mode. Negative values are allowed. |
+| `label` | no | string | Non-empty. Shown small under the number, for example `"Hole"`. |
+| `color` | no | string | Tile colour as `#RRGGBB`. Match the physical item where it helps players find it. |
 
 ---
 

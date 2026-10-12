@@ -254,6 +254,7 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
       allowReplace: widget.fieldDefinition.allowReplace,
       allowAdjust: widget.fieldDefinition.allowAdjust,
       entryMemory: widget.entryMemory,
+      valuePickers: widget.fieldDefinition.valuePickers,
     );
 
     if (request == null) {

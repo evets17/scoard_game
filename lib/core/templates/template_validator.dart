@@ -13,7 +13,14 @@ const templatePromptTypes = {'boolean', 'integer'};
 /// Prompt effects and the prompt type each one needs.
 const templatePromptEffects = {'lowScoreWins': 'boolean'};
 
+/// Template-defined score entry modes.
+const templateEntryModeTypes = {'valuePicker'};
+
+/// Keeps a value picker small enough to fit on a phone without scrolling.
+const maximumPickerValues = 24;
+
 final _idPattern = RegExp(r'^[a-z0-9]+(-[a-z0-9]+)*$');
+final _colorPattern = RegExp(r'^#[0-9A-Fa-f]{6}$');
 final _versionPattern = RegExp(r'^\d+\.\d+\.\d+$');
 
 class TemplateProblem {
@@ -111,6 +118,7 @@ List<TemplateProblem> validateTemplateJson(
       'initialValue',
       'minimumDisplayDigits',
       'entry',
+      'entryModes',
     });
     scoreField.identifier('id', required: true);
     scoreField.text('label', required: true);
@@ -120,17 +128,75 @@ List<TemplateProblem> validateTemplateJson(
       scoreField.problem('minimumDisplayDigits', 'must be at least 1');
     }
 
+    var tapToEdit = false;
     final entry = scoreField.object('entry');
     if (entry != null) {
       const entryKeys = {'tapToEdit', 'quickAdjust', 'replace', 'adjust'};
       entry.allowOnlyKeys(entryKeys);
       for (final key in entryKeys) {
-        entry.boolean(key);
+        final value = entry.boolean(key);
+        if (key == 'tapToEdit') {
+          tapToEdit = value ?? false;
+        }
+      }
+    }
+
+    final entryModes = scoreField.list('entryModes');
+    if (entryModes != null && entryModes.isNotEmpty && !tapToEdit) {
+      scoreField.problem(
+        'entryModes',
+        'need entry.tapToEdit to be true, or the entry sheet never opens',
+      );
+    }
+    if (entryModes != null) {
+      final seenModeIds = <String>{};
+      for (final mode in entryModes) {
+        if (mode.isObject) {
+          _validateEntryMode(mode, seenModeIds);
+        }
       }
     }
   }
 
   return problems;
+}
+
+void _validateEntryMode(_ObjectReader mode, Set<String> seenModeIds) {
+  mode.allowOnlyKeys(const {'type', 'id', 'label', 'values'});
+  mode.oneOf('type', templateEntryModeTypes, required: true);
+
+  final id = mode.identifier('id', required: true);
+  if (id != null && !seenModeIds.add(id)) {
+    mode.problem('id', 'duplicate entry mode id "$id"');
+  }
+  mode.text('label', required: true);
+
+  final values = mode.list('values', required: true);
+  if (values == null) {
+    return;
+  }
+  if (values.isEmpty) {
+    mode.problem('values', 'needs at least one value');
+  } else if (values.length > maximumPickerValues) {
+    mode.problem('values', 'has ${values.length} values; the most is $maximumPickerValues');
+  }
+
+  final seenValues = <int>{};
+  for (final option in values) {
+    if (!option.isObject) {
+      continue;
+    }
+    option.allowOnlyKeys(const {'value', 'label', 'color'});
+    final value = option.integer('value', required: true);
+    if (value != null && !seenValues.add(value)) {
+      option.problem('value', 'duplicate value $value');
+    }
+    option.text('label');
+    final color = option.text('color');
+    if (color != null && !_colorPattern.hasMatch(color)) {
+      option.problem('color', '"$color" must look like #3A7BD5');
+    }
+  }
 }
 
 void _validatePrompt(_ObjectReader prompt, Set<String> seenPromptIds) {

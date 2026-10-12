@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "id": "skyjo",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "Skyjo",
   "description": "Add up each round's cards. Lowest total wins. Game ends once someone reaches 100.",
-  "source": "Skyjo rulebook (Magilano), scoring section",
+  "source": "https://officialgamerules.org/game-rules/skyjo/",
   "players": { "minimum": 2, "maximum": 8 },
   "scoringModel": "rounds",
   "winner": "lowestScore",
@@ -13,6 +13,30 @@
     "label": "Round Score",
     "initialValue": 0,
     "minimumDisplayDigits": 2,
-    "entry": { "tapToEdit": true, "quickAdjust": true, "replace": true, "adjust": true }
+    "entry": { "tapToEdit": true, "quickAdjust": true, "replace": true, "adjust": true },
+    "entryModes": [
+      {
+        "type": "valuePicker",
+        "id": "cards",
+        "label": "Cards",
+        "values": [
+          { "value": -2, "color": "#3949AB" },
+          { "value": -1, "color": "#3949AB" },
+          { "value": 0, "color": "#4FC3F7" },
+          { "value": 1, "color": "#43A047" },
+          { "value": 2, "color": "#43A047" },
+          { "value": 3, "color": "#43A047" },
+          { "value": 4, "color": "#43A047" },
+          { "value": 5, "color": "#FDD835" },
+          { "value": 6, "color": "#FDD835" },
+          { "value": 7, "color": "#FDD835" },
+          { "value": 8, "color": "#FDD835" },
+          { "value": 9, "color": "#E53935" },
+          { "value": 10, "color": "#E53935" },
+          { "value": 11, "color": "#E53935" },
+          { "value": 12, "color": "#E53935" }
+        ]
+      }
+    ]
   }
 }

@@ -170,4 +170,67 @@ void main() {
     expect(result.problemsByFile.keys, ['assets/templates/broken.json']);
     expect(result.describeProblems(), contains('is not valid JSON'));
   });
+
+  test('value picker entry modes are checked', () {
+    final problems = problemsFor((template) {
+      child(template, 'scoreField')['entryModes'] = [
+        {
+          'type': 'valuePicker',
+          'id': 'cards',
+          'label': 'Cards',
+          'values': [
+            {'value': 1, 'color': 'red'},
+            {'value': 1},
+            {'value': 2, 'size': 'big'},
+          ],
+        },
+        {'type': 'slider', 'id': 'cards', 'label': 'More', 'values': []},
+        {
+          'type': 'valuePicker',
+          'id': 'lots',
+          'label': 'Lots',
+          'values': [
+            for (var value = 0; value < 25; value++) {'value': value},
+          ],
+        },
+      ];
+    });
+
+    expect(
+      problems,
+      containsAll([
+        'scoreField.entryModes[0].values[0].color: "red" must look like #3A7BD5',
+        'scoreField.entryModes[0].values[1].value: duplicate value 1',
+        'scoreField.entryModes[0].values[2].size: unknown key',
+        'scoreField.entryModes[1].type: unsupported value "slider"; expected one of: valuePicker',
+        'scoreField.entryModes[1].id: duplicate entry mode id "cards"',
+        'scoreField.entryModes[1].values: needs at least one value',
+        'scoreField.entryModes[2].values: has 25 values; the most is 24',
+      ]),
+    );
+  });
+
+  test('entry modes need tap to edit', () {
+    final problems = problemsFor((template) {
+      final scoreField = child(template, 'scoreField');
+      child(scoreField, 'entry')['tapToEdit'] = false;
+      scoreField['entryModes'] = [
+        {
+          'type': 'valuePicker',
+          'id': 'cards',
+          'label': 'Cards',
+          'values': [
+            {'value': 1},
+          ],
+        },
+      ];
+    });
+
+    expect(
+      problems,
+      contains(
+        'scoreField.entryModes: need entry.tapToEdit to be true, or the entry sheet never opens',
+      ),
+    );
+  });
 }

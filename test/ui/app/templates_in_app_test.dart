@@ -31,9 +31,7 @@ void main() {
 
     // Skyjo has no options, but still opens its game page.
     expect(
-      find.text(
-        'Add up each round\'s cards. Lowest total wins once someone reaches 100.',
-      ),
+      find.text(loadTestTemplateCatalog().byId('skyjo').description),
       findsOneWidget,
     );
     expect(find.text('2–8 players'), findsOneWidget);
