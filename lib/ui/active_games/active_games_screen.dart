@@ -3,6 +3,7 @@ import 'package:scoard_game/application/models/app_summaries.dart';
 import 'package:scoard_game/application/repositories/session_repository.dart';
 import 'package:scoard_game/application/services/players/create_player.dart';
 import 'package:scoard_game/application/services/players/rename_player.dart';
+import 'package:scoard_game/application/services/scoring/remember_setup_player_group.dart';
 import 'package:scoard_game/application/services/scoring/load_quick_score_setup_model.dart';
 import 'package:scoard_game/application/services/scoring/load_round_score_setup_model.dart';
 import 'package:scoard_game/application/services/sessions/delete_active_session.dart';
@@ -32,6 +33,7 @@ class ActiveGamesScreen extends StatefulWidget {
     required this.createPlayer,
     required this.renamePlayer,
     required this.stayAwakeController,
+    required this.rememberSetupPlayerGroup,
     super.key,
   });
 
@@ -48,6 +50,7 @@ class ActiveGamesScreen extends StatefulWidget {
   final CreatePlayer createPlayer;
   final RenamePlayer renamePlayer;
   final StayAwakeController stayAwakeController;
+  final RememberSetupPlayerGroup rememberSetupPlayerGroup;
 
   @override
   State<ActiveGamesScreen> createState() => _ActiveGamesScreenState();
@@ -170,6 +173,7 @@ class _ActiveGamesScreenState extends State<ActiveGamesScreen> {
           createPlayer: widget.createPlayer,
           renamePlayer: widget.renamePlayer,
           stayAwakeController: widget.stayAwakeController,
+          rememberSetupPlayerGroup: widget.rememberSetupPlayerGroup,
           saveQuickScoreSession: widget.saveQuickScoreSession,
           saveQuickScoreActiveSession: widget.saveQuickScoreActiveSession,
           deleteActiveSession: widget.deleteActiveSession,
@@ -188,6 +192,7 @@ class _ActiveGamesScreenState extends State<ActiveGamesScreen> {
           createPlayer: widget.createPlayer,
           renamePlayer: widget.renamePlayer,
           stayAwakeController: widget.stayAwakeController,
+          rememberSetupPlayerGroup: widget.rememberSetupPlayerGroup,
           saveRoundScoreSession: widget.saveRoundScoreSession,
           saveRoundScoreActiveSession: widget.saveRoundScoreActiveSession,
           deleteActiveSession: widget.deleteActiveSession,

@@ -14,6 +14,7 @@ import 'package:scoard_game/application/models/sessions/quick_score_session_id_r
 import 'package:scoard_game/application/models/sessions/quick_score_setup_model.dart';
 import 'package:scoard_game/application/services/players/create_player.dart';
 import 'package:scoard_game/application/services/players/rename_player.dart';
+import 'package:scoard_game/application/services/scoring/remember_setup_player_group.dart';
 import 'package:scoard_game/application/services/scoring/load_quick_score_setup_model.dart';
 import 'package:scoard_game/application/services/sessions/delete_active_session.dart';
 import 'package:scoard_game/application/services/sessions/save_quick_score_active_session.dart';
@@ -26,6 +27,7 @@ import 'package:scoard_game/ui/navigation/app_routes.dart';
 import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
 import 'package:scoard_game/ui/players/in_game_player_actions.dart';
 import 'package:scoard_game/ui/players/player_editor_sheet.dart';
+import 'package:scoard_game/ui/players/player_group_filter_chips.dart';
 import 'package:scoard_game/ui/players/player_reorderable_list.dart';
 import 'package:scoard_game/ui/players/player_sort_menu_button.dart';
 import 'package:scoard_game/ui/settings/stay_awake_controller.dart';
@@ -38,6 +40,7 @@ class QuickScoreFlowScreen extends StatefulWidget {
     required this.createPlayer,
     required this.renamePlayer,
     required this.stayAwakeController,
+    required this.rememberSetupPlayerGroup,
     required this.saveQuickScoreSession,
     required this.saveQuickScoreActiveSession,
     required this.deleteActiveSession,
@@ -51,6 +54,7 @@ class QuickScoreFlowScreen extends StatefulWidget {
   final CreatePlayer createPlayer;
   final RenamePlayer renamePlayer;
   final StayAwakeController stayAwakeController;
+  final RememberSetupPlayerGroup rememberSetupPlayerGroup;
   final SaveQuickScoreSession saveQuickScoreSession;
   final SaveQuickScoreActiveSession saveQuickScoreActiveSession;
   final DeleteActiveSession deleteActiveSession;
@@ -75,6 +79,8 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
   List<QuickScoreAvailablePlayer> _selectedPlayers = const [];
   final Map<String, TextEditingController> _scoreControllers = {};
   final ScoreEntryMemory _scoreEntryMemory = ScoreEntryMemory();
+  String? _setupGroupId;
+  bool _hasAppliedInitialGroup = false;
   ScoringPreset? _preset;
   List<PresetPromptAnswer> _promptAnswers = const [];
   QuickScoreResult? _result;
@@ -150,6 +156,10 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
             }
   
             final setupModel = snapshot.requireData;
+          if (!_hasAppliedInitialGroup) {
+            _setupGroupId = setupModel.initialGroupId;
+            _hasAppliedInitialGroup = true;
+          }
             _preset ??= setupModel.preset;
             if (_promptAnswers.isEmpty) {
               _promptAnswers = widget.initialPromptAnswers;
@@ -161,6 +171,8 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
                   selectedPlayerIds: _selectedPlayerIds,
                   onTogglePlayer: _togglePlayer,
                   onReorderSelected: _reorderSelectedPlayerIds,
+                  selectedGroupId: _setupGroupId,
+                  onGroupSelected: _selectSetupGroup,
                   onAddPlayer: () => _handleAddPlayer(setupModel),
                   onContinue: () => _continueToScoreEntry(setupModel),
                 ),
@@ -248,6 +260,11 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
       ..clear()
       ..addAll(orderedPlayerIds)
       ..addAll(remainingIds);
+  }
+
+  void _selectSetupGroup(String? groupId) {
+    setState(() => _setupGroupId = groupId);
+    unawaited(widget.rememberSetupPlayerGroup(groupId: groupId));
   }
 
   void _togglePlayer(String playerId, bool isSelected) {
@@ -678,6 +695,8 @@ class _QuickScoreSetupStep extends StatelessWidget {
     required this.selectedPlayerIds,
     required this.onTogglePlayer,
     required this.onReorderSelected,
+    required this.selectedGroupId,
+    required this.onGroupSelected,
     required this.onAddPlayer,
     required this.onContinue,
   });
@@ -686,6 +705,8 @@ class _QuickScoreSetupStep extends StatelessWidget {
   final List<String> selectedPlayerIds;
   final void Function(String playerId, bool isSelected) onTogglePlayer;
   final ValueChanged<List<String>> onReorderSelected;
+  final String? selectedGroupId;
+  final ValueChanged<String?> onGroupSelected;
   final VoidCallback onAddPlayer;
   final VoidCallback onContinue;
 
@@ -700,8 +721,14 @@ class _QuickScoreSetupStep extends StatelessWidget {
         )
         .whereType<QuickScoreAvailablePlayer>()
         .toList(growable: false);
+    // A remembered group that has since been deleted falls back to All.
+    final groupId =
+        setupModel.groups.any((group) => group.id == selectedGroupId)
+            ? selectedGroupId
+            : null;
     final availablePlayers = setupModel.availablePlayers
         .where((player) => !selectedPlayerIds.contains(player.id))
+        .where((player) => groupId == null || player.groupIds.contains(groupId))
         .toList(growable: false);
 
     return Column(
@@ -762,9 +789,19 @@ class _QuickScoreSetupStep extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 10),
+              if (setupModel.groups.isNotEmpty) ...[
+                PlayerGroupFilterChips(
+                  groups: setupModel.groups,
+                  selectedGroupId: groupId,
+                  onSelected: onGroupSelected,
+                ),
+                const SizedBox(height: 10),
+              ],
               if (availablePlayers.isEmpty)
-                const _QuickScoreSelectionEmptyState(
-                  message: 'All saved players are already in this game.',
+                _QuickScoreSelectionEmptyState(
+                  message: groupId == null
+                      ? 'All saved players are already in this game.'
+                      : 'Everyone in this group is already in the game.',
                 )
               else
                 ...availablePlayers.map(

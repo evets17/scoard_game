@@ -68,6 +68,7 @@ void main() {
           createPlayer: environment.createPlayer,
           renamePlayer: environment.renamePlayer,
           stayAwakeController: controller,
+          rememberSetupPlayerGroup: environment.rememberSetupPlayerGroup,
           saveRoundScoreSession: environment.saveRoundScoreSession,
           saveRoundScoreActiveSession: environment.saveRoundScoreActiveSession,
           deleteActiveSession: environment.deleteActiveSession,

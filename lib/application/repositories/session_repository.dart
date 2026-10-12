@@ -43,4 +43,7 @@ abstract class SessionRepository {
   });
 
   Future<void> deleteActiveSession({required String sessionId});
+
+  /// When each player last took part in a game, finished or in progress.
+  Future<Map<String, DateTime>> loadLastPlayedAtByPlayerId();
 }

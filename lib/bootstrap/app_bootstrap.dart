@@ -1,5 +1,6 @@
 import 'package:scoard_game/application/repositories/player_repository.dart';
 import 'package:scoard_game/application/repositories/session_repository.dart';
+import 'package:scoard_game/application/repositories/setup_preferences_repository.dart';
 import 'package:scoard_game/application/services/load_home_shell_model.dart';
 import 'package:scoard_game/application/services/players/archive_player.dart';
 import 'package:scoard_game/application/services/players/create_player.dart';
@@ -12,6 +13,7 @@ import 'package:scoard_game/application/services/players/set_player_groups.dart'
 import 'package:scoard_game/application/services/players/unarchive_player.dart';
 import 'package:scoard_game/application/services/scoring/load_quick_score_setup_model.dart';
 import 'package:scoard_game/application/services/scoring/load_round_score_setup_model.dart';
+import 'package:scoard_game/application/services/scoring/remember_setup_player_group.dart';
 import 'package:scoard_game/application/services/sessions/delete_active_session.dart';
 import 'package:scoard_game/application/services/sessions/load_quick_score_active_session.dart';
 import 'package:scoard_game/application/services/sessions/load_round_score_active_session.dart';
@@ -23,7 +25,9 @@ import 'package:scoard_game/bootstrap/app_environment.dart';
 import 'package:scoard_game/infrastructure/memory/memory_game_repository.dart';
 import 'package:scoard_game/infrastructure/memory/memory_player_repository.dart';
 import 'package:scoard_game/infrastructure/memory/memory_session_repository.dart';
+import 'package:scoard_game/infrastructure/memory/memory_setup_preferences_repository.dart';
 import 'package:scoard_game/infrastructure/persistence/db/app_database.dart';
+import 'package:scoard_game/infrastructure/persistence/preferences/setup_preference_store.dart';
 import 'package:scoard_game/infrastructure/persistence/preferences/stay_awake_preference_store.dart';
 import 'package:scoard_game/infrastructure/persistence/preferences/theme_preference_store.dart';
 import 'package:scoard_game/infrastructure/persistence/repositories/persistent_player_repository.dart';
@@ -42,11 +46,13 @@ class AppBootstrap {
     final SessionRepository sessionRepository;
     final AppThemeController themeController;
     final StayAwakeController stayAwakeController;
+    final SetupPreferencesRepository setupPreferences;
 
     if (usePersistentStorage) {
       final appDatabase = AppDatabase();
       final themePreferenceStore = await ThemePreferenceStore.create();
       final stayAwakePreferenceStore = await StayAwakePreferenceStore.create();
+      setupPreferences = await SetupPreferenceStore.create();
 
       playerRepository = PersistentPlayerRepository(appDatabase);
       sessionRepository = PersistentSessionRepository(appDatabase);
@@ -63,6 +69,7 @@ class AppBootstrap {
       sessionRepository = MemorySessionRepository.seeded();
       themeController = AppThemeController();
       stayAwakeController = StayAwakeController();
+      setupPreferences = MemorySetupPreferencesRepository();
     }
 
     return AppEnvironment(
@@ -86,14 +93,21 @@ class AppBootstrap {
       renamePlayerGroup: RenamePlayerGroup(playerRepository: playerRepository),
       deletePlayerGroup: DeletePlayerGroup(playerRepository: playerRepository),
       setPlayerGroups: SetPlayerGroups(playerRepository: playerRepository),
+      rememberSetupPlayerGroup: RememberSetupPlayerGroup(
+        setupPreferences: setupPreferences,
+      ),
       loadQuickScoreSetupModel: LoadQuickScoreSetupModel(
         playerRepository: playerRepository,
+        sessionRepository: sessionRepository,
+        setupPreferences: setupPreferences,
       ),
       saveQuickScoreSession: SaveQuickScoreSession(
         sessionRepository: sessionRepository,
       ),
       loadRoundScoreSetupModel: LoadRoundScoreSetupModel(
         playerRepository: playerRepository,
+        sessionRepository: sessionRepository,
+        setupPreferences: setupPreferences,
       ),
       saveRoundScoreSession: SaveRoundScoreSession(
         sessionRepository: sessionRepository,

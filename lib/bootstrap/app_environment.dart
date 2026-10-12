@@ -13,6 +13,7 @@ import 'package:scoard_game/application/services/players/set_player_groups.dart'
 import 'package:scoard_game/application/services/players/unarchive_player.dart';
 import 'package:scoard_game/application/services/scoring/load_quick_score_setup_model.dart';
 import 'package:scoard_game/application/services/scoring/load_round_score_setup_model.dart';
+import 'package:scoard_game/application/services/scoring/remember_setup_player_group.dart';
 import 'package:scoard_game/application/services/sessions/delete_active_session.dart';
 import 'package:scoard_game/application/services/sessions/load_quick_score_active_session.dart';
 import 'package:scoard_game/application/services/sessions/load_round_score_active_session.dart';
@@ -40,6 +41,7 @@ class AppEnvironment {
     required this.renamePlayerGroup,
     required this.deletePlayerGroup,
     required this.setPlayerGroups,
+    required this.rememberSetupPlayerGroup,
     required this.loadQuickScoreSetupModel,
     required this.saveQuickScoreSession,
     required this.loadRoundScoreSetupModel,
@@ -66,6 +68,7 @@ class AppEnvironment {
   final RenamePlayerGroup renamePlayerGroup;
   final DeletePlayerGroup deletePlayerGroup;
   final SetPlayerGroups setPlayerGroups;
+  final RememberSetupPlayerGroup rememberSetupPlayerGroup;
   final LoadQuickScoreSetupModel loadQuickScoreSetupModel;
   final SaveQuickScoreSession saveQuickScoreSession;
   final LoadRoundScoreSetupModel loadRoundScoreSetupModel;

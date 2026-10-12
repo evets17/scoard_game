@@ -71,6 +71,7 @@ class MemorySessionRepository implements SessionRepository {
   final List<SessionSummary> _sessions;
   final Map<String, QuickScoreActiveSession> _quickActiveSessions;
   final Map<String, RoundScoreActiveSession> _roundActiveSessions;
+  final Map<String, DateTime> _lastCompletedAtByPlayerId = {};
 
   @override
   Future<int> countCompletedSessions() async => _sessions.length;
@@ -130,6 +131,10 @@ class MemorySessionRepository implements SessionRepository {
     );
     _quickActiveSessions.remove(result.sessionId);
     _roundActiveSessions.remove(result.sessionId);
+    _recordCompleted(
+      result.playerResults.map((player) => player.playerId),
+      result.completedAt,
+    );
   }
 
   @override
@@ -163,6 +168,10 @@ class MemorySessionRepository implements SessionRepository {
     );
     _quickActiveSessions.remove(result.sessionId);
     _roundActiveSessions.remove(result.sessionId);
+    _recordCompleted(
+      result.playerResults.map((player) => player.playerId),
+      result.completedAt,
+    );
   }
 
   @override
@@ -171,6 +180,40 @@ class MemorySessionRepository implements SessionRepository {
   }) async {
     _roundActiveSessions[session.sessionId] = session;
     _quickActiveSessions.remove(session.sessionId);
+  }
+
+  @override
+  Future<Map<String, DateTime>> loadLastPlayedAtByPlayerId() async {
+    final lastPlayedAt = {..._lastCompletedAtByPlayerId};
+
+    void record(String playerId, DateTime playedAt) {
+      final existing = lastPlayedAt[playerId];
+      if (existing == null || playedAt.isAfter(existing)) {
+        lastPlayedAt[playerId] = playedAt;
+      }
+    }
+
+    for (final session in _quickActiveSessions.values) {
+      for (final participant in session.participantValues) {
+        record(participant.playerId, session.updatedAt);
+      }
+    }
+    for (final session in _roundActiveSessions.values) {
+      for (final player in session.selectedPlayers) {
+        record(player.id, session.updatedAt);
+      }
+    }
+
+    return lastPlayedAt;
+  }
+
+  void _recordCompleted(Iterable<String> playerIds, DateTime completedAt) {
+    for (final playerId in playerIds) {
+      final existing = _lastCompletedAtByPlayerId[playerId];
+      if (existing == null || completedAt.isAfter(existing)) {
+        _lastCompletedAtByPlayerId[playerId] = completedAt;
+      }
+    }
   }
 
   @override

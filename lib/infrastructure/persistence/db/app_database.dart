@@ -649,6 +649,57 @@ class AppDatabase extends _$AppDatabase {
           ..where((table) => table.id.equals(sessionId)))
         .go();
   }
+
+  /// The latest finished game for each player, across both scoring styles.
+  Future<Map<String, DateTime>> loadLastCompletedAtByPlayerId() async {
+    final lastCompletedAt = <String, DateTime>{};
+
+    void record(String? playerId, DateTime? completedAt) {
+      if (playerId == null || completedAt == null) {
+        return;
+      }
+      final existing = lastCompletedAt[playerId];
+      if (existing == null || completedAt.isAfter(existing)) {
+        lastCompletedAt[playerId] = completedAt;
+      }
+    }
+
+    final quickLatest = quickScoreSessionsTable.completedAt.max();
+    final quickQuery = selectOnly(quickScorePlayerResultsTable).join([
+      innerJoin(
+        quickScoreSessionsTable,
+        quickScoreSessionsTable.id
+            .equalsExp(quickScorePlayerResultsTable.sessionId),
+      ),
+    ])
+      ..addColumns([quickScorePlayerResultsTable.playerId, quickLatest])
+      ..groupBy([quickScorePlayerResultsTable.playerId]);
+    for (final row in await quickQuery.get()) {
+      record(
+        row.read(quickScorePlayerResultsTable.playerId),
+        row.read(quickLatest),
+      );
+    }
+
+    final roundLatest = roundScoreSessionsTable.completedAt.max();
+    final roundQuery = selectOnly(roundScorePlayerResultsTable).join([
+      innerJoin(
+        roundScoreSessionsTable,
+        roundScoreSessionsTable.id
+            .equalsExp(roundScorePlayerResultsTable.sessionId),
+      ),
+    ])
+      ..addColumns([roundScorePlayerResultsTable.playerId, roundLatest])
+      ..groupBy([roundScorePlayerResultsTable.playerId]);
+    for (final row in await roundQuery.get()) {
+      record(
+        row.read(roundScorePlayerResultsTable.playerId),
+        row.read(roundLatest),
+      );
+    }
+
+    return lastCompletedAt;
+  }
 }
 
 LazyDatabase _openConnection() {

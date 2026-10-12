@@ -55,6 +55,7 @@ class ScoardGameApp extends StatelessWidget {
                 createPlayer: environment.createPlayer,
                 renamePlayer: environment.renamePlayer,
                 stayAwakeController: environment.stayAwakeController,
+                rememberSetupPlayerGroup: environment.rememberSetupPlayerGroup,
               ),
             AppRoutes.players: (_) => PlayersScreen(
                   loadPlayersScreenModel: environment.loadPlayersScreenModel,
@@ -96,6 +97,7 @@ class ScoardGameApp extends StatelessWidget {
                     createPlayer: environment.createPlayer,
                     renamePlayer: environment.renamePlayer,
                     stayAwakeController: environment.stayAwakeController,
+                    rememberSetupPlayerGroup: environment.rememberSetupPlayerGroup,
                     saveQuickScoreSession: environment.saveQuickScoreSession,
                     saveQuickScoreActiveSession:
                         environment.saveQuickScoreActiveSession,
@@ -117,6 +119,7 @@ class ScoardGameApp extends StatelessWidget {
                     createPlayer: environment.createPlayer,
                     renamePlayer: environment.renamePlayer,
                     stayAwakeController: environment.stayAwakeController,
+                    rememberSetupPlayerGroup: environment.rememberSetupPlayerGroup,
                     saveRoundScoreSession: environment.saveRoundScoreSession,
                     saveRoundScoreActiveSession:
                         environment.saveRoundScoreActiveSession,

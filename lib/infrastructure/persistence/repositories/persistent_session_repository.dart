@@ -197,6 +197,34 @@ class PersistentSessionRepository implements SessionRepository {
     return _appDatabase.deleteActiveSession(sessionId: sessionId);
   }
 
+  @override
+  Future<Map<String, DateTime>> loadLastPlayedAtByPlayerId() async {
+    final lastPlayedAt = await _appDatabase.loadLastCompletedAtByPlayerId();
+
+    // Games in progress count too, as of their last save.
+    final activeSessions = await _appDatabase.loadActiveSessions(limit: 1000);
+    for (final session in activeSessions) {
+      final payload = jsonDecode(session.payloadJson) as Map<String, Object?>;
+      final playerIds = switch (_kindFromStorage(session.sessionKind)) {
+        ActiveSessionKind.quickScore => QuickScoreActiveSession.fromJson(payload)
+            .participantValues
+            .map((participant) => participant.playerId),
+        ActiveSessionKind.roundScore => RoundScoreActiveSession.fromJson(payload)
+            .selectedPlayers
+            .map((player) => player.id),
+      };
+
+      for (final playerId in playerIds) {
+        final existing = lastPlayedAt[playerId];
+        if (existing == null || session.updatedAt.isAfter(existing)) {
+          lastPlayedAt[playerId] = session.updatedAt;
+        }
+      }
+    }
+
+    return lastPlayedAt;
+  }
+
   Future<Map<String, String>> _loadPlayerNames() async {
     final players = await _appDatabase.loadPlayers();
     return {
