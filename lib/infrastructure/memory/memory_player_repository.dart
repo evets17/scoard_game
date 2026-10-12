@@ -1,9 +1,11 @@
+import 'package:scoard_game/application/models/players/player_group.dart';
+import 'package:scoard_game/application/models/players/player_group_rules.dart';
 import 'package:scoard_game/application/models/players/player_id_rules.dart';
 import 'package:scoard_game/application/models/players/player_record.dart';
 import 'package:scoard_game/application/repositories/player_repository.dart';
 
 class MemoryPlayerRepository implements PlayerRepository {
-  MemoryPlayerRepository._(this._players);
+  MemoryPlayerRepository._(this._players) : _groups = [];
 
   factory MemoryPlayerRepository.seeded() {
     final now = DateTime.now();
@@ -43,6 +45,7 @@ class MemoryPlayerRepository implements PlayerRepository {
   }
 
   final List<PlayerRecord> _players;
+  final List<PlayerGroup> _groups;
 
   @override
   Future<List<PlayerRecord>> loadPlayers() async {
@@ -86,6 +89,74 @@ class MemoryPlayerRepository implements PlayerRepository {
     final playerIndex = _players.indexWhere((player) => player.id == playerId);
     final existingPlayer = _getPlayerAt(playerIndex, playerId);
     final updatedPlayer = existingPlayer.copyWith(isArchived: isArchived);
+
+    _players[playerIndex] = updatedPlayer;
+
+    return updatedPlayer;
+  }
+
+  @override
+  Future<List<PlayerGroup>> loadGroups() async {
+    return _groups.toList(growable: false);
+  }
+
+  @override
+  Future<PlayerGroup> createGroup({required String name}) async {
+    final createdAt = DateTime.now();
+    final group = PlayerGroup(
+      id: createPlayerGroupId(name, timestamp: createdAt),
+      name: name,
+      createdAt: createdAt,
+    );
+
+    _groups.add(group);
+
+    return group;
+  }
+
+  @override
+  Future<PlayerGroup> renameGroup({
+    required String groupId,
+    required String name,
+  }) async {
+    final groupIndex = _groups.indexWhere((group) => group.id == groupId);
+    if (groupIndex == -1) {
+      throw StateError('Group not found: $groupId');
+    }
+
+    final existingGroup = _groups[groupIndex];
+    final updatedGroup = PlayerGroup(
+      id: existingGroup.id,
+      name: name,
+      createdAt: existingGroup.createdAt,
+    );
+    _groups[groupIndex] = updatedGroup;
+
+    return updatedGroup;
+  }
+
+  @override
+  Future<void> deleteGroup({required String groupId}) async {
+    _groups.removeWhere((group) => group.id == groupId);
+
+    for (var index = 0; index < _players.length; index++) {
+      final player = _players[index];
+      if (player.groupIds.contains(groupId)) {
+        _players[index] = player.copyWith(
+          groupIds: {...player.groupIds}..remove(groupId),
+        );
+      }
+    }
+  }
+
+  @override
+  Future<PlayerRecord> setPlayerGroups({
+    required String playerId,
+    required Set<String> groupIds,
+  }) async {
+    final playerIndex = _players.indexWhere((player) => player.id == playerId);
+    final existingPlayer = _getPlayerAt(playerIndex, playerId);
+    final updatedPlayer = existingPlayer.copyWith(groupIds: {...groupIds});
 
     _players[playerIndex] = updatedPlayer;
 

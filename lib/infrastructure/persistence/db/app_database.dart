@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:scoard_game/application/models/players/player_group.dart';
 import 'package:scoard_game/application/models/players/player_name_rules.dart';
 import 'package:scoard_game/application/models/players/player_record.dart';
 import 'package:scoard_game/application/models/results/quick_score_player_result.dart';
@@ -31,6 +32,33 @@ class PlayersTable extends Table {
   List<Set<Column<Object>>> get uniqueKeys => [
         {normalizedDisplayName},
       ];
+}
+
+class PlayerGroupsTable extends Table {
+  TextColumn get id => text()();
+
+  TextColumn get name => text()();
+
+  TextColumn get normalizedName => text()();
+
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+        {normalizedName},
+      ];
+}
+
+class PlayerGroupMembersTable extends Table {
+  TextColumn get playerId => text()();
+
+  TextColumn get groupId => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {playerId, groupId};
 }
 
 class QuickScoreSessionsTable extends Table {
@@ -157,6 +185,8 @@ class ActiveSessionsTable extends Table {
   RoundScorePlayerResultsTable,
   RoundScoreFieldValuesTable,
   ActiveSessionsTable,
+  PlayerGroupsTable,
+  PlayerGroupMembersTable,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -164,7 +194,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -195,11 +225,22 @@ class AppDatabase extends _$AppDatabase {
               roundScoreSessionsTable.optionsJson as GeneratedColumn<Object>,
             );
           }
+          if (from < 7) {
+            await migrator.createTable(playerGroupsTable);
+            await migrator.createTable(playerGroupMembersTable);
+          }
         },
       );
 
   Future<List<PlayerRecord>> loadPlayers() async {
     final rows = await select(playersTable).get();
+    final memberships = await select(playerGroupMembersTable).get();
+    final groupIdsByPlayerId = <String, Set<String>>{};
+    for (final membership in memberships) {
+      groupIdsByPlayerId
+          .putIfAbsent(membership.playerId, () => <String>{})
+          .add(membership.groupId);
+    }
 
     return rows
         .map(
@@ -208,9 +249,84 @@ class AppDatabase extends _$AppDatabase {
             displayName: row.displayName,
             isArchived: row.isArchived,
             createdAt: row.createdAt,
+            groupIds: groupIdsByPlayerId[row.id] ?? const {},
           ),
         )
         .toList(growable: false);
+  }
+
+  Future<List<PlayerGroup>> loadPlayerGroups() async {
+    final rows = await select(playerGroupsTable).get();
+
+    return rows
+        .map(
+          (row) => PlayerGroup(
+            id: row.id,
+            name: row.name,
+            createdAt: row.createdAt,
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  Future<void> createPlayerGroup({
+    required String id,
+    required String name,
+    required DateTime createdAt,
+  }) {
+    return into(playerGroupsTable).insert(
+      PlayerGroupsTableCompanion.insert(
+        id: id,
+        name: name,
+        normalizedName: normalizePlayerName(name),
+        createdAt: createdAt,
+      ),
+    );
+  }
+
+  Future<void> renamePlayerGroup({
+    required String id,
+    required String name,
+  }) {
+    return (update(playerGroupsTable)..where((table) => table.id.equals(id)))
+        .write(
+      PlayerGroupsTableCompanion(
+        name: Value(name),
+        normalizedName: Value(normalizePlayerName(name)),
+      ),
+    );
+  }
+
+  Future<void> deletePlayerGroup({required String id}) {
+    return transaction(() async {
+      await (delete(playerGroupMembersTable)
+            ..where((table) => table.groupId.equals(id)))
+          .go();
+      await (delete(playerGroupsTable)..where((table) => table.id.equals(id)))
+          .go();
+    });
+  }
+
+  Future<void> setPlayerGroups({
+    required String playerId,
+    required Set<String> groupIds,
+  }) {
+    return transaction(() async {
+      await (delete(playerGroupMembersTable)
+            ..where((table) => table.playerId.equals(playerId)))
+          .go();
+      await batch((batch) {
+        batch.insertAll(
+          playerGroupMembersTable,
+          groupIds.map(
+            (groupId) => PlayerGroupMembersTableCompanion.insert(
+              playerId: playerId,
+              groupId: groupId,
+            ),
+          ),
+        );
+      });
+    });
   }
 
   Future<void> createPlayer({

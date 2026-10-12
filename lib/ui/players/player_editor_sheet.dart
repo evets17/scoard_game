@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:scoard_game/application/models/players/player_group.dart';
 import 'package:scoard_game/application/models/players/player_list_item_model.dart';
 import 'package:scoard_game/application/models/players/player_name_rules.dart';
+import 'package:scoard_game/ui/players/group_name_dialog.dart';
 
+/// Asks for a player name only.
 Future<String?> showPlayerEditorSheet(
   BuildContext context, {
   required String title,
@@ -9,8 +12,8 @@ Future<String?> showPlayerEditorSheet(
   String initialValue = '',
   List<PlayerListItemModel> existingPlayers = const [],
   String? editingPlayerId,
-}) {
-  return showModalBottomSheet<String>(
+}) async {
+  final result = await showModalBottomSheet<PlayerEditorResult>(
     context: context,
     isScrollControlled: true,
     builder: (context) => _PlayerEditorSheet(
@@ -19,6 +22,59 @@ Future<String?> showPlayerEditorSheet(
       initialValue: initialValue,
       existingPlayers: existingPlayers,
       editingPlayerId: editingPlayerId,
+    ),
+  );
+
+  return result?.name;
+}
+
+enum PlayerEditorAction {
+  save,
+  archive,
+  restore,
+}
+
+class PlayerEditorResult {
+  const PlayerEditorResult.save({required this.name, required this.groupIds})
+      : action = PlayerEditorAction.save;
+
+  const PlayerEditorResult._status(this.action)
+      : name = null,
+        groupIds = const {};
+
+  final PlayerEditorAction action;
+  final String? name;
+  final Set<String> groupIds;
+}
+
+/// The full player editor: name, groups, and archiving.
+///
+/// [statusAction] adds an Archive or Restore button; leave it null to hide it.
+Future<PlayerEditorResult?> showPlayerDetailsSheet(
+  BuildContext context, {
+  required String title,
+  required String confirmLabel,
+  required List<PlayerGroup> groups,
+  required Future<PlayerGroup> Function(String name) onCreateGroup,
+  String initialValue = '',
+  Set<String> initialGroupIds = const {},
+  List<PlayerListItemModel> existingPlayers = const [],
+  String? editingPlayerId,
+  PlayerEditorAction? statusAction,
+}) {
+  return showModalBottomSheet<PlayerEditorResult>(
+    context: context,
+    isScrollControlled: true,
+    builder: (context) => _PlayerEditorSheet(
+      title: title,
+      confirmLabel: confirmLabel,
+      initialValue: initialValue,
+      existingPlayers: existingPlayers,
+      editingPlayerId: editingPlayerId,
+      groups: groups,
+      initialGroupIds: initialGroupIds,
+      onCreateGroup: onCreateGroup,
+      statusAction: statusAction,
     ),
   );
 }
@@ -30,6 +86,10 @@ class _PlayerEditorSheet extends StatefulWidget {
     required this.initialValue,
     required this.existingPlayers,
     this.editingPlayerId,
+    this.groups,
+    this.initialGroupIds = const {},
+    this.onCreateGroup,
+    this.statusAction,
   });
 
   final String title;
@@ -38,12 +98,20 @@ class _PlayerEditorSheet extends StatefulWidget {
   final List<PlayerListItemModel> existingPlayers;
   final String? editingPlayerId;
 
+  /// Null hides the groups section.
+  final List<PlayerGroup>? groups;
+  final Set<String> initialGroupIds;
+  final Future<PlayerGroup> Function(String name)? onCreateGroup;
+  final PlayerEditorAction? statusAction;
+
   @override
   State<_PlayerEditorSheet> createState() => _PlayerEditorSheetState();
 }
 
 class _PlayerEditorSheetState extends State<_PlayerEditorSheet> {
   late final TextEditingController _controller;
+  late final List<PlayerGroup> _groups = [...?widget.groups];
+  late final Set<String> _selectedGroupIds = {...widget.initialGroupIds};
   String? _errorText;
 
   @override
@@ -67,7 +135,7 @@ class _PlayerEditorSheetState extends State<_PlayerEditorSheet> {
     final matchingPlayers = _matchingPlayers(_controller.text);
     final hasExactDuplicate = _hasExactDuplicate(_controller.text);
 
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(20, 20, 20, viewInsets + 20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -140,14 +208,65 @@ class _PlayerEditorSheetState extends State<_PlayerEditorSheet> {
               ),
             ),
           ],
+          if (widget.groups != null) ...[
+            const SizedBox(height: 16),
+            Text('Groups', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ..._groups.map(
+                  (group) => FilterChip(
+                    label: Text(group.name),
+                    selected: _selectedGroupIds.contains(group.id),
+                    onSelected: (selected) => setState(() {
+                      if (selected) {
+                        _selectedGroupIds.add(group.id);
+                      } else {
+                        _selectedGroupIds.remove(group.id);
+                      }
+                    }),
+                  ),
+                ),
+                ActionChip(
+                  avatar: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('New group'),
+                  onPressed: _createGroup,
+                ),
+              ],
+            ),
+          ],
+          if (widget.statusAction != null) ...[
+            const SizedBox(height: 12),
+            switch (widget.statusAction!) {
+              PlayerEditorAction.restore => TextButton.icon(
+                  onPressed: () => Navigator.of(context).pop(
+                    const PlayerEditorResult._status(PlayerEditorAction.restore),
+                  ),
+                  icon: const Icon(Icons.unarchive_rounded),
+                  label: const Text('Restore player'),
+                ),
+              _ => TextButton.icon(
+                  onPressed: () => Navigator.of(context).pop(
+                    const PlayerEditorResult._status(PlayerEditorAction.archive),
+                  ),
+                  icon: const Icon(Icons.archive_outlined),
+                  label: const Text('Archive player'),
+                ),
+            },
+          ],
           const SizedBox(height: 18),
-          Row(
+          // Wraps onto two lines when large text makes the buttons too wide.
+          OverflowBar(
+            alignment: MainAxisAlignment.spaceBetween,
+            overflowAlignment: OverflowBarAlignment.end,
+            overflowSpacing: 8,
             children: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Text('Cancel'),
               ),
-              const Spacer(),
               FilledButton(
                 onPressed: _submit,
                 child: Text(widget.confirmLabel),
@@ -157,6 +276,29 @@ class _PlayerEditorSheetState extends State<_PlayerEditorSheet> {
         ],
       ),
     );
+  }
+
+  Future<void> _createGroup() async {
+    final onCreateGroup = widget.onCreateGroup;
+    if (onCreateGroup == null) {
+      return;
+    }
+
+    final group = await showGroupNameDialog<PlayerGroup>(
+      context,
+      title: 'New Group',
+      confirmLabel: 'Create',
+      onSubmit: onCreateGroup,
+    );
+
+    if (group == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _groups.add(group);
+      _selectedGroupIds.add(group.id);
+    });
   }
 
   void _submit() {
@@ -174,7 +316,9 @@ class _PlayerEditorSheetState extends State<_PlayerEditorSheet> {
       return;
     }
 
-    Navigator.of(context).pop(value);
+    Navigator.of(context).pop(
+      PlayerEditorResult.save(name: value, groupIds: {..._selectedGroupIds}),
+    );
   }
 
   void _handleTextChanged() {

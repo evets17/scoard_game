@@ -3,8 +3,12 @@ import 'package:scoard_game/application/repositories/session_repository.dart';
 import 'package:scoard_game/application/services/load_home_shell_model.dart';
 import 'package:scoard_game/application/services/players/archive_player.dart';
 import 'package:scoard_game/application/services/players/create_player.dart';
+import 'package:scoard_game/application/services/players/create_player_group.dart';
+import 'package:scoard_game/application/services/players/delete_player_group.dart';
 import 'package:scoard_game/application/services/players/load_players_screen_model.dart';
 import 'package:scoard_game/application/services/players/rename_player.dart';
+import 'package:scoard_game/application/services/players/rename_player_group.dart';
+import 'package:scoard_game/application/services/players/set_player_groups.dart';
 import 'package:scoard_game/application/services/players/unarchive_player.dart';
 import 'package:scoard_game/application/services/scoring/load_quick_score_setup_model.dart';
 import 'package:scoard_game/application/services/scoring/load_round_score_setup_model.dart';
@@ -78,6 +82,10 @@ class AppBootstrap {
       renamePlayer: RenamePlayer(playerRepository: playerRepository),
       archivePlayer: ArchivePlayer(playerRepository: playerRepository),
       unarchivePlayer: UnarchivePlayer(playerRepository: playerRepository),
+      createPlayerGroup: CreatePlayerGroup(playerRepository: playerRepository),
+      renamePlayerGroup: RenamePlayerGroup(playerRepository: playerRepository),
+      deletePlayerGroup: DeletePlayerGroup(playerRepository: playerRepository),
+      setPlayerGroups: SetPlayerGroups(playerRepository: playerRepository),
       loadQuickScoreSetupModel: LoadQuickScoreSetupModel(
         playerRepository: playerRepository,
       ),

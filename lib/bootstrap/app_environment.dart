@@ -4,8 +4,12 @@ import 'package:scoard_game/application/repositories/session_repository.dart';
 import 'package:scoard_game/application/services/load_home_shell_model.dart';
 import 'package:scoard_game/application/services/players/archive_player.dart';
 import 'package:scoard_game/application/services/players/create_player.dart';
+import 'package:scoard_game/application/services/players/create_player_group.dart';
+import 'package:scoard_game/application/services/players/delete_player_group.dart';
 import 'package:scoard_game/application/services/players/load_players_screen_model.dart';
 import 'package:scoard_game/application/services/players/rename_player.dart';
+import 'package:scoard_game/application/services/players/rename_player_group.dart';
+import 'package:scoard_game/application/services/players/set_player_groups.dart';
 import 'package:scoard_game/application/services/players/unarchive_player.dart';
 import 'package:scoard_game/application/services/scoring/load_quick_score_setup_model.dart';
 import 'package:scoard_game/application/services/scoring/load_round_score_setup_model.dart';
@@ -32,6 +36,10 @@ class AppEnvironment {
     required this.renamePlayer,
     required this.archivePlayer,
     required this.unarchivePlayer,
+    required this.createPlayerGroup,
+    required this.renamePlayerGroup,
+    required this.deletePlayerGroup,
+    required this.setPlayerGroups,
     required this.loadQuickScoreSetupModel,
     required this.saveQuickScoreSession,
     required this.loadRoundScoreSetupModel,
@@ -54,6 +62,10 @@ class AppEnvironment {
   final RenamePlayer renamePlayer;
   final ArchivePlayer archivePlayer;
   final UnarchivePlayer unarchivePlayer;
+  final CreatePlayerGroup createPlayerGroup;
+  final RenamePlayerGroup renamePlayerGroup;
+  final DeletePlayerGroup deletePlayerGroup;
+  final SetPlayerGroups setPlayerGroups;
   final LoadQuickScoreSetupModel loadQuickScoreSetupModel;
   final SaveQuickScoreSession saveQuickScoreSession;
   final LoadRoundScoreSetupModel loadRoundScoreSetupModel;

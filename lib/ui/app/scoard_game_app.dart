@@ -62,6 +62,10 @@ class ScoardGameApp extends StatelessWidget {
                   renamePlayer: environment.renamePlayer,
                   archivePlayer: environment.archivePlayer,
                   unarchivePlayer: environment.unarchivePlayer,
+                  createPlayerGroup: environment.createPlayerGroup,
+                  renamePlayerGroup: environment.renamePlayerGroup,
+                  deletePlayerGroup: environment.deletePlayerGroup,
+                  setPlayerGroups: environment.setPlayerGroups,
                 ),
             AppRoutes.newGame: (_) => const ScoreGameScreen(),
             AppRoutes.playStats: (_) => const PlaceholderScreen(

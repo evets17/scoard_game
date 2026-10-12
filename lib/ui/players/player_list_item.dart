@@ -5,13 +5,15 @@ class PlayerListItem extends StatelessWidget {
   const PlayerListItem({
     required this.player,
     required this.onTap,
-    required this.onArchiveToggle,
+    this.groupNames = const [],
     super.key,
   });
 
   final PlayerListItemModel player;
   final VoidCallback onTap;
-  final VoidCallback onArchiveToggle;
+
+  /// Names of the groups the player belongs to, shown under their name.
+  final List<String> groupNames;
 
   @override
   Widget build(BuildContext context) {
@@ -23,31 +25,32 @@ class PlayerListItem extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           child: Row(
             children: [
               Expanded(
-                child: Text(
-                  player.displayName,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontSize: 22,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      player.displayName,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontSize: 22,
+                      ),
+                    ),
+                    if (groupNames.isNotEmpty)
+                      Text(
+                        groupNames.join(' · '),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              IconButton(
-                onPressed: onArchiveToggle,
-                constraints: const BoxConstraints.tightFor(
-                  width: 40,
-                  height: 40,
-                ),
-                padding: EdgeInsets.zero,
-                visualDensity: VisualDensity.compact,
-                icon: Icon(
-                  player.isArchived
-                      ? Icons.unarchive_rounded
-                      : Icons.archive_outlined,
-                ),
-                tooltip: player.isArchived ? 'Restore player' : 'Archive player',
+              Icon(
+                Icons.chevron_right_rounded,
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ],
           ),

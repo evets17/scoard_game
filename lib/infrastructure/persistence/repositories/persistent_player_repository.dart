@@ -1,3 +1,5 @@
+import 'package:scoard_game/application/models/players/player_group.dart';
+import 'package:scoard_game/application/models/players/player_group_rules.dart';
 import 'package:scoard_game/application/models/players/player_id_rules.dart';
 import 'package:scoard_game/application/models/players/player_record.dart';
 import 'package:scoard_game/application/repositories/player_repository.dart';
@@ -54,6 +56,66 @@ class PersistentPlayerRepository implements PlayerRepository {
     await _appDatabase.setPlayerArchived(id: playerId, isArchived: isArchived);
 
     return existingPlayer.copyWith(isArchived: isArchived);
+  }
+
+  @override
+  Future<List<PlayerGroup>> loadGroups() {
+    return _appDatabase.loadPlayerGroups();
+  }
+
+  @override
+  Future<PlayerGroup> createGroup({required String name}) async {
+    final createdAt = DateTime.now();
+    final group = PlayerGroup(
+      id: createPlayerGroupId(name, timestamp: createdAt),
+      name: name,
+      createdAt: createdAt,
+    );
+
+    await _appDatabase.createPlayerGroup(
+      id: group.id,
+      name: group.name,
+      createdAt: group.createdAt,
+    );
+
+    return group;
+  }
+
+  @override
+  Future<PlayerGroup> renameGroup({
+    required String groupId,
+    required String name,
+  }) async {
+    final groups = await loadGroups();
+    final existingGroup = groups.firstWhere(
+      (group) => group.id == groupId,
+      orElse: () => throw StateError('Group not found: $groupId'),
+    );
+
+    await _appDatabase.renamePlayerGroup(id: groupId, name: name);
+
+    return PlayerGroup(
+      id: existingGroup.id,
+      name: name,
+      createdAt: existingGroup.createdAt,
+    );
+  }
+
+  @override
+  Future<void> deleteGroup({required String groupId}) {
+    return _appDatabase.deletePlayerGroup(id: groupId);
+  }
+
+  @override
+  Future<PlayerRecord> setPlayerGroups({
+    required String playerId,
+    required Set<String> groupIds,
+  }) async {
+    final existingPlayer = await _requirePlayer(playerId);
+
+    await _appDatabase.setPlayerGroups(playerId: playerId, groupIds: groupIds);
+
+    return existingPlayer.copyWith(groupIds: {...groupIds});
   }
 
   Future<PlayerRecord> _requirePlayer(String playerId) async {
