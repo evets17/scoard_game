@@ -23,6 +23,7 @@ class NumericScoreField extends StatefulWidget {
     this.markers = const [],
     this.activeMarkers = const {},
     this.onMarkerChanged,
+    this.roundScore,
     this.onEntryPickChanged,
     this.compact = false,
     this.entryMemory,
@@ -50,6 +51,11 @@ class NumericScoreField extends StatefulWidget {
   final List<MarkerFieldDefinition> markers;
   final Set<String> activeMarkers;
   final void Function(String markerId, bool isSet)? onMarkerChanged;
+
+  /// The score this entry counts for, when the template calculates it (such
+  /// as Skyjo doubling). Shown as the main number, with the entered value
+  /// underneath when they differ. Null shows the entered value.
+  final int? roundScore;
 
   /// Tighter spacing for long player lists.
   final bool compact;
@@ -120,6 +126,14 @@ const _RowSpacing _compactSpacing = (verticalPadding: 2, bottomMargin: 4);
 const double _scoreVerticalPadding = 6;
 const double _valueLabelVerticalPadding = 8;
 const double _compactIconButtonSize = 40;
+
+/// Font sizes for labels shown instead of the score. The score number keeps
+/// its own size; these only apply while a label is showing.
+double _rowLabelFontSize(RowLabelSize size) => switch (size) {
+      RowLabelSize.small => 18,
+      RowLabelSize.medium => 23,
+      RowLabelSize.large => 28,
+    };
 
 /// Shown in place of a score that has not been entered yet.
 const emptyScoreText = '–';
@@ -261,7 +275,7 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
                                 rowLabel.text,
                                 textAlign: TextAlign.center,
                                 style: scoreTextStyle?.copyWith(
-                                  fontSize: 28,
+                                  fontSize: _rowLabelFontSize(rowLabel.size),
                                   color: parseTileColor(rowLabel.color),
                                 ),
                               ),
@@ -279,9 +293,9 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
                                 ),
                               ),
                             )
-                          : Text(
-                              '$currentValue',
-                              textAlign: TextAlign.center,
+                          : _ScoreNumber(
+                              enteredValue: currentValue,
+                              roundScore: widget.roundScore,
                               style: scoreTextStyle,
                             ),
                     ),
@@ -334,6 +348,7 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
       title: widget.label,
       currentValue: currentValue,
       hasCurrentValue: widget.controller.text.trim().isNotEmpty,
+      currentRoundScore: widget.roundScore,
       allowReplace: widget.fieldDefinition.allowReplace,
       allowAdjust: widget.fieldDefinition.allowAdjust,
       entryMemory: widget.entryMemory,
@@ -444,6 +459,47 @@ class _ScoreBadge extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// The main number on a score row: the round score, with the entered value
+/// underneath when a template's calculation makes them differ ("8" over
+/// "from 4"). -/+ and the entry sheet still change the entered value.
+class _ScoreNumber extends StatelessWidget {
+  const _ScoreNumber({
+    required this.enteredValue,
+    required this.roundScore,
+    required this.style,
+  });
+
+  final int enteredValue;
+  final int? roundScore;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = roundScore ?? enteredValue;
+    if (shown == enteredValue) {
+      return Text('$enteredValue', textAlign: TextAlign.center, style: style);
+    }
+
+    final theme = Theme.of(context);
+    return Semantics(
+      label: '$shown, from $enteredValue',
+      excludeSemantics: true,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('$shown', textAlign: TextAlign.center, style: style),
+          Text(
+            'from $enteredValue',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
       ),
     );
   }

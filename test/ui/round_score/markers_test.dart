@@ -93,6 +93,17 @@ void main() {
 
     expect(inRow('Avery', 'Out'), findsOneWidget);
     expect(totalFor(tester, 'Avery'), '20');
+    // The row's number shows the doubled round score, with the cards
+    // counted underneath.
+    expect(inRow('Avery', '20'), findsWidgets);
+    expect(inRow('Avery', 'from 10'), findsOneWidget);
+
+    // The score sheet says the same.
+    await tester.tap(inRow('Avery', '20').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Current score: 20 (from 10)'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
 
     // Only one player can go out first: marking Jules moves it.
     await toggleWentOutFirst(tester, 'Jules', '4');
@@ -101,5 +112,6 @@ void main() {
     expect(inRow('Jules', 'Out'), findsOneWidget);
     expect(totalFor(tester, 'Avery'), '10');
     expect(totalFor(tester, 'Jules'), '4');
+    expect(inRow('Avery', 'from 10'), findsNothing);
   });
 }

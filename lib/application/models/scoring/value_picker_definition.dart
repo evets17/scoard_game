@@ -1,3 +1,5 @@
+import 'package:scoard_game/application/models/scoring/score_row_label.dart';
+
 /// A template-defined way to enter a score by tapping the values in front of
 /// a player, such as Skyjo cards.
 ///
@@ -62,6 +64,7 @@ class ValuePickerRowLabel {
     required this.when,
     required this.text,
     this.isBadge = false,
+    this.size = RowLabelSize.large,
     this.color,
   });
 
@@ -72,6 +75,9 @@ class ValuePickerRowLabel {
   /// True to show as a small badge beside the player's name, keeping the
   /// score visible. False to show instead of the score.
   final bool isBadge;
+
+  /// Text size when shown instead of the score.
+  final RowLabelSize size;
 
   /// Text colour, or the badge colour, as `#RRGGBB`.
   final String? color;

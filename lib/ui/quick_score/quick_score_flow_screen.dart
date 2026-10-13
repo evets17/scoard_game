@@ -208,6 +208,9 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
                   markers: _preset!.markerFields,
                   activeMarkers: _markers,
                   onMarkerChanged: _setMarker,
+                  roundScores: _preset!.calculatedFields.isEmpty
+                      ? null
+                      : _currentScores(),
                   onBack: () => setState(() => _step = _QuickScoreStep.setup),
                   onSave: _saveQuickScoreSession,
                 ),
@@ -681,6 +684,11 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
   }
 
   void _handleScoreChanged() {
+    // A calculated score can depend on other players' entries, so every
+    // row has to refresh, not just the one that changed.
+    if (mounted && (_preset?.calculatedFields.isNotEmpty ?? false)) {
+      setState(() {});
+    }
     unawaited(_autosaveCurrentSession());
   }
 
@@ -999,6 +1007,7 @@ class _QuickScoreEntryStep extends StatelessWidget {
     required this.markers,
     required this.activeMarkers,
     required this.onMarkerChanged,
+    required this.roundScores,
     required this.onBack,
     required this.onSave,
   });
@@ -1022,6 +1031,10 @@ class _QuickScoreEntryStep extends StatelessWidget {
   final Map<String, Set<String>> activeMarkers;
   final void Function(String playerId, String markerId, bool isSet)
       onMarkerChanged;
+
+  /// Each player's calculated score, or null when the score is what was
+  /// entered.
+  final Map<String, int>? roundScores;
   final VoidCallback onBack;
   final VoidCallback onSave;
 
@@ -1061,6 +1074,7 @@ class _QuickScoreEntryStep extends StatelessWidget {
                     activeMarkers: activeMarkers[player.id] ?? const {},
                     onMarkerChanged: (markerId, isSet) =>
                         onMarkerChanged(player.id, markerId, isSet),
+                    roundScore: roundScores?[player.id],
                     onEditorClosed: onScoreEditorClosed,
                   );
                 },

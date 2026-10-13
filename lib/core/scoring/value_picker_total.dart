@@ -63,7 +63,13 @@ ScoreRowLabel? valuePickerRowLabel(
 
   return _matchingRowLabels(picker, pickedIndexes)
       .where((rowLabel) => !rowLabel.isBadge)
-      .map((rowLabel) => ScoreRowLabel(text: rowLabel.text, color: rowLabel.color))
+      .map(
+        (rowLabel) => ScoreRowLabel(
+          text: rowLabel.text,
+          color: rowLabel.color,
+          size: rowLabel.size,
+        ),
+      )
       .firstOrNull;
 }
 

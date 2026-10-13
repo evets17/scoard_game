@@ -310,7 +310,13 @@ void main() {
             },
           ],
           'rowLabels': [
-            {'when': '{bust} > 0', 'text': 'Bust', 'color': '#C62828'},
+            {
+              'when': '{bust} > 0',
+              'text': 'Bust',
+              'color': '#C62828',
+              'size': 'small',
+            },
+            {'when': '1', 'text': 'Hi', 'show': 'badge', 'size': 'small'},
             {'when': '{busted} > 0', 'text': 'Busted out', 'color': 'red'},
             {'text': 'Odd', 'size': 2},
           ],
@@ -332,11 +338,12 @@ void main() {
     expect(
       problems,
       containsAll([
-        'scoreField.entryModes[0].rowLabels[1].text: must be at most 8 characters',
-        'scoreField.entryModes[0].rowLabels[1].color: "red" must look like #3A7BD5',
-        'scoreField.entryModes[0].rowLabels[1].when: unknown name "busted"; expected one of: bust at position 1',
-        'scoreField.entryModes[0].rowLabels[2].size: unknown key',
-        'scoreField.entryModes[0].rowLabels[2].when: is required',
+        'scoreField.entryModes[0].rowLabels[1].size: only applies to labels shown instead of the score',
+        'scoreField.entryModes[0].rowLabels[2].text: must be at most 8 characters',
+        'scoreField.entryModes[0].rowLabels[2].color: "red" must look like #3A7BD5',
+        'scoreField.entryModes[0].rowLabels[2].when: unknown name "busted"; expected one of: bust at position 1',
+        'scoreField.entryModes[0].rowLabels[3].size: must be a string',
+        'scoreField.entryModes[0].rowLabels[3].when: is required',
         'scoreField.entryModes[1].rowLabels: needs "groups" so a label can say which tiles it is about',
       ]),
     );

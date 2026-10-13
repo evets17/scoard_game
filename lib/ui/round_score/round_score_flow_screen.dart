@@ -1303,6 +1303,9 @@ class _RoundScoreEntryStep extends StatelessWidget {
                     activeMarkers: activeMarkers[player.id] ?? const {},
                     onMarkerChanged: (markerId, isSet) =>
                         onMarkerChanged(player.id, markerId, isSet),
+                    roundScore: scoreIsCalculated
+                        ? currentRoundScores[player.id]
+                        : null,
                     valueLabelMinimumDigits: 3,
                     // An entered score updates from the row's own value; a
                     // calculated one comes from the whole round.

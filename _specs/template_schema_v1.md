@@ -214,7 +214,7 @@ Optional, and only with `groups`. Shows a word on the player's row in place of t
 
 ```json
 "rowLabels": [
-  { "when": "{bust} > 0", "text": "Bust", "color": "#C62828" }
+  { "when": "{bust} > 0", "text": "Bust", "color": "#C62828", "size": "small" }
 ]
 ```
 
@@ -224,6 +224,7 @@ Optional, and only with `groups`. Shows a word on the player's row in place of t
 | `text` | yes | At most 8 characters. |
 | `show` | no | `replace` (default): shown instead of the score. `badge`: a small chip beside the player's name, keeping the score visible. |
 | `color` | no | Text colour for `replace`, chip colour for `badge`, as `#RRGGBB`. |
+| `size` | no | `replace` labels only: `small`, `medium`, or `large` (default). Use `small` to keep a word like "Bust" quieter than a score. The score number always keeps its normal size. Sizes follow the phone's text-size setting. |
 
 Use `replace` only when the outcome always has the same score (a Flip 7 bust is always 0), and `badge` when the score still matters (a Flip 7 bonus round scores differently each time):
 

@@ -410,8 +410,13 @@ void _validateEntryMode(_ObjectReader mode, Set<String> seenModeIds) {
       if (!rowLabel.isObject) {
         continue;
       }
-      rowLabel.allowOnlyKeys(const {'when', 'text', 'color', 'show'});
-      rowLabel.oneOf('show', const {'replace', 'badge'});
+      rowLabel.allowOnlyKeys(const {'when', 'text', 'color', 'show', 'size'});
+      final show = rowLabel.oneOf('show', const {'replace', 'badge'});
+      final size =
+          rowLabel.oneOf('size', const {'small', 'medium', 'large'});
+      if (show == 'badge' && size != null) {
+        rowLabel.problem('size', 'only applies to labels shown instead of the score');
+      }
       final text = rowLabel.text('text', required: true);
       if (text != null && text.length > maximumRowLabelLength) {
         rowLabel.problem(

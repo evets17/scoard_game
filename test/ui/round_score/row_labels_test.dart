@@ -71,6 +71,8 @@ void main() {
 
     expect(inRow('Avery', 'Bust'), findsOneWidget);
     expect(inRow('Jules', '–'), findsOneWidget);
+    // Flip 7 draws its Bust label small.
+    expect(tester.widget<Text>(inRow('Avery', 'Bust')).style?.fontSize, 18);
 
     // The label is saved with the game in progress.
     final summary =
@@ -92,6 +94,12 @@ void main() {
     await tester.pump();
     expect(inRow('Avery', 'Bust'), findsNothing);
     expect(inRow('Avery', '1'), findsWidgets);
+
+    // The number is back at the normal score size.
+    expect(
+      tester.widget<Text>(inRow('Avery', '1').first).style?.fontSize,
+      34,
+    );
   });
 
   testWidgets('labels belong to their round', (tester) async {

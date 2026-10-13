@@ -15,6 +15,7 @@ Future<ScoreValueEditRequest?> showNumericValuePicker(
   required String title,
   required int currentValue,
   bool hasCurrentValue = true,
+  int? currentRoundScore,
   required bool allowReplace,
   required bool allowAdjust,
   ScoreEntryMemory? entryMemory,
@@ -31,6 +32,7 @@ Future<ScoreValueEditRequest?> showNumericValuePicker(
       title: title,
       currentValue: currentValue,
       hasCurrentValue: hasCurrentValue,
+      currentRoundScore: currentRoundScore,
       allowReplace: allowReplace,
       allowAdjust: allowAdjust,
       entryMemory: entryMemory ?? ScoreEntryMemory(),
@@ -48,6 +50,7 @@ class _NumericValuePicker extends StatefulWidget {
     required this.title,
     required this.currentValue,
     required this.hasCurrentValue,
+    this.currentRoundScore,
     required this.allowReplace,
     required this.allowAdjust,
     required this.entryMemory,
@@ -64,6 +67,10 @@ class _NumericValuePicker extends StatefulWidget {
   /// False when the player has no score yet; [currentValue] is then the
   /// starting value used for Adjust.
   final bool hasCurrentValue;
+
+  /// What the current entry counts for when the template calculates the
+  /// score (such as Skyjo doubling), or null.
+  final int? currentRoundScore;
   final bool allowReplace;
   final bool allowAdjust;
   final ScoreEntryMemory entryMemory;
@@ -102,6 +109,19 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
   late final Set<String> _activeMarkers = {...widget.activeMarkers};
 
   static String _pickerKey(String id) => 'picker:$id';
+
+  /// "No score yet", "Current score: 10", or with a calculated score,
+  /// "Current score: 20 (from 10)".
+  String get _currentScoreText {
+    if (!widget.hasCurrentValue) {
+      return 'No score yet';
+    }
+    final roundScore = widget.currentRoundScore;
+    if (roundScore != null && roundScore != widget.currentValue) {
+      return 'Current score: $roundScore (from ${widget.currentValue})';
+    }
+    return 'Current score: ${widget.currentValue}';
+  }
 
   ValuePickerDefinition? get _initialPickPicker {
     final pickerId = widget.initialPick?.pickerId;
@@ -184,9 +204,7 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      widget.hasCurrentValue
-                          ? 'Current score: ${widget.currentValue}'
-                          : 'No score yet',
+                      _currentScoreText,
                       style: theme.textTheme.bodyMedium,
                     ),
                   ],
@@ -285,27 +303,35 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
             if (errorText != null) _ErrorText(errorText),
           ],
           const SizedBox(height: 18),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              if (widget.allowReplace)
-                FilledButton(
-                  onPressed: () => _submit(ScoreValueEditAction.replace),
-                  child: Text(
-                    entryValue == null ? 'Replace' : 'Replace -> $entryValue',
+          // Adjust sits at the left and Replace, the more common choice, at
+          // the right, spread apart so they are hard to mix up.
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              alignment: widget.allowAdjust
+                  ? WrapAlignment.spaceBetween
+                  : WrapAlignment.end,
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                if (widget.allowAdjust)
+                  FilledButton.tonal(
+                    onPressed: () => _submit(ScoreValueEditAction.add),
+                    child: Text(
+                      adjustedValue == null
+                          ? 'Add to Existing'
+                          : 'Adjust -> $adjustedValue',
+                    ),
                   ),
-                ),
-              if (widget.allowAdjust)
-                FilledButton.tonal(
-                  onPressed: () => _submit(ScoreValueEditAction.add),
-                  child: Text(
-                    adjustedValue == null
-                        ? 'Add to Existing'
-                        : 'Adjust -> $adjustedValue',
+                if (widget.allowReplace)
+                  FilledButton(
+                    onPressed: () => _submit(ScoreValueEditAction.replace),
+                    child: Text(
+                      entryValue == null ? 'Replace' : 'Replace -> $entryValue',
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),

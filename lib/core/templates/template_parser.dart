@@ -5,6 +5,7 @@ import 'package:scoard_game/application/models/scoring/preset_prompt_definition.
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_input_kind.dart';
 import 'package:scoard_game/application/models/scoring/scoring_model.dart';
+import 'package:scoard_game/application/models/scoring/score_row_label.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_definition.dart';
 import 'package:scoard_game/application/models/scoring/winner_rule.dart';
@@ -139,6 +140,8 @@ ValuePickerDefinition _parseValuePicker(Map<String, Object?> mode) {
             text: label['text']! as String,
             color: label['color'] as String?,
             isBadge: label['show'] == 'badge',
+            size: RowLabelSize.values.asNameMap()[label['size']] ??
+                RowLabelSize.large,
           ),
     ],
   );
