@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:scoard_game/application/models/scoring/marker_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_definition.dart';
+import 'package:scoard_game/application/models/scoring/value_picker_pick.dart';
 import 'package:scoard_game/core/scoring/score_expression.dart';
 import 'package:scoard_game/core/scoring/value_picker_total.dart';
 import 'package:scoard_game/ui/score_input/quick_pick_grid.dart';
@@ -17,6 +19,10 @@ Future<ScoreValueEditRequest?> showNumericValuePicker(
   required bool allowAdjust,
   ScoreEntryMemory? entryMemory,
   List<ValuePickerDefinition> valuePickers = const [],
+  ValuePickerPick? initialPick,
+  List<MarkerFieldDefinition> markers = const [],
+  Set<String> activeMarkers = const {},
+  void Function(String markerId, bool isSet)? onMarkerChanged,
 }) {
   return showModalBottomSheet<ScoreValueEditRequest>(
     context: context,
@@ -29,6 +35,10 @@ Future<ScoreValueEditRequest?> showNumericValuePicker(
       allowAdjust: allowAdjust,
       entryMemory: entryMemory ?? ScoreEntryMemory(),
       valuePickers: valuePickers,
+      initialPick: initialPick,
+      markers: markers,
+      activeMarkers: activeMarkers,
+      onMarkerChanged: onMarkerChanged,
     ),
   );
 }
@@ -42,6 +52,10 @@ class _NumericValuePicker extends StatefulWidget {
     required this.allowAdjust,
     required this.entryMemory,
     required this.valuePickers,
+    this.initialPick,
+    this.markers = const [],
+    this.activeMarkers = const {},
+    this.onMarkerChanged,
   });
 
   final String title;
@@ -57,6 +71,15 @@ class _NumericValuePicker extends StatefulWidget {
   /// Template-defined modes, offered before the built-in ones.
   final List<ValuePickerDefinition> valuePickers;
 
+  /// Tiles the score was last entered with, to reopen the picker with them.
+  final ValuePickerPick? initialPick;
+
+  /// The template's per-round flags, such as "Went out first", with the
+  /// ones set for this player. Toggling one takes effect immediately.
+  final List<MarkerFieldDefinition> markers;
+  final Set<String> activeMarkers;
+  final void Function(String markerId, bool isSet)? onMarkerChanged;
+
   @override
   State<_NumericValuePicker> createState() => _NumericValuePickerState();
 }
@@ -68,13 +91,32 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
   late String _modeKey = _initialModeKey();
   ScoreExpression _expression = const ScoreExpression();
   int? _quickPickValue;
-  /// Indexes of the value picker tiles tapped so far, in order.
-  List<int> _pickedTiles = const [];
+
+  /// Indexes of the value picker tiles tapped so far, in order. Starts with
+  /// the tiles the score was last entered with, if any.
+  late List<int> _pickedTiles = switch (_initialPickPicker) {
+    final picker? => pickedIndexesFor(picker, widget.initialPick!),
+    null => const [],
+  };
   String? _errorText;
+  late final Set<String> _activeMarkers = {...widget.activeMarkers};
 
   static String _pickerKey(String id) => 'picker:$id';
 
+  ValuePickerDefinition? get _initialPickPicker {
+    final pickerId = widget.initialPick?.pickerId;
+    return widget.valuePickers
+        .where((picker) => picker.id == pickerId)
+        .firstOrNull;
+  }
+
   String _initialModeKey() {
+    // A score entered with a picker reopens in that picker, ready to adjust.
+    final initialPicker = _initialPickPicker;
+    if (initialPicker != null) {
+      return _pickerKey(initialPicker.id);
+    }
+
     final memory = widget.entryMemory;
     final rememberedPickerId = memory.valuePickerId;
     if (rememberedPickerId != null &&
@@ -171,6 +213,30 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
               ),
             ],
           ),
+          if (widget.markers.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final marker in widget.markers)
+                  FilterChip(
+                    label: Text(marker.label),
+                    selected: _activeMarkers.contains(marker.id),
+                    onSelected: (isSet) {
+                      setState(() {
+                        if (isSet) {
+                          _activeMarkers.add(marker.id);
+                        } else {
+                          _activeMarkers.remove(marker.id);
+                        }
+                      });
+                      widget.onMarkerChanged?.call(marker.id, isSet);
+                    },
+                  ),
+              ],
+            ),
+          ],
           const SizedBox(height: 16),
           if (activePicker != null) ...[
             ValuePickerPad(
@@ -298,9 +364,9 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
       ScoreValueEditRequest(
         action: action,
         value: entryValue,
-        rowLabel: _activePicker == null
+        entryPick: _activePicker == null
             ? null
-            : valuePickerRowLabel(_activePicker!, _pickedTiles),
+            : valuePickerPickOf(_activePicker!, _pickedTiles),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:scoard_game/application/models/scoring/score_row_label.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_definition.dart';
+import 'package:scoard_game/application/models/scoring/value_picker_pick.dart';
 import 'package:scoard_game/core/formulas/formula_evaluator.dart';
 import 'package:scoard_game/core/formulas/formula_parser.dart';
 
@@ -50,8 +51,8 @@ class _PickerScope extends FormulaScope {
 
 final _parsedConditions = Expando<Formula>('ValuePickerRowLabelWhen');
 
-/// The label to show on the player's row for these picked tiles: the first
-/// of the picker's row labels whose condition is true, or null.
+/// The label to show instead of the score for these picked tiles: the first
+/// non-badge row label whose condition is true, or null.
 ScoreRowLabel? valuePickerRowLabel(
   ValuePickerDefinition picker,
   List<int> pickedIndexes,
@@ -60,14 +61,62 @@ ScoreRowLabel? valuePickerRowLabel(
     return null;
   }
 
+  return _matchingRowLabels(picker, pickedIndexes)
+      .where((rowLabel) => !rowLabel.isBadge)
+      .map((rowLabel) => ScoreRowLabel(text: rowLabel.text, color: rowLabel.color))
+      .firstOrNull;
+}
+
+/// The badges to show beside the player's name for these picked tiles: every
+/// badge-style row label whose condition is true, in template order.
+List<ScoreRowLabel> valuePickerBadges(
+  ValuePickerDefinition picker,
+  List<int> pickedIndexes,
+) {
+  return [
+    for (final rowLabel in _matchingRowLabels(picker, pickedIndexes))
+      if (rowLabel.isBadge)
+        ScoreRowLabel(text: rowLabel.text, color: rowLabel.color),
+  ];
+}
+
+Iterable<ValuePickerRowLabel> _matchingRowLabels(
+  ValuePickerDefinition picker,
+  List<int> pickedIndexes,
+) sync* {
+  if (picker.rowLabels.isEmpty || pickedIndexes.isEmpty) {
+    return;
+  }
+
   final picked = [for (final index in pickedIndexes) picker.options[index]];
   final scope = _PickerScope(picker, picked);
   for (final rowLabel in picker.rowLabels) {
     final condition =
         _parsedConditions[rowLabel] ??= Formula.parse(rowLabel.when);
     if (evaluateFormula(condition, scope) != 0) {
-      return ScoreRowLabel(text: rowLabel.text, color: rowLabel.color);
+      yield rowLabel;
     }
   }
-  return null;
+}
+
+/// The picker's tiles for a saved [pick], as indexes into its options. Tiles
+/// the picker no longer has are skipped.
+List<int> pickedIndexesFor(ValuePickerDefinition picker, ValuePickerPick pick) {
+  return [
+    for (final tile in pick.tiles)
+      if (picker.options.indexWhere((option) => option.displayText == tile)
+          case final index when index >= 0)
+        index,
+  ];
+}
+
+/// Records [pickedIndexes] in [picker] as a [ValuePickerPick].
+ValuePickerPick valuePickerPickOf(
+  ValuePickerDefinition picker,
+  List<int> pickedIndexes,
+) {
+  return ValuePickerPick(
+    pickerId: picker.id,
+    tiles: [for (final index in pickedIndexes) picker.options[index].displayText],
+  );
 }

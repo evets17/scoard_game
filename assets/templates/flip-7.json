@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "flip-7",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "name": "Flip 7",
   "description": "Add up the cards in front of you each round: number cards (doubled by ×2), then +modifiers, plus 15 for seven different number cards. A bust scores 0. Highest total wins once someone has 200 or more at the end of a round.",
   "source": "https://officialgamerules.org/game-rules/flip-7-rules/",
@@ -50,7 +50,13 @@
         ],
         "total": "if({bust} > 0, 0, {numbers} * if({double} > 0, 2, 1) + {modifiers} + if(distinctIn(numbers) >= 7, 15, 0))",
         "rowLabels": [
-          { "when": "{bust} > 0", "text": "Bust", "color": "#C62828" }
+          { "when": "{bust} > 0", "text": "Bust", "color": "#C62828" },
+          {
+            "when": "{bust} == 0 and distinctIn(numbers) >= 7",
+            "text": "7!",
+            "show": "badge",
+            "color": "#2E7D32"
+          }
         ]
       }
     ]

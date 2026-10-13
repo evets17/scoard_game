@@ -1,42 +1,55 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "skyjo",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "name": "Skyjo",
-  "description": "Add up each round's cards. Lowest total wins. Game ends once someone reaches 100.",
+  "description": "Add up each round's cards. Mark who went out first: unless they have the lowest score outright, their round score is doubled (only if it is positive). Lowest total wins. Game ends once someone reaches 100.",
   "source": "https://officialgamerules.org/game-rules/skyjo/",
   "players": { "minimum": 2, "maximum": 8 },
   "scoringModel": "rounds",
   "winner": "lowestScore",
-  "scoreField": {
-    "id": "round-score",
-    "label": "Round Score",
-    "initialValue": 0,
-    "minimumDisplayDigits": 2,
-    "entry": { "tapToEdit": true, "quickAdjust": true, "replace": true, "adjust": true },
-    "entryModes": [
-      {
-        "type": "valuePicker",
-        "id": "cards",
-        "label": "Cards",
-        "values": [
-          { "value": -2, "color": "#3949AB" },
-          { "value": -1, "color": "#3949AB" },
-          { "value": 0, "color": "#4FC3F7" },
-          { "value": 1, "color": "#43A047" },
-          { "value": 2, "color": "#43A047" },
-          { "value": 3, "color": "#43A047" },
-          { "value": 4, "color": "#43A047" },
-          { "value": 5, "color": "#FDD835" },
-          { "value": 6, "color": "#FDD835" },
-          { "value": 7, "color": "#FDD835" },
-          { "value": 8, "color": "#FDD835" },
-          { "value": 9, "color": "#E53935" },
-          { "value": 10, "color": "#E53935" },
-          { "value": 11, "color": "#E53935" },
-          { "value": 12, "color": "#E53935" }
-        ]
-      }
-    ]
-  }
+  "fields": [
+    {
+      "id": "round-score",
+      "label": "Round Score",
+      "initialValue": 0,
+      "minimumDisplayDigits": 2,
+      "entry": { "tapToEdit": true, "quickAdjust": true, "replace": true, "adjust": true },
+      "entryModes": [
+        {
+          "type": "valuePicker",
+          "id": "cards",
+          "label": "Cards",
+          "values": [
+            { "value": -2, "color": "#3949AB" },
+            { "value": -1, "color": "#3949AB" },
+            { "value": 0, "color": "#4FC3F7" },
+            { "value": 1, "color": "#43A047" },
+            { "value": 2, "color": "#43A047" },
+            { "value": 3, "color": "#43A047" },
+            { "value": 4, "color": "#43A047" },
+            { "value": 5, "color": "#FDD835" },
+            { "value": 6, "color": "#FDD835" },
+            { "value": 7, "color": "#FDD835" },
+            { "value": 8, "color": "#FDD835" },
+            { "value": 9, "color": "#E53935" },
+            { "value": 10, "color": "#E53935" },
+            { "value": 11, "color": "#E53935" },
+            { "value": 12, "color": "#E53935" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "first-out",
+      "label": "Went out first",
+      "marker": { "badge": "Out", "color": "#1565C0", "onePerRound": true }
+    },
+    {
+      "id": "points",
+      "label": "Points",
+      "formula": "if({first-out} > 0 and {round-score} > 0 and lowestOther(round-score) <= {round-score}, {round-score} * 2, {round-score})"
+    }
+  ],
+  "score": "points"
 }

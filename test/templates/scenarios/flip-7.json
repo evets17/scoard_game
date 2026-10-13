@@ -88,6 +88,7 @@
       "name": "Seven different number cards earn 15",
       "picker": "cards",
       "taps": ["1", "2", "3", "4", "5", "6", "7"],
+      "badges": ["7!"],
       "expected": 43
     },
     {
@@ -100,6 +101,7 @@
       "name": "Seven cards with a repeat do not earn the bonus",
       "picker": "cards",
       "taps": ["1", "1", "2", "3", "4", "5", "6"],
+      "badges": [],
       "expected": 22
     }
   ]

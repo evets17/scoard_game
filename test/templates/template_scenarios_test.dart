@@ -163,7 +163,9 @@ class _ScenarioFile {
         for (final rowLabel in picker.rowLabels) {
           final labelChecked = pickerTotals.any(
             (check) =>
-                check.picker == picker && check.expectedLabel == rowLabel.text,
+                check.picker == picker &&
+                (check.expectedLabel == rowLabel.text ||
+                    (check.expectedBadges?.contains(rowLabel.text) ?? false)),
           );
           if (!labelChecked) {
             fail(
@@ -207,6 +209,7 @@ class _PickerTotalCheck {
     this.expected, {
     required this.checksLabel,
     required this.expectedLabel,
+    required this.expectedBadges,
   });
 
   final String name;
@@ -218,8 +221,22 @@ class _PickerTotalCheck {
   final bool checksLabel;
   final String? expectedLabel;
 
+  /// Badge texts the taps should give, in order, if the check names them.
+  final List<String>? expectedBadges;
+
   static _PickerTotalCheck parse(_Reader reader, ScoringPreset template) {
-    reader.onlyKeys(const {'name', 'picker', 'taps', 'expected', 'label'});
+    reader.onlyKeys(
+      const {'name', 'picker', 'taps', 'expected', 'label', 'badges'},
+    );
+    final expectedBadges = reader.has('badges')
+        ? [
+            for (final badge in reader.list('badges'))
+              if (badge is String)
+                badge
+              else
+                reader.fail('badges', 'must be a list of badge texts'),
+          ]
+        : null;
     final checksLabel = reader.has('label');
     final expectedLabel = reader.map['label'];
     if (expectedLabel != null && expectedLabel is! String) {
@@ -257,6 +274,7 @@ class _PickerTotalCheck {
       reader.integer('expected'),
       checksLabel: checksLabel,
       expectedLabel: expectedLabel as String?,
+      expectedBadges: expectedBadges,
     );
   }
 
@@ -267,6 +285,13 @@ class _PickerTotalCheck {
         valuePickerRowLabel(picker, tappedIndexes)?.text,
         expectedLabel,
         reason: 'row label',
+      );
+    }
+    if (expectedBadges != null) {
+      expect(
+        valuePickerBadges(picker, tappedIndexes).map((badge) => badge.text),
+        expectedBadges,
+        reason: 'badges',
       );
     }
   }
@@ -288,8 +313,9 @@ class _Scenario {
   final String name;
   final List<String> players;
   final Map<String, Object> promptValues;
-  final Map<String, int>? scores;
-  final List<Map<String, int>>? rounds;
+  /// Entered values by player: the score field, plus any markers.
+  final Map<String, Map<String, int>>? scores;
+  final List<Map<String, Map<String, int>>>? rounds;
   final Map<String, int>? expectedTotals;
   final Set<String>? expectedWinners;
   final Map<String, int>? expectedPlacements;
@@ -361,14 +387,42 @@ class _Scenario {
       };
     }
 
-    Map<String, int>? scores;
-    List<Map<String, int>>? rounds;
+    // A player's entry is a number for the score field, or an object that
+    // also sets markers, for example { "round-score": 10, "first-out": 1 }.
+    final scoreFieldId = template.scoreFields.single.id;
+    final markerIds = {for (final marker in template.markerFields) marker.id};
+    Map<String, Map<String, int>> enteredByPlayer(_Reader entriesReader) {
+      entriesReader.onlyKeys(players.toSet());
+      return {
+        for (final player in players)
+          player: switch (entriesReader.map[player]) {
+            final int score => {scoreFieldId: score},
+            final Map<String, Object?> entry => () {
+                final entryReader = entriesReader.child(player, entry);
+                entryReader.onlyKeys({scoreFieldId, ...markerIds});
+                return {
+                  scoreFieldId: entryReader.integer(scoreFieldId),
+                  for (final markerId in markerIds)
+                    if (entryReader.has(markerId))
+                      markerId: entryReader.integer(markerId),
+                };
+              }(),
+            _ => entriesReader.fail(
+                player,
+                'must be a whole number, or an object with "$scoreFieldId"',
+              ),
+          },
+      };
+    }
+
+    Map<String, Map<String, int>>? scores;
+    List<Map<String, Map<String, int>>>? rounds;
     switch (template.scoringModel) {
       case ScoringModel.finalScore:
         if (reader.has('rounds')) {
           reader.fail('rounds', 'finalScore templates use "scores"');
         }
-        scores = scoresByPlayer(reader.object('scores'));
+        scores = enteredByPlayer(reader.object('scores'));
       case ScoringModel.rounds:
         if (reader.has('scores')) {
           reader.fail('scores', 'rounds templates use "rounds"');
@@ -379,7 +433,7 @@ class _Scenario {
         }
         rounds = [
           for (var index = 0; index < rawRounds.length; index++)
-            scoresByPlayer(reader.child('rounds[$index]', rawRounds[index])),
+            enteredByPlayer(reader.child('rounds[$index]', rawRounds[index])),
         ];
     }
 
@@ -467,14 +521,16 @@ class _Scenario {
       preset: template,
       promptAnswers: answers,
     ).winnerRule;
-    final fieldId = template.scoreFields.single.id;
     final completedAt = DateTime(2026);
 
-    QuickScoreParticipantValues valuesFor(String player, int score) {
+    QuickScoreParticipantValues valuesFor(
+      String player,
+      Map<String, int> enteredValues,
+    ) {
       return QuickScoreParticipantValues(
         playerId: player,
         displayName: player,
-        enteredValues: {fieldId: score},
+        enteredValues: enteredValues,
       );
     }
 

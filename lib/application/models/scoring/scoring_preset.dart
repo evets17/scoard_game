@@ -1,4 +1,5 @@
 import 'package:scoard_game/application/models/scoring/calculated_field_definition.dart';
+import 'package:scoard_game/application/models/scoring/marker_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/scoring_model.dart';
@@ -21,6 +22,7 @@ class ScoringPreset {
     this.source,
     this.promptDefinitions = const [],
     this.calculatedFields = const [],
+    this.markerFields = const [],
     this.scoreFieldId,
   });
 
@@ -49,6 +51,9 @@ class ScoringPreset {
 
   /// Fields worked out from formulas.
   final List<CalculatedFieldDefinition> calculatedFields;
+
+  /// Flags players set by hand each round, such as "Went out first".
+  final List<MarkerFieldDefinition> markerFields;
 
   /// The field that is each player's score. Defaults to the entered field.
   final String? scoreFieldId;

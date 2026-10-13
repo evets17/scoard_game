@@ -121,4 +121,46 @@ void main() {
       ]),
     );
   });
+
+  test('marker fields are checked and readable by formulas', () {
+    final good = versionTwo(
+      fields: [
+        entered,
+        {
+          'id': 'first-out',
+          'label': 'Went out first',
+          'marker': {'badge': 'Out', 'color': '#1565C0', 'onePerRound': true},
+        },
+        calculated('scored', 'if({first-out} > 0, {points} * 2, {points})'),
+      ],
+    );
+    expect(problemsFor(good), isEmpty);
+
+    final problems = problemsFor(
+      versionTwo(
+        fields: [
+          entered,
+          {
+            'id': 'flag',
+            'label': 'Flag',
+            'marker': {'badge': 'Way too long', 'color': 'blue', 'size': 1},
+          },
+          {'id': 'empty', 'label': 'Empty', 'marker': <String, Object?>{}},
+          calculated('scored', '{points}'),
+        ],
+      ),
+    );
+
+    expect(
+      problems,
+      containsAll([
+        'fields[1].marker.badge: must be at most 8 characters',
+        'fields[1].marker.color: "blue" must look like #3A7BD5',
+        'fields[1].marker.size: unknown key',
+        'fields[2].marker.badge: is required',
+      ]),
+    );
+    // Markers do not count as the one entered number field.
+    expect(problems.where((p) => p.startsWith('fields:')), isEmpty);
+  });
 }

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:scoard_game/application/models/scoring/marker_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_row_label.dart';
+import 'package:scoard_game/application/models/scoring/value_picker_definition.dart';
+import 'package:scoard_game/application/models/scoring/value_picker_pick.dart';
+import 'package:scoard_game/core/scoring/value_picker_total.dart';
 import 'package:scoard_game/ui/score_input/numeric_value_picker.dart';
 import 'package:scoard_game/ui/score_input/score_entry_mode.dart';
 import 'package:scoard_game/ui/score_input/score_value_edit_action.dart';
@@ -15,8 +19,11 @@ class NumericScoreField extends StatefulWidget {
     this.valueLabelMinimumDigits = 0,
     this.onLabelTap,
     this.onEditorClosed,
-    this.rowLabel,
-    this.onRowLabelChanged,
+    this.entryPick,
+    this.markers = const [],
+    this.activeMarkers = const {},
+    this.onMarkerChanged,
+    this.onEntryPickChanged,
     this.compact = false,
     this.entryMemory,
     super.key,
@@ -30,12 +37,19 @@ class NumericScoreField extends StatefulWidget {
   final VoidCallback? onLabelTap;
   final VoidCallback? onEditorClosed;
 
-  /// Shown instead of the score, such as "Bust", until the score is changed
-  /// some other way.
-  final ScoreRowLabel? rowLabel;
+  /// The value picker tiles the score was entered with, if any. Reopening
+  /// the entry sheet starts with them, and row labels such as "Bust" come
+  /// from them.
+  final ValuePickerPick? entryPick;
 
-  /// Called when an edit sets or clears [rowLabel].
-  final ValueChanged<ScoreRowLabel?>? onRowLabelChanged;
+  /// Called when an edit sets or clears [entryPick].
+  final ValueChanged<ValuePickerPick?>? onEntryPickChanged;
+
+  /// The template's per-round flags and the ones set for this player,
+  /// shown as badges and toggled in the entry sheet.
+  final List<MarkerFieldDefinition> markers;
+  final Set<String> activeMarkers;
+  final void Function(String markerId, bool isSet)? onMarkerChanged;
 
   /// Tighter spacing for long player lists.
   final bool compact;
@@ -159,6 +173,13 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isEmpty = widget.controller.text.trim().isEmpty;
+    final rowLabel = _rowLabel;
+    final badges = [
+      for (final marker in widget.markers)
+        if (widget.activeMarkers.contains(marker.id))
+          ScoreRowLabel(text: marker.badge, color: marker.color),
+      if (!isEmpty) ..._badges,
+    ];
     final currentValue = int.tryParse(widget.controller.text.trim()) ??
         (widget.fieldDefinition.initialIntegerValue ?? 0);
     final valueLabel = widget.valueLabelBuilder?.call(currentValue);
@@ -180,7 +201,24 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: widget.onLabelTap,
-                child: Text(widget.label, style: _labelTextStyle(theme)),
+                child: badges.isEmpty
+                    ? Text(widget.label, style: _labelTextStyle(theme))
+                    : Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              widget.label,
+                              style: _labelTextStyle(theme),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          for (final badge in badges) ...[
+                            const SizedBox(width: 6),
+                            _ScoreBadge(badge: badge),
+                          ],
+                        ],
+                      ),
               ),
             ),
             Row(
@@ -214,17 +252,17 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
                       ),
                       // A dash means nothing has been entered yet; it still
                       // counts as the starting value if play moves on.
-                      child: !isEmpty && widget.rowLabel != null
+                      child: !isEmpty && rowLabel != null
                           ? Semantics(
-                              label: '${widget.rowLabel!.text}, score '
+                              label: '${rowLabel.text}, score '
                                   '$currentValue',
                               excludeSemantics: true,
                               child: Text(
-                                widget.rowLabel!.text,
+                                rowLabel.text,
                                 textAlign: TextAlign.center,
                                 style: scoreTextStyle?.copyWith(
                                   fontSize: 28,
-                                  color: parseTileColor(widget.rowLabel!.color),
+                                  color: parseTileColor(rowLabel.color),
                                 ),
                               ),
                             )
@@ -300,6 +338,10 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
       allowAdjust: widget.fieldDefinition.allowAdjust,
       entryMemory: widget.entryMemory,
       valuePickers: widget.fieldDefinition.valuePickers,
+      initialPick: widget.entryPick,
+      markers: widget.markers,
+      activeMarkers: widget.activeMarkers,
+      onMarkerChanged: widget.onMarkerChanged,
     );
 
     if (request == null) {
@@ -308,23 +350,48 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
 
     switch (request.action) {
       case ScoreValueEditAction.replace:
-        _setValue(request.value, rowLabel: request.rowLabel);
+        _setValue(request.value, entryPick: request.entryPick);
       case ScoreValueEditAction.add:
-        _setValue(currentValue + request.value, rowLabel: request.rowLabel);
+        // Added tiles no longer describe the whole score, so none are kept.
+        _setValue(currentValue + request.value);
     }
 
     widget.onEditorClosed?.call();
   }
 
-  /// Sets the score. Any edit replaces the row label: a value picker may
-  /// supply a new one, and every other edit clears it. The label is reported
-  /// first so it is saved together with the new value.
-  void _setValue(int value, {ScoreRowLabel? rowLabel}) {
-    if (rowLabel != widget.rowLabel) {
-      widget.onRowLabelChanged?.call(rowLabel);
+  /// Sets the score. Only a value picker's Replace keeps the tiles it came
+  /// from; every other edit drops them. The change is reported first so it
+  /// is saved together with the new value.
+  void _setValue(int value, {ValuePickerPick? entryPick}) {
+    if (entryPick != widget.entryPick) {
+      widget.onEntryPickChanged?.call(entryPick);
     }
     widget.controller.text = value.toString();
   }
+
+  /// The value picker behind the score and the tiles picked in it, if any.
+  (ValuePickerDefinition, List<int>)? get _pickedTiles {
+    final pick = widget.entryPick;
+    if (pick == null) {
+      return null;
+    }
+    final picker = widget.fieldDefinition.valuePickers
+        .where((picker) => picker.id == pick.pickerId)
+        .firstOrNull;
+    return picker == null ? null : (picker, pickedIndexesFor(picker, pick));
+  }
+
+  /// The row label (such as "Bust") shown instead of the score.
+  ScoreRowLabel? get _rowLabel => switch (_pickedTiles) {
+        (final picker, final picked) => valuePickerRowLabel(picker, picked),
+        null => null,
+      };
+
+  /// Badges (such as "7!") shown beside the player's name.
+  List<ScoreRowLabel> get _badges => switch (_pickedTiles) {
+        (final picker, final picked) => valuePickerBadges(picker, picked),
+        null => const [],
+      };
 
   double _minimumWidthForDigits(
     BuildContext context,
@@ -346,5 +413,38 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
     )..layout();
 
     return textPainter.width + horizontalPadding;
+  }
+}
+/// A small marker beside a player's name, such as "7!".
+class _ScoreBadge extends StatelessWidget {
+  const _ScoreBadge({required this.badge});
+
+  final ScoreRowLabel badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final background =
+        parseTileColor(badge.color) ?? theme.colorScheme.secondaryContainer;
+    final foreground =
+        background.computeLuminance() > 0.5 ? Colors.black87 : Colors.white;
+
+    return Semantics(
+      label: badge.text,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          badge.text,
+          style: theme.textTheme.labelMedium?.copyWith(
+            color: foreground,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
   }
 }

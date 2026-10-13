@@ -1,4 +1,5 @@
 import 'package:scoard_game/application/models/scoring/calculated_field_definition.dart';
+import 'package:scoard_game/application/models/scoring/marker_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_behavior.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
@@ -22,10 +23,15 @@ ScoringPreset parseTemplateJson(Map<String, Object?> json) {
     else
       json['scoreField']! as Map<String, Object?>,
   ];
-  final enteredFields =
-      fields.where((field) => !field.containsKey('formula')).toList();
+  final markerFields =
+      fields.where((field) => field.containsKey('marker')).toList();
   final calculatedFields =
       fields.where((field) => field.containsKey('formula')).toList();
+  final enteredFields = fields
+      .where(
+        (field) => !field.containsKey('formula') && !field.containsKey('marker'),
+      )
+      .toList();
 
   return ScoringPreset(
     id: json['id']! as String,
@@ -56,6 +62,17 @@ ScoringPreset parseTemplateJson(Map<String, Object?> json) {
           label: field['label']! as String,
           formula: field['formula']! as String,
         ),
+    ],
+    markerFields: [
+      for (final field in markerFields)
+        if (field['marker'] case final Map<String, Object?> marker)
+          MarkerFieldDefinition(
+            id: field['id']! as String,
+            label: field['label']! as String,
+            badge: marker['badge']! as String,
+            color: marker['color'] as String?,
+            onePerRound: (marker['onePerRound'] as bool?) ?? false,
+          ),
     ],
     scoreFieldId: json['score'] as String?,
   );
@@ -121,6 +138,7 @@ ValuePickerDefinition _parseValuePicker(Map<String, Object?> mode) {
             when: label['when']! as String,
             text: label['text']! as String,
             color: label['color'] as String?,
+            isBadge: label['show'] == 'badge',
           ),
     ],
   );

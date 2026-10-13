@@ -222,9 +222,20 @@ Optional, and only with `groups`. Shows a word on the player's row in place of t
 |---|---|---|
 | `when` | yes | A formula over the groups, like `total`. The label shows when it is not 0. |
 | `text` | yes | At most 8 characters. |
-| `color` | no | Text colour as `#RRGGBB`. |
+| `show` | no | `replace` (default): shown instead of the score. `badge`: a small chip beside the player's name, keeping the score visible. |
+| `color` | no | Text colour for `replace`, chip colour for `badge`, as `#RRGGBB`. |
 
-Labels are checked in order and the first match is used. A label stays with that round's entry (going back to the round shows it again) until the score is changed another way, such as with − / + or the calculator. The score itself still counts as normal.
+Use `replace` only when the outcome always has the same score (a Flip 7 bust is always 0), and `badge` when the score still matters (a Flip 7 bonus round scores differently each time):
+
+```json
+{ "when": "{bust} == 0 and distinctIn(numbers) >= 7", "text": "7!", "show": "badge", "color": "#2E7D32" }
+```
+
+For `replace`, the first matching label is used. Every matching `badge` is shown. The score itself still counts as normal.
+
+#### Remembered tiles
+
+When a score is entered with a value picker and **Replace**, the tapped tiles are kept with that entry while the game is in progress (through resume, and when going back to an earlier round). Reopening the entry sheet for that player goes straight to the picker with those tiles, ready to adjust. Row labels come from the kept tiles. Changing the score any other way (− / +, the calculator, quick pick, or **Adjust**) drops the tiles, and with them any label.
 
 ---
 
@@ -302,6 +313,7 @@ Each check taps tiles in a value picker and states the score they should give. T
 | `taps` | yes | Tiles in the order they are tapped, by their text or value. |
 | `expected` | yes | The score. |
 | `label` | no | The row label the taps should give, for example `"Bust"`, or `null` for no label. |
+| `badges` | no | The badge texts the taps should give, in order, for example `["7!"]`, or `[]` for none. |
 
 ### Coverage Rules
 
@@ -310,7 +322,7 @@ The test run fails unless a template's scenarios:
 * include at least one tie for first place
 * answer every prompt that has an `effect` with a non-default value at least once
 * include at least one `pickerTotals` check for every value picker with a `total`
-* include a `pickerTotals` check expecting each row label's `text`
+* include a `pickerTotals` check expecting each row label's `text`, in `label` or `badges`
 
 ---
 

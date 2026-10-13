@@ -64,12 +64,12 @@ Players enter each side's inning points (with the Bags picker or the usual score
 
 ## `fields`
 
-A list of fields. A field with a `formula` is **calculated**; any other field is **entered**.
+A list of fields. A field with a `formula` is **calculated**, a field with a `marker` is a **marker**, and any other field is **entered**.
 
 Rules:
 
 * exactly one entered field (several entered fields per player come in a later version)
-* any number of calculated fields
+* any number of calculated fields and markers
 * every `id` unique across all fields, in the same format as the template `id`
 * a calculated field may read entered and other calculated fields, but not itself, directly or through other fields
 
@@ -86,6 +86,33 @@ The same keys as version 1's `scoreField`: `id`, `label`, `initialValue`, `minim
 | `formula` | yes | string | See the formula language below. |
 
 No other keys are allowed.
+
+### Marker Field
+
+A per-player, per-round flag that players switch on by hand, for something that is not part of the score itself but changes how it counts. Skyjo uses one for the player who went out first:
+
+```json
+{
+  "id": "first-out",
+  "label": "Went out first",
+  "marker": { "badge": "Out", "color": "#1565C0", "onePerRound": true }
+},
+{
+  "id": "points",
+  "label": "Points",
+  "formula": "if({first-out} > 0 and {round-score} > 0 and lowestOther(round-score) <= {round-score}, {round-score} * 2, {round-score})"
+}
+```
+
+| Key | Required | Type | Rules |
+|---|---|---|---|
+| `id` | yes | string | Unique across all fields. |
+| `label` | yes | string | Non-empty. The toggle's text in the score sheet. |
+| `marker.badge` | yes | string | At most 8 characters. Shown beside the player's name while the marker is on. |
+| `marker.color` | no | string | Badge colour as `#RRGGBB`. |
+| `marker.onePerRound` | no | boolean | Default `false`. `true`: switching it on for one player switches it off for everyone else that round. |
+
+Players switch markers on and off in the score sheet, whatever entry mode they use, and the change takes effect at once. Changing a player's score does not affect their markers. Formulas read a marker as `{id}`: 1 when on, 0 when off, and other-player functions work on markers too. Markers are saved like entered values, with the game and its results.
 
 ## `score`
 
@@ -160,6 +187,12 @@ Scenario files work as in version 1. Each round gives the entered value per play
 
 ```json
 { "blue": 7, "red": 4 }
+```
+
+To switch on markers, give that player an object with the entered field and the markers:
+
+```json
+{ "avery": { "round-score": 10, "first-out": 1 }, "jules": 4 }
 ```
 
 `expected` can also include **`roundScores`** (for `rounds` templates): each round's score per player, in round order. Use it to check a calculated score round by round, not only through the totals.

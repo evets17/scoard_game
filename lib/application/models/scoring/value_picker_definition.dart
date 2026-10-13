@@ -61,6 +61,7 @@ class ValuePickerRowLabel {
   const ValuePickerRowLabel({
     required this.when,
     required this.text,
+    this.isBadge = false,
     this.color,
   });
 
@@ -68,6 +69,10 @@ class ValuePickerRowLabel {
   final String when;
   final String text;
 
-  /// Text colour as `#RRGGBB`.
+  /// True to show as a small badge beside the player's name, keeping the
+  /// score visible. False to show instead of the score.
+  final bool isBadge;
+
+  /// Text colour, or the badge colour, as `#RRGGBB`.
   final String? color;
 }

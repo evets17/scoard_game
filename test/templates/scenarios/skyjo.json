@@ -51,6 +51,63 @@
         "winners": ["avery", "jules"],
         "placements": { "avery": 1, "jules": 1, "mina": 3 }
       }
+    },
+    {
+      "name": "Going out first with the lowest score outright is not doubled",
+      "players": ["avery", "jules", "mina"],
+      "rounds": [
+        { "avery": { "round-score": 5, "first-out": 1 }, "jules": 9, "mina": 12 }
+      ],
+      "expected": {
+        "roundScores": [{ "avery": 5, "jules": 9, "mina": 12 }]
+      }
+    },
+    {
+      "name": "Going out first without the lowest score doubles it",
+      "players": ["avery", "jules", "mina"],
+      "rounds": [
+        { "avery": { "round-score": 10, "first-out": 1 }, "jules": 4, "mina": 12 }
+      ],
+      "expected": {
+        "roundScores": [{ "avery": 20, "jules": 4, "mina": 12 }],
+        "totals": { "avery": 20, "jules": 4, "mina": 12 }
+      }
+    },
+    {
+      "name": "Tying for lowest is not lowest outright, so it doubles",
+      "players": ["avery", "jules"],
+      "rounds": [
+        { "avery": { "round-score": 6, "first-out": 1 }, "jules": 6 }
+      ],
+      "expected": {
+        "roundScores": [{ "avery": 12, "jules": 6 }]
+      }
+    },
+    {
+      "name": "A negative score is never doubled",
+      "players": ["avery", "jules"],
+      "rounds": [
+        { "avery": { "round-score": -3, "first-out": 1 }, "jules": -5 }
+      ],
+      "expected": {
+        "roundScores": [{ "avery": -3, "jules": -5 }]
+      }
+    },
+    {
+      "name": "Doubling carries into the game total",
+      "players": ["avery", "jules"],
+      "rounds": [
+        { "avery": { "round-score": 15, "first-out": 1 }, "jules": 8 },
+        { "avery": 4, "jules": { "round-score": 2, "first-out": 1 } }
+      ],
+      "expected": {
+        "roundScores": [
+          { "avery": 30, "jules": 8 },
+          { "avery": 4, "jules": 2 }
+        ],
+        "totals": { "avery": 34, "jules": 10 },
+        "winners": ["jules"]
+      }
     }
   ]
 }

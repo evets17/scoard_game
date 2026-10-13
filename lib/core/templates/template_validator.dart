@@ -188,7 +188,30 @@ String? _validateEnteredField(_ObjectReader field) {
   return id;
 }
 
-/// Version 2: `fields` (entered and calculated) and `score`.
+/// A flag players set by hand each round. Returns its id if it is valid.
+String? _validateMarkerField(_ObjectReader field) {
+  field.allowOnlyKeys(const {'id', 'label', 'marker'});
+  final id = field.identifier('id', required: true);
+  field.text('label', required: true);
+
+  final marker = field.object('marker', required: true);
+  if (marker != null) {
+    marker.allowOnlyKeys(const {'badge', 'color', 'onePerRound'});
+    final badge = marker.text('badge', required: true);
+    if (badge != null && badge.length > maximumRowLabelLength) {
+      marker.problem('badge', 'must be at most $maximumRowLabelLength characters');
+    }
+    final color = marker.text('color');
+    if (color != null && !_colorPattern.hasMatch(color)) {
+      marker.problem('color', '"$color" must look like #3A7BD5');
+    }
+    marker.boolean('onePerRound');
+  }
+
+  return id;
+}
+
+/// Version 2: `fields` (entered, calculated, and marker) and `score`.
 void _validateFields(_ObjectReader template) {
   final fields = template.list('fields', required: true);
   final scoreId = template.identifier('score', required: true);
@@ -208,6 +231,11 @@ void _validateFields(_ObjectReader template) {
 
   for (final field in fields) {
     if (!field.isObject) {
+      continue;
+    }
+
+    if (field.has('marker')) {
+      addId(field, _validateMarkerField(field));
       continue;
     }
 
@@ -382,7 +410,8 @@ void _validateEntryMode(_ObjectReader mode, Set<String> seenModeIds) {
       if (!rowLabel.isObject) {
         continue;
       }
-      rowLabel.allowOnlyKeys(const {'when', 'text', 'color'});
+      rowLabel.allowOnlyKeys(const {'when', 'text', 'color', 'show'});
+      rowLabel.oneOf('show', const {'replace', 'badge'});
       final text = rowLabel.text('text', required: true);
       if (text != null && text.length > maximumRowLabelLength) {
         rowLabel.problem(

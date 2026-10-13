@@ -22,6 +22,7 @@ class ScoreEngine {
   factory ScoreEngine._build(ScoringPreset preset) {
     final fieldIds = {
       for (final field in preset.scoreFields) field.id,
+      for (final field in preset.markerFields) field.id,
       for (final field in preset.calculatedFields) field.id,
     };
     final parsed = <String, Formula>{};
@@ -62,6 +63,8 @@ class ScoreEngine {
         participant.playerId: <String, int>{
           for (final field in _preset.scoreFields)
             field.id: participant.enteredValues[field.id] ?? 0,
+          for (final marker in _preset.markerFields)
+            marker.id: participant.enteredValues[marker.id] ?? 0,
         },
     };
     final builtIns = {

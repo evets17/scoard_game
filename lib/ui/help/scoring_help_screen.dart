@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:scoard_game/application/models/scoring/marker_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
 import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
 
@@ -6,11 +7,15 @@ class ScoringHelpButton extends StatelessWidget {
   const ScoringHelpButton({
     required this.fieldDefinition,
     this.isRoundScoring = false,
+    this.markers = const [],
     super.key,
   });
 
   final ScoreFieldDefinition fieldDefinition;
   final bool isRoundScoring;
+
+  /// The game's per-round markers, such as "Went out first".
+  final List<MarkerFieldDefinition> markers;
 
   @override
   Widget build(BuildContext context) {
@@ -20,6 +25,7 @@ class ScoringHelpButton extends StatelessWidget {
           builder: (_) => ScoringHelpScreen(
             fieldDefinition: fieldDefinition,
             isRoundScoring: isRoundScoring,
+            markers: markers,
           ),
         ),
       ),
@@ -33,11 +39,15 @@ class ScoringHelpScreen extends StatelessWidget {
   const ScoringHelpScreen({
     required this.fieldDefinition,
     this.isRoundScoring = false,
+    this.markers = const [],
     super.key,
   });
 
   final ScoreFieldDefinition fieldDefinition;
   final bool isRoundScoring;
+
+  /// The game's per-round markers, such as "Went out first".
+  final List<MarkerFieldDefinition> markers;
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +75,12 @@ class ScoringHelpScreen extends StatelessWidget {
                 text:
                     'A dash means that player has no score yet. If play moves on, it counts as ${fieldDefinition.initialIntegerValue ?? 0}.',
               ),
+              for (final marker in markers)
+                _HelpTip(
+                  icon: Icons.flag_outlined,
+                  text:
+                      '${marker.label}: switch it on in that player\'s score sheet. It shows as "${marker.badge}" beside their name${marker.onePerRound ? ', and only one player can have it each round' : ''}.',
+                ),
               if (fieldDefinition.enableTapToEdit)
                 for (final picker in fieldDefinition.valuePickers)
                   _HelpTip(

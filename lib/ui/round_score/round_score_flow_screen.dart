@@ -3,9 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:scoard_game/application/models/players/player_list_item_model.dart';
 import 'package:scoard_game/application/models/results/round_score_result.dart';
+import 'package:scoard_game/application/models/scoring/marker_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
-import 'package:scoard_game/application/models/scoring/score_row_label.dart';
+import 'package:scoard_game/application/models/scoring/value_picker_pick.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/application/models/scoring/winner_rule.dart';
 import 'package:scoard_game/application/models/sessions/player_sort_mode.dart';
@@ -95,8 +96,11 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
   PlayerSortMode _sortMode = PlayerSortMode.playOrder;
   Map<String, int> _scoreSortSnapshot = const {};
 
-  /// Row labels (such as "Bust") for the round on screen, by player id.
-  Map<String, ScoreRowLabel> _rowLabels = {};
+  /// Value picker tiles behind each entry on screen, by player id.
+  Map<String, ValuePickerPick> _entryPicks = {};
+
+  /// Markers (such as "Went out first") set this round, by player id.
+  Map<String, Set<String>> _markers = {};
 
   @override
   void initState() {
@@ -148,6 +152,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
             ScoringHelpButton(
               fieldDefinition: preset.scoreFields.first,
               isRoundScoring: true,
+              markers: preset.markerFields,
             ),
           ],
         ],
@@ -197,8 +202,11 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
                   entryMemory: _scoreEntryMemory,
                   priorRoundTotals: _priorRoundTotals(),
                   currentRoundScores: _currentRoundScores(),
-                  rowLabels: _rowLabels,
-                  onRowLabelChanged: _setRowLabel,
+                  entryPicks: _entryPicks,
+                  onEntryPickChanged: _setEntryPick,
+                  markers: _preset!.markerFields,
+                  activeMarkers: _markers,
+                  onMarkerChanged: _setMarker,
                   scoreIsCalculated: _preset!.calculatedFields.isNotEmpty,
                   scoreSortSnapshot: _scoreSortSnapshot,
                   onPlayerTap: (player) => _handlePlayerTap(setupModel, player),
@@ -280,6 +288,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
                     fieldDefinition: fieldDefinition,
                   ) ??
                   0,
+              ..._markerValuesFor(player.id),
             },
           ),
       ],
@@ -487,9 +496,13 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
       if (controller != null) {
         _scoreControllers[replacement.id] = controller;
       }
-      final rowLabel = _rowLabels.remove(player.id);
-      if (rowLabel != null) {
-        _rowLabels[replacement.id] = rowLabel;
+      final markers = _markers.remove(player.id);
+      if (markers != null) {
+        _markers[replacement.id] = markers;
+      }
+      final entryPick = _entryPicks.remove(player.id);
+      if (entryPick != null) {
+        _entryPicks[replacement.id] = entryPick;
       }
       _replaceSavedRoundParticipants(
         (participant) => participant.playerId == player.id
@@ -497,7 +510,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
                 playerId: replacement.id,
                 displayName: replacement.displayName,
                 enteredValues: participant.enteredValues,
-                entryLabels: participant.entryLabels,
+                entryPicks: participant.entryPicks,
               )
             : participant,
       );
@@ -698,8 +711,11 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
         QuickScoreParticipantValues(
           playerId: player.id,
           displayName: player.displayName,
-          enteredValues: {scoreFieldId: parsedScore},
-          entryLabels: _entryLabelsFor(player.id, scoreFieldId),
+          enteredValues: {
+            scoreFieldId: parsedScore,
+            ..._markerValuesFor(player.id),
+          },
+          entryPicks: _entryPicksFor(player.id, scoreFieldId),
         ),
       );
     }
@@ -710,39 +726,76 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
     );
   }
 
+  /// Markers set for a player this round, as entered values (1 when set).
+  Map<String, int> _markerValuesFor(String playerId) => {
+        for (final markerId in _markers[playerId] ?? const <String>{})
+          markerId: 1,
+      };
+
+  void _loadMarkers(List<QuickScoreParticipantValues> participants) {
+    _markers = {
+      for (final participant in participants)
+        participant.playerId: {
+          for (final marker in _preset!.markerFields)
+            if ((participant.enteredValues[marker.id] ?? 0) != 0) marker.id,
+        },
+    };
+  }
+
+  void _setMarker(String playerId, String markerId, bool isSet) {
+    final marker =
+        _preset!.markerFields.firstWhere((marker) => marker.id == markerId);
+    setState(() {
+      // A one-per-round marker moves to the player it was just set for.
+      if (isSet && marker.onePerRound) {
+        for (final markers in _markers.values) {
+          markers.remove(markerId);
+        }
+      }
+      final markers = _markers.putIfAbsent(playerId, () => <String>{});
+      if (isSet) {
+        markers.add(markerId);
+      } else {
+        markers.remove(markerId);
+      }
+    });
+    unawaited(_autosaveCurrentSession());
+  }
+
   void _resetCurrentRoundInputs() {
-    _rowLabels = {};
+    _entryPicks = {};
+    _markers = {};
     for (final controller in _scoreControllers.values) {
       controller.clear();
     }
   }
 
-  Map<String, ScoreRowLabel> _entryLabelsFor(
+  Map<String, ValuePickerPick> _entryPicksFor(
     String playerId,
     String scoreFieldId,
   ) {
-    final rowLabel = _rowLabels[playerId];
-    return rowLabel == null ? const {} : {scoreFieldId: rowLabel};
+    final entryPick = _entryPicks[playerId];
+    return entryPick == null ? const {} : {scoreFieldId: entryPick};
   }
 
-  /// Puts back the labels saved with a round's entries.
-  void _loadRowLabels(
+  /// Puts back the value picker tiles saved with a round's entries.
+  void _loadEntryPicks(
     List<QuickScoreParticipantValues> participants,
     String scoreFieldId,
   ) {
-    _rowLabels = {
+    _entryPicks = {
       for (final participant in participants)
-        if (participant.entryLabels[scoreFieldId] case final ScoreRowLabel label)
-          participant.playerId: label,
+        if (participant.entryPicks[scoreFieldId] case final ValuePickerPick pick)
+          participant.playerId: pick,
     };
   }
 
-  void _setRowLabel(String playerId, ScoreRowLabel? rowLabel) {
+  void _setEntryPick(String playerId, ValuePickerPick? entryPick) {
     setState(() {
-      if (rowLabel == null) {
-        _rowLabels.remove(playerId);
+      if (entryPick == null) {
+        _entryPicks.remove(playerId);
       } else {
-        _rowLabels[playerId] = rowLabel;
+        _entryPicks[playerId] = entryPick;
       }
     });
     unawaited(_autosaveCurrentSession());
@@ -797,7 +850,8 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
         participant.playerId: participant.enteredValues[scoreFieldId] ?? 0,
     };
 
-    _loadRowLabels(round.participantValues, scoreFieldId);
+    _loadEntryPicks(round.participantValues, scoreFieldId);
+    _loadMarkers(round.participantValues);
     for (final player in _selectedPlayers) {
       final controller = _scoreControllers[player.id]!;
       final value = valuesByPlayerId[player.id];
@@ -858,7 +912,8 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
         if (participant.enteredValues[scoreFieldId] case final int value)
           participant.playerId: value,
     };
-    _loadRowLabels(session.currentRoundParticipantValues, scoreFieldId);
+    _loadEntryPicks(session.currentRoundParticipantValues, scoreFieldId);
+    _loadMarkers(session.currentRoundParticipantValues);
     for (final player in session.selectedPlayers) {
       _scoreControllers[player.id]!.text =
           currentValuesByPlayerId[player.id]?.toString() ?? '';
@@ -904,8 +959,11 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
           return QuickScoreParticipantValues(
             playerId: player.id,
             displayName: player.displayName,
-            enteredValues: value == null ? const {} : {scoreFieldId: value},
-            entryLabels: _entryLabelsFor(player.id, scoreFieldId),
+            enteredValues: {
+              scoreFieldId: ?value,
+              ..._markerValuesFor(player.id),
+            },
+            entryPicks: _entryPicksFor(player.id, scoreFieldId),
           );
         })
         .toList(growable: false);
@@ -1136,8 +1194,11 @@ class _RoundScoreEntryStep extends StatelessWidget {
     required this.entryMemory,
     required this.priorRoundTotals,
     required this.currentRoundScores,
-    required this.rowLabels,
-    required this.onRowLabelChanged,
+    required this.entryPicks,
+    required this.onEntryPickChanged,
+    required this.markers,
+    required this.activeMarkers,
+    required this.onMarkerChanged,
     required this.scoreIsCalculated,
     required this.scoreSortSnapshot,
     required this.onPlayerTap,
@@ -1161,10 +1222,16 @@ class _RoundScoreEntryStep extends StatelessWidget {
   /// Scores for this round from what is entered so far.
   final Map<String, int> currentRoundScores;
 
-  /// Labels shown instead of scores this round, by player id.
-  final Map<String, ScoreRowLabel> rowLabels;
-  final void Function(String playerId, ScoreRowLabel? rowLabel)
-      onRowLabelChanged;
+  /// Value picker tiles behind each player's entry this round, by player id.
+  final Map<String, ValuePickerPick> entryPicks;
+  final void Function(String playerId, ValuePickerPick? entryPick)
+      onEntryPickChanged;
+
+  /// The template's markers and the ones set this round, by player id.
+  final List<MarkerFieldDefinition> markers;
+  final Map<String, Set<String>> activeMarkers;
+  final void Function(String playerId, String markerId, bool isSet)
+      onMarkerChanged;
 
   /// Whether the score comes from a formula rather than the entry.
   final bool scoreIsCalculated;
@@ -1229,9 +1296,13 @@ class _RoundScoreEntryStep extends StatelessWidget {
                     compact: compact,
                     entryMemory: entryMemory,
                     onLabelTap: () => onPlayerTap(player),
-                    rowLabel: rowLabels[player.id],
-                    onRowLabelChanged: (rowLabel) =>
-                        onRowLabelChanged(player.id, rowLabel),
+                    entryPick: entryPicks[player.id],
+                    onEntryPickChanged: (entryPick) =>
+                        onEntryPickChanged(player.id, entryPick),
+                    markers: markers,
+                    activeMarkers: activeMarkers[player.id] ?? const {},
+                    onMarkerChanged: (markerId, isSet) =>
+                        onMarkerChanged(player.id, markerId, isSet),
                     valueLabelMinimumDigits: 3,
                     // An entered score updates from the row's own value; a
                     // calculated one comes from the whole round.
