@@ -4,7 +4,9 @@ import 'package:scoard_game/application/models/scoring/score_field_definition.da
 import 'package:scoard_game/application/models/scoring/score_row_label.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_definition.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_pick.dart';
+import 'package:scoard_game/application/models/sessions/player_color.dart';
 import 'package:scoard_game/core/scoring/value_picker_total.dart';
+import 'package:scoard_game/ui/players/player_color_halo.dart';
 import 'package:scoard_game/ui/score_input/numeric_value_picker.dart';
 import 'package:scoard_game/ui/score_input/score_entry_mode.dart';
 import 'package:scoard_game/ui/score_input/score_value_edit_action.dart';
@@ -24,6 +26,7 @@ class NumericScoreField extends StatefulWidget {
     this.activeMarkers = const {},
     this.onMarkerChanged,
     this.roundScore,
+    this.playerColor,
     this.onEntryPickChanged,
     this.compact = false,
     this.entryMemory,
@@ -56,6 +59,9 @@ class NumericScoreField extends StatefulWidget {
   /// as Skyjo doubling). Shown as the main number, with the entered value
   /// underneath when they differ. Null shows the entered value.
   final int? roundScore;
+
+  /// The player's colour for this game, shown as a halo around the row.
+  final PlayerColor? playerColor;
 
   /// Tighter spacing for long player lists.
   final bool compact;
@@ -201,9 +207,10 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
     final valueLabelTextStyle = _valueLabelTextStyle(theme);
     final spacing = widget.compact ? _compactSpacing : _normalSpacing;
 
-    return Card(
+    return PlayerHaloCard(
+      color: widget.playerColor,
+      compact: widget.compact,
       margin: EdgeInsets.only(bottom: spacing.bottomMargin),
-      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: 14,

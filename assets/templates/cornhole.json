@@ -21,6 +21,7 @@
           "id": "bags",
           "label": "Bags",
           "values": [
+            { "value": 0, "label": "Off", "color": "#595959" },
             { "value": 1, "label": "Board", "color": "#C8A165" },
             { "value": 3, "label": "Hole", "color": "#37474F" }
           ]

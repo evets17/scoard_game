@@ -9,6 +9,7 @@ import 'package:scoard_game/application/models/scoring/score_field_definition.da
 import 'package:scoard_game/application/models/scoring/value_picker_pick.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/application/models/scoring/winner_rule.dart';
+import 'package:scoard_game/application/models/sessions/player_color.dart';
 import 'package:scoard_game/application/models/sessions/player_sort_mode.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_available_player.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_participant_values.dart';
@@ -30,6 +31,7 @@ import 'package:scoard_game/ui/help/scoring_help_screen.dart';
 import 'package:scoard_game/ui/navigation/app_routes.dart';
 import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
 import 'package:scoard_game/ui/players/in_game_player_actions.dart';
+import 'package:scoard_game/ui/players/player_color_halo.dart';
 import 'package:scoard_game/ui/players/player_editor_sheet.dart';
 import 'package:scoard_game/ui/players/player_group_filter_chips.dart';
 import 'package:scoard_game/ui/players/player_reorderable_list.dart';
@@ -101,6 +103,9 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
 
   /// Markers (such as "Went out first") set this round, by player id.
   Map<String, Set<String>> _markers = {};
+
+  /// Colours given to players for this game, by player id.
+  final Map<String, PlayerColor> _playerColors = {};
 
   @override
   void initState() {
@@ -206,6 +211,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
                   onEntryPickChanged: _setEntryPick,
                   markers: _preset!.markerFields,
                   activeMarkers: _markers,
+                  playerColors: _playerColors,
                   onMarkerChanged: _setMarker,
                   scoreIsCalculated: _preset!.calculatedFields.isNotEmpty,
                   scoreSortSnapshot: _scoreSortSnapshot,
@@ -218,6 +224,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
                 ),
               _RoundScoreStep.result => _RoundScoreResultStep(
                   result: _result!,
+                  playerColors: _playerColors,
                   onBackToRounds: () => setState(() => _step = _RoundScoreStep.roundEntry),
                 ),
             };
@@ -394,6 +401,13 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
     final action = await showInGamePlayerActionsSheet(
       context,
       playerName: player.displayName,
+      color: _playerColors[player.id],
+      colorOwners: playerColorOwners(
+        _playerColors,
+        players: _selectedPlayers,
+        exceptPlayerId: player.id,
+      ),
+      onColorChanged: (color) => _setPlayerColor(player.id, color),
     );
 
     if (action == null || !mounted) {
@@ -406,6 +420,17 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
       case InGamePlayerAction.switchPlayer:
         await _switchPlayerInGame(setupModel, player);
     }
+  }
+
+  void _setPlayerColor(String playerId, PlayerColor? color) {
+    setState(() {
+      if (color == null) {
+        _playerColors.remove(playerId);
+      } else {
+        _playerColors[playerId] = color;
+      }
+    });
+    unawaited(_autosaveCurrentSession());
   }
 
   Future<void> _editPlayerInGame(
@@ -503,6 +528,11 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
       final entryPick = _entryPicks.remove(player.id);
       if (entryPick != null) {
         _entryPicks[replacement.id] = entryPick;
+      }
+      // The colour belongs to the place in the game, so it moves too.
+      final color = _playerColors.remove(player.id);
+      if (color != null) {
+        _playerColors[replacement.id] = color;
       }
       _replaceSavedRoundParticipants(
         (participant) => participant.playerId == player.id
@@ -920,6 +950,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
     }
 
     _sortMode = session.sortMode;
+    _playerColors.addAll(session.playerColors);
     _scoreSortSnapshot = _currentTotals();
     _step = _RoundScoreStep.roundEntry;
   }
@@ -983,6 +1014,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
         currentRoundParticipantValues: currentRoundParticipantValues,
         currentRoundNumber: _currentRoundNumber,
         sortMode: _sortMode,
+        playerColors: Map.of(_playerColors),
         updatedAt: DateTime.now(),
       ),
     );
@@ -1199,6 +1231,7 @@ class _RoundScoreEntryStep extends StatelessWidget {
     required this.markers,
     required this.activeMarkers,
     required this.onMarkerChanged,
+    required this.playerColors,
     required this.scoreIsCalculated,
     required this.scoreSortSnapshot,
     required this.onPlayerTap,
@@ -1232,6 +1265,9 @@ class _RoundScoreEntryStep extends StatelessWidget {
   final Map<String, Set<String>> activeMarkers;
   final void Function(String playerId, String markerId, bool isSet)
       onMarkerChanged;
+
+  /// Colours given to players for this game, by player id.
+  final Map<String, PlayerColor> playerColors;
 
   /// Whether the score comes from a formula rather than the entry.
   final bool scoreIsCalculated;
@@ -1303,6 +1339,7 @@ class _RoundScoreEntryStep extends StatelessWidget {
                     activeMarkers: activeMarkers[player.id] ?? const {},
                     onMarkerChanged: (markerId, isSet) =>
                         onMarkerChanged(player.id, markerId, isSet),
+                    playerColor: playerColors[player.id],
                     roundScore: scoreIsCalculated
                         ? currentRoundScores[player.id]
                         : null,
@@ -1336,10 +1373,12 @@ class _RoundScoreEntryStep extends StatelessWidget {
 class _RoundScoreResultStep extends StatelessWidget {
   const _RoundScoreResultStep({
     required this.result,
+    required this.playerColors,
     required this.onBackToRounds,
   });
 
   final RoundScoreResult result;
+  final Map<String, PlayerColor> playerColors;
   final VoidCallback onBackToRounds;
 
   @override
@@ -1363,7 +1402,8 @@ class _RoundScoreResultStep extends StatelessWidget {
           child: ListView(
             children: result.playerResults
                 .map(
-                  (playerResult) => Card(
+                  (playerResult) => PlayerHaloCard(
+                    color: playerColors[playerResult.playerId],
                     margin: const EdgeInsets.only(bottom: 8),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),

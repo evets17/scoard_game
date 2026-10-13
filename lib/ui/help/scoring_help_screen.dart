@@ -149,6 +149,11 @@ class ScoringHelpScreen extends StatelessWidget {
                     'Tap a player\'s name and choose Switch player if the wrong player was picked. Their scores move to the new player.',
               ),
               _HelpTip(
+                icon: Icons.palette_outlined,
+                text:
+                    'Tap a player\'s name to give them a color for this game, such as their pawn color. It shows as a glow around their row.',
+              ),
+              _HelpTip(
                 icon: Icons.drag_indicator_rounded,
                 text:
                     'Long press a player and drag to change the play order. This works when sorted by play order.',
