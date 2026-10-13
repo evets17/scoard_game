@@ -27,6 +27,9 @@ const maximumPickerValues = 24;
 /// Keeps tile text readable on a small tile, for example "+10" or "Bust".
 const maximumTileTextLength = 6;
 
+/// Keeps a row label inside the space a score normally takes.
+const maximumRowLabelLength = 8;
+
 final _idPattern = RegExp(r'^[a-z0-9]+(-[a-z0-9]+)*$');
 final _colorPattern = RegExp(r'^#[0-9A-Fa-f]{6}$');
 final _versionPattern = RegExp(r'^\d+\.\d+\.\d+$');
@@ -272,7 +275,9 @@ void _validateFields(_ObjectReader template) {
 }
 
 void _validateEntryMode(_ObjectReader mode, Set<String> seenModeIds) {
-  mode.allowOnlyKeys(const {'type', 'id', 'label', 'values', 'groups', 'total'});
+  mode.allowOnlyKeys(
+    const {'type', 'id', 'label', 'values', 'groups', 'total', 'rowLabels'},
+  );
   mode.oneOf('type', templateEntryModeTypes, required: true);
 
   final id = mode.identifier('id', required: true);
@@ -331,6 +336,9 @@ void _validateEntryMode(_ObjectReader mode, Set<String> seenModeIds) {
     if (mode.has('total')) {
       mode.problem('total', 'needs "groups"; without groups the tiles are added up');
     }
+    if (mode.has('rowLabels')) {
+      mode.problem('rowLabels', 'needs "groups" so a label can say which tiles it is about');
+    }
   } else {
     final groups = mode.list('groups', required: true) ?? const [];
     if (groups.isEmpty) {
@@ -367,6 +375,40 @@ void _validateEntryMode(_ObjectReader mode, Set<String> seenModeIds) {
         }
       } on FormulaSyntaxError catch (error) {
         mode.problem('total', error.toString());
+      }
+    }
+
+    for (final rowLabel in mode.list('rowLabels') ?? const <_ObjectReader>[]) {
+      if (!rowLabel.isObject) {
+        continue;
+      }
+      rowLabel.allowOnlyKeys(const {'when', 'text', 'color'});
+      final text = rowLabel.text('text', required: true);
+      if (text != null && text.length > maximumRowLabelLength) {
+        rowLabel.problem(
+          'text',
+          'must be at most $maximumRowLabelLength characters',
+        );
+      }
+      final color = rowLabel.text('color');
+      if (color != null && !_colorPattern.hasMatch(color)) {
+        rowLabel.problem('color', '"$color" must look like #3A7BD5');
+      }
+      final when = rowLabel.text('when', required: true);
+      if (when == null) {
+        continue;
+      }
+      try {
+        final problems = checkFormula(
+          Formula.parse(when),
+          fieldIds: groupIds,
+          context: FormulaContext.picker,
+        );
+        for (final problem in problems) {
+          rowLabel.problem('when', problem.toString());
+        }
+      } on FormulaSyntaxError catch (error) {
+        rowLabel.problem('when', error.toString());
       }
     }
   }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
+import 'package:scoard_game/application/models/scoring/score_row_label.dart';
 import 'package:scoard_game/ui/score_input/numeric_value_picker.dart';
 import 'package:scoard_game/ui/score_input/score_entry_mode.dart';
 import 'package:scoard_game/ui/score_input/score_value_edit_action.dart';
+import 'package:scoard_game/ui/score_input/value_picker_pad.dart';
 
 class NumericScoreField extends StatefulWidget {
   const NumericScoreField({
@@ -13,6 +15,8 @@ class NumericScoreField extends StatefulWidget {
     this.valueLabelMinimumDigits = 0,
     this.onLabelTap,
     this.onEditorClosed,
+    this.rowLabel,
+    this.onRowLabelChanged,
     this.compact = false,
     this.entryMemory,
     super.key,
@@ -25,6 +29,13 @@ class NumericScoreField extends StatefulWidget {
   final int valueLabelMinimumDigits;
   final VoidCallback? onLabelTap;
   final VoidCallback? onEditorClosed;
+
+  /// Shown instead of the score, such as "Bust", until the score is changed
+  /// some other way.
+  final ScoreRowLabel? rowLabel;
+
+  /// Called when an edit sets or clears [rowLabel].
+  final ValueChanged<ScoreRowLabel?>? onRowLabelChanged;
 
   /// Tighter spacing for long player lists.
   final bool compact;
@@ -96,6 +107,9 @@ const double _scoreVerticalPadding = 6;
 const double _valueLabelVerticalPadding = 8;
 const double _compactIconButtonSize = 40;
 
+/// Shown in place of a score that has not been entered yet.
+const emptyScoreText = '–';
+
 TextStyle? _labelTextStyle(ThemeData theme) =>
     theme.textTheme.titleLarge?.copyWith(fontSize: 22);
 
@@ -144,6 +158,7 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isEmpty = widget.controller.text.trim().isEmpty;
     final currentValue = int.tryParse(widget.controller.text.trim()) ??
         (widget.fieldDefinition.initialIntegerValue ?? 0);
     final valueLabel = widget.valueLabelBuilder?.call(currentValue);
@@ -197,11 +212,40 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
                         horizontal: 8,
                         vertical: _scoreVerticalPadding,
                       ),
-                      child: Text(
-                        '$currentValue',
-                        textAlign: TextAlign.center,
-                        style: scoreTextStyle,
-                      ),
+                      // A dash means nothing has been entered yet; it still
+                      // counts as the starting value if play moves on.
+                      child: !isEmpty && widget.rowLabel != null
+                          ? Semantics(
+                              label: '${widget.rowLabel!.text}, score '
+                                  '$currentValue',
+                              excludeSemantics: true,
+                              child: Text(
+                                widget.rowLabel!.text,
+                                textAlign: TextAlign.center,
+                                style: scoreTextStyle?.copyWith(
+                                  fontSize: 28,
+                                  color: parseTileColor(widget.rowLabel!.color),
+                                ),
+                              ),
+                            )
+                          : isEmpty
+                          ? Semantics(
+                              label: 'No score yet',
+                              excludeSemantics: true,
+                              child: Text(
+                                emptyScoreText,
+                                textAlign: TextAlign.center,
+                                style: scoreTextStyle?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant
+                                      .withValues(alpha: 0.6),
+                                ),
+                              ),
+                            )
+                          : Text(
+                              '$currentValue',
+                              textAlign: TextAlign.center,
+                              style: scoreTextStyle,
+                            ),
                     ),
                   ),
                 ),
@@ -251,6 +295,7 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
       context,
       title: widget.label,
       currentValue: currentValue,
+      hasCurrentValue: widget.controller.text.trim().isNotEmpty,
       allowReplace: widget.fieldDefinition.allowReplace,
       allowAdjust: widget.fieldDefinition.allowAdjust,
       entryMemory: widget.entryMemory,
@@ -263,15 +308,21 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
 
     switch (request.action) {
       case ScoreValueEditAction.replace:
-        _setValue(request.value);
+        _setValue(request.value, rowLabel: request.rowLabel);
       case ScoreValueEditAction.add:
-        _setValue(currentValue + request.value);
+        _setValue(currentValue + request.value, rowLabel: request.rowLabel);
     }
 
     widget.onEditorClosed?.call();
   }
 
-  void _setValue(int value) {
+  /// Sets the score. Any edit replaces the row label: a value picker may
+  /// supply a new one, and every other edit clears it. The label is reported
+  /// first so it is saved together with the new value.
+  void _setValue(int value, {ScoreRowLabel? rowLabel}) {
+    if (rowLabel != widget.rowLabel) {
+      widget.onRowLabelChanged?.call(rowLabel);
+    }
     widget.controller.text = value.toString();
   }
 

@@ -12,6 +12,7 @@ Future<ScoreValueEditRequest?> showNumericValuePicker(
   BuildContext context, {
   required String title,
   required int currentValue,
+  bool hasCurrentValue = true,
   required bool allowReplace,
   required bool allowAdjust,
   ScoreEntryMemory? entryMemory,
@@ -23,6 +24,7 @@ Future<ScoreValueEditRequest?> showNumericValuePicker(
     builder: (context) => _NumericValuePicker(
       title: title,
       currentValue: currentValue,
+      hasCurrentValue: hasCurrentValue,
       allowReplace: allowReplace,
       allowAdjust: allowAdjust,
       entryMemory: entryMemory ?? ScoreEntryMemory(),
@@ -35,6 +37,7 @@ class _NumericValuePicker extends StatefulWidget {
   const _NumericValuePicker({
     required this.title,
     required this.currentValue,
+    required this.hasCurrentValue,
     required this.allowReplace,
     required this.allowAdjust,
     required this.entryMemory,
@@ -43,6 +46,10 @@ class _NumericValuePicker extends StatefulWidget {
 
   final String title;
   final int currentValue;
+
+  /// False when the player has no score yet; [currentValue] is then the
+  /// starting value used for Adjust.
+  final bool hasCurrentValue;
   final bool allowReplace;
   final bool allowAdjust;
   final ScoreEntryMemory entryMemory;
@@ -135,7 +142,9 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Current score: ${widget.currentValue}',
+                      widget.hasCurrentValue
+                          ? 'Current score: ${widget.currentValue}'
+                          : 'No score yet',
                       style: theme.textTheme.bodyMedium,
                     ),
                   ],
@@ -289,6 +298,9 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
       ScoreValueEditRequest(
         action: action,
         value: entryValue,
+        rowLabel: _activePicker == null
+            ? null
+            : valuePickerRowLabel(_activePicker!, _pickedTiles),
       ),
     );
   }

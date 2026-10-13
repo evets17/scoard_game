@@ -1,3 +1,4 @@
+import 'package:scoard_game/application/models/scoring/score_row_label.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_definition.dart';
 import 'package:scoard_game/core/formulas/formula_evaluator.dart';
 import 'package:scoard_game/core/formulas/formula_parser.dart';
@@ -45,4 +46,28 @@ class _PickerScope extends FormulaScope {
   @override
   int distinctIn(String groupId) =>
       (_picked[groupId] ?? const []).map((option) => option.displayText).toSet().length;
+}
+
+final _parsedConditions = Expando<Formula>('ValuePickerRowLabelWhen');
+
+/// The label to show on the player's row for these picked tiles: the first
+/// of the picker's row labels whose condition is true, or null.
+ScoreRowLabel? valuePickerRowLabel(
+  ValuePickerDefinition picker,
+  List<int> pickedIndexes,
+) {
+  if (picker.rowLabels.isEmpty || pickedIndexes.isEmpty) {
+    return null;
+  }
+
+  final picked = [for (final index in pickedIndexes) picker.options[index]];
+  final scope = _PickerScope(picker, picked);
+  for (final rowLabel in picker.rowLabels) {
+    final condition =
+        _parsedConditions[rowLabel] ??= Formula.parse(rowLabel.when);
+    if (evaluateFormula(condition, scope) != 0) {
+      return ScoreRowLabel(text: rowLabel.text, color: rowLabel.color);
+    }
+  }
+  return null;
 }

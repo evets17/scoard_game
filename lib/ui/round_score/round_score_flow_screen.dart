@@ -5,6 +5,7 @@ import 'package:scoard_game/application/models/players/player_list_item_model.da
 import 'package:scoard_game/application/models/results/round_score_result.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
+import 'package:scoard_game/application/models/scoring/score_row_label.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/application/models/scoring/winner_rule.dart';
 import 'package:scoard_game/application/models/sessions/player_sort_mode.dart';
@@ -93,6 +94,9 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
   AppLifecycleListener? _lifecycleListener;
   PlayerSortMode _sortMode = PlayerSortMode.playOrder;
   Map<String, int> _scoreSortSnapshot = const {};
+
+  /// Row labels (such as "Bust") for the round on screen, by player id.
+  Map<String, ScoreRowLabel> _rowLabels = {};
 
   @override
   void initState() {
@@ -193,6 +197,8 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
                   entryMemory: _scoreEntryMemory,
                   priorRoundTotals: _priorRoundTotals(),
                   currentRoundScores: _currentRoundScores(),
+                  rowLabels: _rowLabels,
+                  onRowLabelChanged: _setRowLabel,
                   scoreIsCalculated: _preset!.calculatedFields.isNotEmpty,
                   scoreSortSnapshot: _scoreSortSnapshot,
                   onPlayerTap: (player) => _handlePlayerTap(setupModel, player),
@@ -481,12 +487,17 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
       if (controller != null) {
         _scoreControllers[replacement.id] = controller;
       }
+      final rowLabel = _rowLabels.remove(player.id);
+      if (rowLabel != null) {
+        _rowLabels[replacement.id] = rowLabel;
+      }
       _replaceSavedRoundParticipants(
         (participant) => participant.playerId == player.id
             ? QuickScoreParticipantValues(
                 playerId: replacement.id,
                 displayName: replacement.displayName,
                 enteredValues: participant.enteredValues,
+                entryLabels: participant.entryLabels,
               )
             : participant,
       );
@@ -688,6 +699,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
           playerId: player.id,
           displayName: player.displayName,
           enteredValues: {scoreFieldId: parsedScore},
+          entryLabels: _entryLabelsFor(player.id, scoreFieldId),
         ),
       );
     }
@@ -699,9 +711,41 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
   }
 
   void _resetCurrentRoundInputs() {
+    _rowLabels = {};
     for (final controller in _scoreControllers.values) {
       controller.clear();
     }
+  }
+
+  Map<String, ScoreRowLabel> _entryLabelsFor(
+    String playerId,
+    String scoreFieldId,
+  ) {
+    final rowLabel = _rowLabels[playerId];
+    return rowLabel == null ? const {} : {scoreFieldId: rowLabel};
+  }
+
+  /// Puts back the labels saved with a round's entries.
+  void _loadRowLabels(
+    List<QuickScoreParticipantValues> participants,
+    String scoreFieldId,
+  ) {
+    _rowLabels = {
+      for (final participant in participants)
+        if (participant.entryLabels[scoreFieldId] case final ScoreRowLabel label)
+          participant.playerId: label,
+    };
+  }
+
+  void _setRowLabel(String playerId, ScoreRowLabel? rowLabel) {
+    setState(() {
+      if (rowLabel == null) {
+        _rowLabels.remove(playerId);
+      } else {
+        _rowLabels[playerId] = rowLabel;
+      }
+    });
+    unawaited(_autosaveCurrentSession());
   }
 
   bool _persistCurrentRoundIfNeeded() {
@@ -753,6 +797,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
         participant.playerId: participant.enteredValues[scoreFieldId] ?? 0,
     };
 
+    _loadRowLabels(round.participantValues, scoreFieldId);
     for (final player in _selectedPlayers) {
       final controller = _scoreControllers[player.id]!;
       final value = valuesByPlayerId[player.id];
@@ -806,14 +851,17 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
       _scoreControllers[player.id] = _createScoreController('');
     }
 
+    // Players with nothing entered yet stay empty (shown as "–").
     final scoreFieldId = _preset!.scoreFields.first.id;
     final currentValuesByPlayerId = {
       for (final participant in session.currentRoundParticipantValues)
-        participant.playerId: participant.enteredValues[scoreFieldId] ?? 0,
+        if (participant.enteredValues[scoreFieldId] case final int value)
+          participant.playerId: value,
     };
+    _loadRowLabels(session.currentRoundParticipantValues, scoreFieldId);
     for (final player in session.selectedPlayers) {
       _scoreControllers[player.id]!.text =
-          '${currentValuesByPlayerId[player.id] ?? 0}';
+          currentValuesByPlayerId[player.id]?.toString() ?? '';
     }
 
     _sortMode = session.sortMode;
@@ -846,21 +894,20 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
       return;
     }
 
+    // Untouched rows are saved without a value, so they come back empty
+    // (shown as "–") when the game is resumed.
     final scoreFieldId = preset.scoreFields.first.id;
     final currentRoundParticipantValues = _selectedPlayers
-        .map(
-          (player) => QuickScoreParticipantValues(
+        .map((player) {
+          final value =
+              int.tryParse(_scoreControllers[player.id]!.text.trim());
+          return QuickScoreParticipantValues(
             playerId: player.id,
             displayName: player.displayName,
-            enteredValues: {
-              scoreFieldId: _parseEnteredScore(
-                    rawValue: _scoreControllers[player.id]!.text.trim(),
-                    fieldDefinition: preset.scoreFields.first,
-                  ) ??
-                  0,
-            },
-          ),
-        )
+            enteredValues: value == null ? const {} : {scoreFieldId: value},
+            entryLabels: _entryLabelsFor(player.id, scoreFieldId),
+          );
+        })
         .toList(growable: false);
 
     final sessionId =
@@ -1089,6 +1136,8 @@ class _RoundScoreEntryStep extends StatelessWidget {
     required this.entryMemory,
     required this.priorRoundTotals,
     required this.currentRoundScores,
+    required this.rowLabels,
+    required this.onRowLabelChanged,
     required this.scoreIsCalculated,
     required this.scoreSortSnapshot,
     required this.onPlayerTap,
@@ -1111,6 +1160,11 @@ class _RoundScoreEntryStep extends StatelessWidget {
 
   /// Scores for this round from what is entered so far.
   final Map<String, int> currentRoundScores;
+
+  /// Labels shown instead of scores this round, by player id.
+  final Map<String, ScoreRowLabel> rowLabels;
+  final void Function(String playerId, ScoreRowLabel? rowLabel)
+      onRowLabelChanged;
 
   /// Whether the score comes from a formula rather than the entry.
   final bool scoreIsCalculated;
@@ -1175,6 +1229,9 @@ class _RoundScoreEntryStep extends StatelessWidget {
                     compact: compact,
                     entryMemory: entryMemory,
                     onLabelTap: () => onPlayerTap(player),
+                    rowLabel: rowLabels[player.id],
+                    onRowLabelChanged: (rowLabel) =>
+                        onRowLabelChanged(player.id, rowLabel),
                     valueLabelMinimumDigits: 3,
                     // An entered score updates from the row's own value; a
                     // calculated one comes from the whole round.

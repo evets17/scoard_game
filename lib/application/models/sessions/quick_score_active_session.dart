@@ -53,13 +53,7 @@ class QuickScoreActiveSession {
           .map((promptAnswer) => promptAnswer.toJson())
           .toList(growable: false),
       'participantValues': participantValues
-          .map(
-            (participant) => {
-              'playerId': participant.playerId,
-              'displayName': participant.displayName,
-              'enteredValues': participant.enteredValues,
-            },
-          )
+          .map((participant) => participant.toJson())
           .toList(growable: false),
     };
   }
@@ -82,19 +76,11 @@ class QuickScoreActiveSession {
           )
           .toList(growable: false),
       participantValues: rawParticipants
-          .map((rawParticipant) {
-            final participant = rawParticipant! as Map<String, Object?>;
-            final rawValues =
-                participant['enteredValues']! as Map<String, Object?>;
-
-            return QuickScoreParticipantValues(
-              playerId: participant['playerId']! as String,
-              displayName: participant['displayName']! as String,
-              enteredValues: rawValues.map(
-                (key, value) => MapEntry(key, value! as int),
-              ),
-            );
-          })
+          .map(
+            (rawParticipant) => QuickScoreParticipantValues.fromJson(
+              rawParticipant! as Map<String, Object?>,
+            ),
+          )
           .toList(growable: false),
       updatedAt: DateTime.now(),
       sortMode: PlayerSortMode.fromStorage(json['sortMode']),

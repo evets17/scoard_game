@@ -10,6 +10,7 @@ class ValuePickerDefinition {
     required this.label,
     required this.options,
     this.total,
+    this.rowLabels = const [],
   });
 
   final String id;
@@ -22,6 +23,10 @@ class ValuePickerDefinition {
 
   /// Formula for the score from the tapped tiles, or null to add them up.
   final String? total;
+
+  /// Labels shown on the row instead of the score when the picked tiles
+  /// match, checked in order. The first match is used.
+  final List<ValuePickerRowLabel> rowLabels;
 }
 
 class ValuePickerOption {
@@ -48,4 +53,21 @@ class ValuePickerOption {
   final String? groupId;
 
   String get displayText => text ?? '$value';
+}
+
+/// A label to show on the player's row when [when] is true for the picked
+/// tiles, for example "Bust" when the bust tile was picked.
+class ValuePickerRowLabel {
+  const ValuePickerRowLabel({
+    required this.when,
+    required this.text,
+    this.color,
+  });
+
+  /// Formula over the picker's groups; non-zero means the label applies.
+  final String when;
+  final String text;
+
+  /// Text colour as `#RRGGBB`.
+  final String? color;
 }

@@ -5,6 +5,7 @@ import 'package:scoard_game/application/models/players/player_list_item_model.da
 import 'package:scoard_game/application/models/results/quick_score_result.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
+import 'package:scoard_game/application/models/scoring/score_row_label.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/application/models/sessions/player_sort_mode.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_active_session.dart';
@@ -89,6 +90,9 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
   AppLifecycleListener? _lifecycleListener;
   PlayerSortMode _sortMode = PlayerSortMode.playOrder;
   Map<String, int> _scoreSortSnapshot = const {};
+
+  /// Row labels (such as "Bust") shown instead of scores, by player id.
+  Map<String, ScoreRowLabel> _rowLabels = {};
 
   @override
   void initState() {
@@ -192,6 +196,8 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
                   onPlayerTap: (player) => _handlePlayerTap(setupModel, player),
                   onReorder: _reorderPlayers,
                   onScoreEditorClosed: _refreshScoreSort,
+                  rowLabels: _rowLabels,
+                  onRowLabelChanged: _setRowLabel,
                   onBack: () => setState(() => _step = _QuickScoreStep.setup),
                   onSave: _saveQuickScoreSession,
                 ),
@@ -216,6 +222,17 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
   }
 
   // Score sorting uses a snapshot so rows don't jump on every +/- tap.
+  void _setRowLabel(String playerId, ScoreRowLabel? rowLabel) {
+    setState(() {
+      if (rowLabel == null) {
+        _rowLabels.remove(playerId);
+      } else {
+        _rowLabels[playerId] = rowLabel;
+      }
+    });
+    unawaited(_autosaveCurrentSession());
+  }
+
   void _refreshScoreSort() {
     if (_sortMode != PlayerSortMode.score) {
       return;
@@ -443,6 +460,10 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
       if (controller != null) {
         _scoreControllers[replacement.id] = controller;
       }
+      final rowLabel = _rowLabels.remove(player.id);
+      if (rowLabel != null) {
+        _rowLabels[replacement.id] = rowLabel;
+      }
       _scoreSortSnapshot = _currentScores();
       _setupModelFuture = widget.loadQuickScoreSetupModel(
         presetId: _preset!.id,
@@ -483,8 +504,6 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
   }
 
   void _continueToScoreEntry(QuickScoreSetupModel setupModel) {
-    final defaultScoreValue =
-        setupModel.preset.scoreFields.first.initialIntegerValue;
     final playersById = {
       for (final player in setupModel.availablePlayers) player.id: player,
     };
@@ -507,7 +526,7 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
     for (final player in selectedPlayers) {
       _scoreControllers.putIfAbsent(
         player.id,
-        () => _createScoreController(defaultScoreValue?.toString() ?? ''),
+        () => _createScoreController(''),
       );
     }
 
@@ -592,10 +611,15 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
     final scoreFieldId = _preset!.scoreFields.first.id;
     for (final participant in session.participantValues) {
       _scoreControllers[participant.playerId] = _createScoreController(
-        '${participant.enteredValues[scoreFieldId] ?? 0}',
+        participant.enteredValues[scoreFieldId]?.toString() ?? '',
       );
     }
 
+    _rowLabels = {
+      for (final participant in session.participantValues)
+        if (participant.entryLabels[scoreFieldId] case final ScoreRowLabel label)
+          participant.playerId: label,
+    };
     _sortMode = session.sortMode;
     _scoreSortSnapshot = _currentScores();
     _step = _QuickScoreStep.entry;
@@ -621,16 +645,21 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
       return;
     }
 
-    final fieldDefinition = preset.scoreFields.first;
-    final scoreFieldId = fieldDefinition.id;
-    final participantValues = _buildParticipantValues(
-      fieldDefinition: fieldDefinition,
-      scoreFieldId: scoreFieldId,
-      showErrors: false,
-    );
-    if (participantValues == null) {
-      return;
-    }
+    // Untouched rows are saved without a value, so they come back empty
+    // (shown as "–") when the game is resumed.
+    final scoreFieldId = preset.scoreFields.first.id;
+    final participantValues = [
+      for (final player in _selectedPlayers)
+        QuickScoreParticipantValues(
+          playerId: player.id,
+          displayName: player.displayName,
+          enteredValues: _enteredValuesFor(player.id, scoreFieldId),
+          entryLabels: {
+            if (_rowLabels[player.id] case final ScoreRowLabel rowLabel)
+              scoreFieldId: rowLabel,
+          },
+        ),
+    ];
 
     final sessionId =
         _currentSessionId ?? createQuickScoreSessionId(timestamp: DateTime.now());
@@ -647,6 +676,13 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
         sortMode: _sortMode,
       ),
     );
+  }
+
+  /// What a player has entered so far: empty if their row is untouched.
+  Map<String, int> _enteredValuesFor(String playerId, String scoreFieldId) {
+    final rawValue = _scoreControllers[playerId]?.text.trim() ?? '';
+    final value = int.tryParse(rawValue);
+    return value == null ? const {} : {scoreFieldId: value};
   }
 
   List<QuickScoreParticipantValues>? _buildParticipantValues({
@@ -906,6 +942,8 @@ class _QuickScoreEntryStep extends StatelessWidget {
     required this.onPlayerTap,
     required this.onReorder,
     required this.onScoreEditorClosed,
+    required this.rowLabels,
+    required this.onRowLabelChanged,
     required this.onBack,
     required this.onSave,
   });
@@ -918,6 +956,11 @@ class _QuickScoreEntryStep extends StatelessWidget {
   final ValueChanged<QuickScoreAvailablePlayer> onPlayerTap;
   final ReorderCallback onReorder;
   final VoidCallback onScoreEditorClosed;
+
+  /// Labels shown instead of scores, by player id.
+  final Map<String, ScoreRowLabel> rowLabels;
+  final void Function(String playerId, ScoreRowLabel? rowLabel)
+      onRowLabelChanged;
   final VoidCallback onBack;
   final VoidCallback onSave;
 
@@ -950,6 +993,9 @@ class _QuickScoreEntryStep extends StatelessWidget {
                     compact: compact,
                     entryMemory: entryMemory,
                     onLabelTap: () => onPlayerTap(player),
+                    rowLabel: rowLabels[player.id],
+                    onRowLabelChanged: (rowLabel) =>
+                        onRowLabelChanged(player.id, rowLabel),
                     onEditorClosed: onScoreEditorClosed,
                   );
                 },

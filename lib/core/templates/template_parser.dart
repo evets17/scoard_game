@@ -114,6 +114,15 @@ ValuePickerDefinition _parseValuePicker(Map<String, Object?> mode) {
     label: mode['label']! as String,
     options: options,
     total: mode['total'] as String?,
+    rowLabels: [
+      for (final rawLabel in (mode['rowLabels'] as List<Object?>?) ?? const [])
+        if (rawLabel case final Map<String, Object?> label)
+          ValuePickerRowLabel(
+            when: label['when']! as String,
+            text: label['text']! as String,
+            color: label['color'] as String?,
+          ),
+    ],
   );
 }
 

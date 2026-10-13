@@ -81,7 +81,7 @@ void main() {
     // Inning 2: Jules enters two in the hole and one on the board (7) with
     // the Bags picker; Avery gets 2.
     await tester.tap(
-      find.descendant(of: rowFor('Jules'), matching: find.text('0')).first,
+      find.descendant(of: rowFor('Jules'), matching: find.text('–')).first,
     );
     await tester.pumpAndSettle();
     expect(find.text('Bags'), findsOneWidget);

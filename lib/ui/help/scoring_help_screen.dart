@@ -60,6 +60,11 @@ class ScoringHelpScreen extends StatelessWidget {
                   text:
                       'Use + − × ÷ to tally several numbers, like 3 + 4 + 5. It works left to right like a running total, so 3 + 4 × 2 is 14. Division rounds down.',
                 ),
+              _HelpTip(
+                icon: Icons.horizontal_rule_rounded,
+                text:
+                    'A dash means that player has no score yet. If play moves on, it counts as ${fieldDefinition.initialIntegerValue ?? 0}.',
+              ),
               if (fieldDefinition.enableTapToEdit)
                 for (final picker in fieldDefinition.valuePickers)
                   _HelpTip(

@@ -208,6 +208,24 @@ The tiles are shown in template order, groups one after another, in one grid. Gi
 
 The players see the total update as they tap, and Replace or Adjust uses it.
 
+#### `rowLabels`
+
+Optional, and only with `groups`. Shows a word on the player's row in place of their score when the tapped tiles match, so the table can see at a glance what happened. For Flip 7, a bust shows **Bust** in red instead of 0:
+
+```json
+"rowLabels": [
+  { "when": "{bust} > 0", "text": "Bust", "color": "#C62828" }
+]
+```
+
+| Key | Required | Rules |
+|---|---|---|
+| `when` | yes | A formula over the groups, like `total`. The label shows when it is not 0. |
+| `text` | yes | At most 8 characters. |
+| `color` | no | Text colour as `#RRGGBB`. |
+
+Labels are checked in order and the first match is used. A label stays with that round's entry (going back to the round shows it again) until the score is changed another way, such as with − / + or the calculator. The score itself still counts as normal.
+
 ---
 
 ## Scenario File
@@ -283,6 +301,7 @@ Each check taps tiles in a value picker and states the score they should give. T
 | `picker` | yes | The `id` of a value picker in the template. |
 | `taps` | yes | Tiles in the order they are tapped, by their text or value. |
 | `expected` | yes | The score. |
+| `label` | no | The row label the taps should give, for example `"Bust"`, or `null` for no label. |
 
 ### Coverage Rules
 
@@ -291,6 +310,7 @@ The test run fails unless a template's scenarios:
 * include at least one tie for first place
 * answer every prompt that has an `effect` with a non-default value at least once
 * include at least one `pickerTotals` check for every value picker with a `total`
+* include a `pickerTotals` check expecting each row label's `text`
 
 ---
 

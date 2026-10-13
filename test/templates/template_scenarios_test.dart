@@ -160,6 +160,18 @@ class _ScenarioFile {
             'which has a total formula.',
           );
         }
+        for (final rowLabel in picker.rowLabels) {
+          final labelChecked = pickerTotals.any(
+            (check) =>
+                check.picker == picker && check.expectedLabel == rowLabel.text,
+          );
+          if (!labelChecked) {
+            fail(
+              '$path: add a pickerTotals check whose "label" is '
+              '"${rowLabel.text}" for value picker "${picker.id}".',
+            );
+          }
+        }
       }
     }
 
@@ -185,17 +197,34 @@ class _ScenarioFile {
   }
 }
 
-/// Checks a value picker's total formula: tap these tiles, expect this score.
+/// Checks a value picker's total formula: tap these tiles, expect this score
+/// and, optionally, this row label.
 class _PickerTotalCheck {
-  _PickerTotalCheck(this.name, this.picker, this.tappedIndexes, this.expected);
+  _PickerTotalCheck(
+    this.name,
+    this.picker,
+    this.tappedIndexes,
+    this.expected, {
+    required this.checksLabel,
+    required this.expectedLabel,
+  });
 
   final String name;
   final ValuePickerDefinition picker;
   final List<int> tappedIndexes;
   final int expected;
 
+  /// Whether the check names a label; `"label": null` expects none.
+  final bool checksLabel;
+  final String? expectedLabel;
+
   static _PickerTotalCheck parse(_Reader reader, ScoringPreset template) {
-    reader.onlyKeys(const {'name', 'picker', 'taps', 'expected'});
+    reader.onlyKeys(const {'name', 'picker', 'taps', 'expected', 'label'});
+    final checksLabel = reader.has('label');
+    final expectedLabel = reader.map['label'];
+    if (expectedLabel != null && expectedLabel is! String) {
+      reader.fail('label', 'must be the label text, or null for no label');
+    }
     final name = reader.string('name');
     final pickerId = reader.string('picker');
     final picker = template.scoreFields
@@ -226,11 +255,20 @@ class _PickerTotalCheck {
       picker,
       tappedIndexes,
       reader.integer('expected'),
+      checksLabel: checksLabel,
+      expectedLabel: expectedLabel as String?,
     );
   }
 
   void run() {
-    expect(valuePickerTotal(picker, tappedIndexes), expected);
+    expect(valuePickerTotal(picker, tappedIndexes), expected, reason: 'total');
+    if (checksLabel) {
+      expect(
+        valuePickerRowLabel(picker, tappedIndexes)?.text,
+        expectedLabel,
+        reason: 'row label',
+      );
+    }
   }
 }
 
