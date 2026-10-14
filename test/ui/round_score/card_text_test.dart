@@ -47,7 +47,11 @@ void main() {
   Finder inRow(String name, String text) =>
       find.descendant(of: rowFor(name), matching: find.text(text));
 
-  Future<void> bust(WidgetTester tester, String name, {String from = '–'}) async {
+  Future<void> bust(
+    WidgetTester tester,
+    String name, {
+    String from = '–',
+  }) async {
     await tester.tap(inRow(name, from).first);
     await tester.pumpAndSettle();
     await tester.tap(
@@ -70,18 +74,25 @@ void main() {
     await bust(tester, 'Avery');
 
     expect(inRow('Avery', 'Bust'), findsOneWidget);
+    // A small label still leaves the card at its usual height.
+    expect(
+      tester.getSize(rowFor('Avery')).height,
+      tester.getSize(rowFor('Jules')).height,
+    );
     expect(inRow('Jules', '–'), findsOneWidget);
     // Flip 7 draws its Bust label small.
     expect(tester.widget<Text>(inRow('Avery', 'Bust')).style?.fontSize, 18);
 
     // The label is saved with the game in progress.
-    final summary =
-        (await environment.sessionRepository.loadActiveSessions(limit: 10))
-            .firstWhere((summary) => summary.gameName == 'Flip 7');
-    final saved =
-        await environment.loadRoundScoreActiveSession(sessionId: summary.id);
-    final averyEntry = saved!.currentRoundParticipantValues
-        .firstWhere((participant) => participant.displayName == 'Avery');
+    final summary = (await environment.sessionRepository.loadActiveSessions(
+      limit: 10,
+    )).firstWhere((summary) => summary.gameName == 'Flip 7');
+    final saved = await environment.loadRoundScoreActiveSession(
+      sessionId: summary.id,
+    );
+    final averyEntry = saved!.currentRoundParticipantValues.firstWhere(
+      (participant) => participant.displayName == 'Avery',
+    );
     expect(averyEntry.entryPicks['round-score']?.tiles, ['9', 'Bust']);
 
     // Changing the score with + clears the label.
@@ -96,10 +107,7 @@ void main() {
     expect(inRow('Avery', '1'), findsWidgets);
 
     // The number is back at the normal score size.
-    expect(
-      tester.widget<Text>(inRow('Avery', '1').first).style?.fontSize,
-      34,
-    );
+    expect(tester.widget<Text>(inRow('Avery', '1').first).style?.fontSize, 34);
   });
 
   testWidgets('labels belong to their round', (tester) async {
@@ -189,9 +197,9 @@ void main() {
 
     // Play order is Avery, Jules, Mina.
     String? firstPlayer() => [
-          for (final name in ['Avery', 'Jules', 'Mina'])
-            if (tester.any(inRow(name, '1st'))) name,
-        ].singleOrNull;
+      for (final name in ['Avery', 'Jules', 'Mina'])
+        if (tester.any(inRow(name, '1st'))) name,
+    ].singleOrNull;
 
     expect(firstPlayer(), 'Avery');
     for (final expected in ['Jules', 'Mina', 'Avery']) {

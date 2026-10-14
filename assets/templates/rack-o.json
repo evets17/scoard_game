@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "rack-o",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "name": "Rack-O",
   "description": "Arrange your cards in ascending order in your rack. The first player to have all cards in order wins the round. Score is based on the position of cards in the rack. Highest total wins once someone has 500 or more at the end of a round.",
   "source": "https://winning-moves.com/images/RackO_Rules_2023.pdf",
@@ -48,5 +48,8 @@
   },
   "scoreSubLabels": [
     { "when": "{racko} > 0", "text": "Rack-o", "color": "#00D126" }
+  ],
+  "playerBadges": [
+    { "when": "({roundNumber} - 1) % {playerCount} + 1 == {playerPosition}", "text": "1st", "color": "#1565C0" }
   ]
 }

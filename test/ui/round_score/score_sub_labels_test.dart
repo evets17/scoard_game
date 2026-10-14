@@ -76,6 +76,11 @@ void main() {
     // The same 75 from cards alone is not a Rack-O.
     expect(inRow('Jules', '75'), findsWidgets);
     expect(inRow('Jules', 'Rack-o'), findsNothing);
+    // The sub label fits under the number without making the card taller.
+    expect(
+      tester.getSize(rowFor('Avery')).height,
+      tester.getSize(rowFor('Jules')).height,
+    );
 
     // Changing the score another way drops the tiles, and the sub label.
     await tester.tap(

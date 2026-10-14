@@ -101,23 +101,15 @@ class NumericScoreField extends StatefulWidget {
     required bool hasValueLabel,
   }) {
     final theme = Theme.of(context);
-    final textScaler = MediaQuery.textScalerOf(context);
-
-    double lineHeight(TextStyle? style) {
-      final painter = TextPainter(
-        text: TextSpan(text: '0', style: style),
-        textDirection: Directionality.of(context),
-        textScaler: textScaler,
-      )..layout();
-      return painter.height;
-    }
+    double lineHeight(TextStyle? style) => _lineHeight(context, style);
 
     final contentHeights = [
       lineHeight(_labelTextStyle(theme)),
       lineHeight(_scoreTextStyle(theme)) + _scoreVerticalPadding * 2,
       if (fieldDefinition.enableQuickAdjust) _compactIconButtonSize,
       if (hasValueLabel)
-        lineHeight(_valueLabelTextStyle(theme)) + _valueLabelVerticalPadding * 2,
+        lineHeight(_valueLabelTextStyle(theme)) +
+            _valueLabelVerticalPadding * 2,
     ];
     final contentHeight = contentHeights.reduce((a, b) => a > b ? a : b);
 
@@ -140,16 +132,27 @@ const _RowSpacing _compactSpacing = (verticalPadding: 2, bottomMargin: 4);
 const double _normalBadgeDrop = 18;
 const double _compactBadgeDrop = 13;
 const double _scoreVerticalPadding = 6;
+
+/// The height of one line of [style], following the phone's text size.
+double _lineHeight(BuildContext context, TextStyle? style) {
+  final painter = TextPainter(
+    text: TextSpan(text: '0', style: style),
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+  )..layout();
+  return painter.height;
+}
+
 const double _valueLabelVerticalPadding = 8;
 const double _compactIconButtonSize = 40;
 
 /// Font sizes for labels shown instead of the score. The score number keeps
 /// its own size; these only apply while a label is showing.
 double _scoreLabelFontSize(CardTextSize size) => switch (size) {
-      CardTextSize.small => 18,
-      CardTextSize.medium => 23,
-      CardTextSize.large => 28,
-    };
+  CardTextSize.small => 18,
+  CardTextSize.medium => 23,
+  CardTextSize.large => 28,
+};
 
 /// Shown in place of a score that has not been entered yet.
 const emptyScoreText = '–';
@@ -211,7 +214,8 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
           CardText(text: marker.badge, color: marker.color),
       ...widget.cardTexts.playerBadges,
     ];
-    final currentValue = int.tryParse(widget.controller.text.trim()) ??
+    final currentValue =
+        int.tryParse(widget.controller.text.trim()) ??
         (widget.fieldDefinition.initialIntegerValue ?? 0);
     final valueLabel = widget.valueLabelBuilder?.call(currentValue);
     final scoreTextStyle = _scoreTextStyle(theme);
@@ -274,41 +278,51 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
                         horizontal: 8,
                         vertical: _scoreVerticalPadding,
                       ),
-                      // A dash means nothing has been entered yet; it still
-                      // counts as the starting value if play moves on.
-                      child: !isEmpty && scoreLabel != null
-                          ? Semantics(
-                              label: '${scoreLabel.text}, score '
-                                  '$currentValue',
-                              excludeSemantics: true,
-                              child: Text(
-                                scoreLabel.text,
-                                textAlign: TextAlign.center,
-                                style: scoreTextStyle?.copyWith(
-                                  fontSize: _scoreLabelFontSize(scoreLabel.size),
-                                  color: parseTileColor(scoreLabel.color),
+                      // Always the height of a score number, so a small score
+                      // label or a sub label never changes the card's height.
+                      child: SizedBox(
+                        height: _lineHeight(context, scoreTextStyle),
+                        child: Center(
+                          // A dash means nothing has been entered yet; it still
+                          // counts as the starting value if play moves on.
+                          child: !isEmpty && scoreLabel != null
+                              ? Semantics(
+                                  label:
+                                      '${scoreLabel.text}, score '
+                                      '$currentValue',
+                                  excludeSemantics: true,
+                                  child: Text(
+                                    scoreLabel.text,
+                                    textAlign: TextAlign.center,
+                                    style: scoreTextStyle?.copyWith(
+                                      fontSize: _scoreLabelFontSize(
+                                        scoreLabel.size,
+                                      ),
+                                      color: parseTileColor(scoreLabel.color),
+                                    ),
+                                  ),
+                                )
+                              : isEmpty
+                              ? Semantics(
+                                  label: 'No score yet',
+                                  excludeSemantics: true,
+                                  child: Text(
+                                    emptyScoreText,
+                                    textAlign: TextAlign.center,
+                                    style: scoreTextStyle?.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant
+                                          .withValues(alpha: 0.6),
+                                    ),
+                                  ),
+                                )
+                              : _ScoreNumber(
+                                  enteredValue: currentValue,
+                                  roundScore: widget.roundScore,
+                                  subLabel: widget.cardTexts.scoreSubLabel,
+                                  style: scoreTextStyle,
                                 ),
-                              ),
-                            )
-                          : isEmpty
-                          ? Semantics(
-                              label: 'No score yet',
-                              excludeSemantics: true,
-                              child: Text(
-                                emptyScoreText,
-                                textAlign: TextAlign.center,
-                                style: scoreTextStyle?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant
-                                      .withValues(alpha: 0.6),
-                                ),
-                              ),
-                            )
-                          : _ScoreNumber(
-                              enteredValue: currentValue,
-                              roundScore: widget.roundScore,
-                              note: widget.cardTexts.scoreSubLabel,
-                              style: scoreTextStyle,
-                            ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -399,9 +413,9 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
   double _minimumWidthForDigits(
     BuildContext context,
     TextStyle? style,
-    int minimumDigits,
-    {double horizontalPadding = 0}
-  ) {
+    int minimumDigits, {
+    double horizontalPadding = 0,
+  }) {
     if (minimumDigits <= 0) {
       return 0;
     }
@@ -418,6 +432,7 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
     return textPainter.width + horizontalPadding;
   }
 }
+
 /// The player's name with their badges low in the card under its start, so
 /// the badges never take width from the name and line up down the list.
 class _NameWithBadges extends StatelessWidget {
@@ -440,12 +455,7 @@ class _NameWithBadges extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Text(
-          name,
-          style: style,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
+        Text(name, style: style, maxLines: 1, overflow: TextOverflow.ellipsis),
         Positioned(
           left: 0,
           bottom: -drop,
@@ -475,8 +485,9 @@ class _ScoreBadge extends StatelessWidget {
     final theme = Theme.of(context);
     final background =
         parseTileColor(badge.color) ?? theme.colorScheme.secondaryContainer;
-    final foreground =
-        background.computeLuminance() > 0.5 ? Colors.black87 : Colors.white;
+    final foreground = background.computeLuminance() > 0.5
+        ? Colors.black87
+        : Colors.white;
 
     return Semantics(
       label: badge.text,
@@ -503,45 +514,63 @@ class _ScoreBadge extends StatelessWidget {
 }
 
 /// The main number on a score row: the round score, with the template's
-/// note underneath when it has one ("8" over "from 4"). -/+ and the entry
-/// sheet still change the entered value.
+/// score sub label just under its digits when it has one ("8" over
+/// "from 4"). The sub label hangs into the space below the number, so the
+/// number stays put and the card keeps its height. -/+ and the entry sheet
+/// still change the entered value.
 class _ScoreNumber extends StatelessWidget {
   const _ScoreNumber({
     required this.enteredValue,
     required this.roundScore,
-    required this.note,
+    required this.subLabel,
     required this.style,
   });
 
   final int enteredValue;
   final int? roundScore;
-  final CardText? note;
+  final CardText? subLabel;
   final TextStyle? style;
 
   @override
   Widget build(BuildContext context) {
     final shown = roundScore ?? enteredValue;
-    final note = this.note;
-    if (note == null) {
-      return Text('$shown', textAlign: TextAlign.center, style: style);
+    final number = Text('$shown', textAlign: TextAlign.center, style: style);
+    final subLabel = this.subLabel;
+    if (subLabel == null) {
+      return number;
     }
 
     final theme = Theme.of(context);
+    final baseline = (TextPainter(
+      text: TextSpan(text: '$shown', style: style),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout()).computeDistanceToActualBaseline(TextBaseline.alphabetic);
+
     return Semantics(
-      label: '$shown, ${note.text}',
+      label: '$shown, ${subLabel.text}',
       excludeSemantics: true,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.topCenter,
         children: [
-          Text('$shown', textAlign: TextAlign.center, style: style),
-          Text(
-            note.text,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: parseTileColor(note.color) ??
-                  theme.colorScheme.onSurfaceVariant,
+          number,
+          // Wider than the number when it needs to be, centred under it.
+          Positioned(
+            top: baseline + 1,
+            left: -40,
+            right: -40,
+            child: Text(
+              subLabel.text,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                height: 1.1,
+                color:
+                    parseTileColor(subLabel.color) ??
+                    theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ],

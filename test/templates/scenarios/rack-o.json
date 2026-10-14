@@ -12,7 +12,12 @@
       "expected": {
         "totals": { "avery": 220, "jules": 245, "mina": 170 },
         "winners": ["jules"],
-        "placements": { "jules": 1, "avery": 2, "mina": 3 }
+        "placements": { "jules": 1, "avery": 2, "mina": 3 },
+        "roundPlayerBadges": [
+          { "avery": ["1st"] },
+          { "jules": ["1st"] },
+          { "mina": ["1st"] }
+        ]
       }
     },
     {
