@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scoard_game/application/models/scoring/calculated_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
@@ -5,9 +7,11 @@ import 'package:scoard_game/application/models/scoring/score_field_definition.da
 import 'package:scoard_game/application/models/scoring/score_input_kind.dart';
 import 'package:scoard_game/application/models/scoring/scoring_model.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
+import 'package:scoard_game/application/models/scoring/value_picker_pick.dart';
 import 'package:scoard_game/application/models/scoring/winner_rule.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_participant_values.dart';
 import 'package:scoard_game/core/scoring/score_engine.dart';
+import 'package:scoard_game/core/templates/template_catalog.dart';
 
 ScoringPreset presetWith({
   List<CalculatedFieldDefinition> calculated = const [],
@@ -129,6 +133,104 @@ void main() {
     expect(
       engine.scores(entries({'a': 3}), roundNumber: 1, options: {'double': 0}),
       {'a': 3},
+    );
+  });
+
+  test('score notes read tiles, fields, other players, and prompts', () {
+    final preset = loadTemplateCatalog({
+      'notes.json': jsonEncode({
+        'schemaVersion': 2,
+        'id': 'notes',
+        'version': '1.0.0',
+        'name': 'Notes',
+        'description': 'x',
+        'players': {'minimum': 2},
+        'scoringModel': 'rounds',
+        'winner': 'highestScore',
+        'prompts': [
+          {'id': 'bonus-note', 'type': 'boolean', 'label': 'Bonus note'},
+        ],
+        'fields': [
+          {
+            'id': 'points',
+            'label': 'Points',
+            'entry': {'tapToEdit': true},
+            'entryModes': [
+              {
+                'type': 'valuePicker',
+                'id': 'cards',
+                'label': 'Cards',
+                'groups': [
+                  {
+                    'id': 'numbers',
+                    'values': [
+                      {'value': 1},
+                      {'value': 2},
+                    ],
+                  },
+                  {
+                    'id': 'bonus',
+                    'values': [
+                      {'value': 10, 'text': 'Bonus'},
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          {'id': 'scored', 'label': 'Scored', 'formula': '{points} * 2'},
+        ],
+        'score': 'scored',
+        'scoreNotes': [
+          {
+            'when': '{bonus} > 0 and {bonus-note}',
+            'text': 'Bonus +{bonus}',
+            'color': '#00AA00',
+          },
+          {
+            'when': '{scored} > highestOther(scored)',
+            'text': 'from {points}, top',
+          },
+        ],
+      }),
+    }).catalog.byId('notes');
+    final engine = ScoreEngine.of(preset);
+
+    final participants = [
+      QuickScoreParticipantValues(
+        playerId: 'a',
+        displayName: 'a',
+        enteredValues: const {'points': 11},
+        entryPicks: const {
+          'points': ValuePickerPick(pickerId: 'cards', tiles: ['1', 'Bonus']),
+        },
+      ),
+      const QuickScoreParticipantValues(
+        playerId: 'b',
+        displayName: 'b',
+        enteredValues: {'points': 2},
+      ),
+    ];
+
+    // With the option on, the tile note comes first.
+    final withOption = engine.scoreNotes(
+      participants,
+      roundNumber: 1,
+      options: const {'bonus-note': 1},
+    );
+    expect(withOption.keys, ['a']);
+    expect(withOption['a']!.text, 'Bonus +10');
+    expect(withOption['a']!.color, '#00AA00');
+
+    // Without it, the next note that applies is used; b has none.
+    final withoutOption = engine.scoreNotes(
+      participants,
+      roundNumber: 1,
+      options: const {'bonus-note': 0},
+    );
+    expect(
+      {for (final entry in withoutOption.entries) entry.key: entry.value.text},
+      {'a': 'from 11, top'},
     );
   });
 

@@ -26,6 +26,7 @@ class NumericScoreField extends StatefulWidget {
     this.activeMarkers = const {},
     this.onMarkerChanged,
     this.roundScore,
+    this.scoreNote,
     this.playerColor,
     this.onEntryPickChanged,
     this.compact = false,
@@ -56,9 +57,14 @@ class NumericScoreField extends StatefulWidget {
   final void Function(String markerId, bool isSet)? onMarkerChanged;
 
   /// The score this entry counts for, when the template calculates it (such
-  /// as Skyjo doubling). Shown as the main number, with the entered value
-  /// underneath when they differ. Null shows the entered value.
+  /// as Skyjo doubling). Shown as the main number. Null shows
+  /// the entered value.
   final int? roundScore;
+
+  /// The template's note for this score, shown in small text under it,
+  /// such as "from 4" or "Rack-o". The app shows it; the template decides
+  /// what it says.
+  final ScoreRowLabel? scoreNote;
 
   /// The player's colour for this game, shown as a halo around the row.
   final PlayerColor? playerColor;
@@ -303,6 +309,7 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
                           : _ScoreNumber(
                               enteredValue: currentValue,
                               roundScore: widget.roundScore,
+                              note: widget.scoreNote,
                               style: scoreTextStyle,
                             ),
                     ),
@@ -356,6 +363,7 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
       currentValue: currentValue,
       hasCurrentValue: widget.controller.text.trim().isNotEmpty,
       currentRoundScore: widget.roundScore,
+      currentScoreNote: widget.scoreNote?.text,
       allowReplace: widget.fieldDefinition.allowReplace,
       allowAdjust: widget.fieldDefinition.allowAdjust,
       entryMemory: widget.entryMemory,
@@ -471,39 +479,46 @@ class _ScoreBadge extends StatelessWidget {
   }
 }
 
-/// The main number on a score row: the round score, with the entered value
-/// underneath when a template's calculation makes them differ ("8" over
-/// "from 4"). -/+ and the entry sheet still change the entered value.
+/// The main number on a score row: the round score, with the template's
+/// note underneath when it has one ("8" over "from 4"). -/+ and the entry
+/// sheet still change the entered value.
 class _ScoreNumber extends StatelessWidget {
   const _ScoreNumber({
     required this.enteredValue,
     required this.roundScore,
+    required this.note,
     required this.style,
   });
 
   final int enteredValue;
   final int? roundScore;
+  final ScoreRowLabel? note;
   final TextStyle? style;
 
   @override
   Widget build(BuildContext context) {
     final shown = roundScore ?? enteredValue;
-    if (shown == enteredValue) {
-      return Text('$enteredValue', textAlign: TextAlign.center, style: style);
+    final note = this.note;
+    if (note == null) {
+      return Text('$shown', textAlign: TextAlign.center, style: style);
     }
 
     final theme = Theme.of(context);
     return Semantics(
-      label: '$shown, from $enteredValue',
+      label: '$shown, ${note.text}',
       excludeSemantics: true,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text('$shown', textAlign: TextAlign.center, style: style),
           Text(
-            'from $enteredValue',
+            note.text,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+              color: parseTileColor(note.color) ??
+                  theme.colorScheme.onSurfaceVariant,
             ),
           ),
         ],

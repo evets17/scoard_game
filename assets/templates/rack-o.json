@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "rack-o",
+  "version": "1.0.0",
+  "name": "Rack-O",
+  "description": "Arrange your cards in ascending order in your rack. The first player to have all cards in order wins the round. Score is based on the position of cards in the rack. Highest total wins once someone has 500 or more at the end of a round.",
+  "source": "https://winning-moves.com/images/RackO_Rules_2023.pdf",
+  "players": { "minimum": 2, "maximum": 4 },
+  "scoringModel": "rounds",
+  "winner": "highestScore",
+  "scoreField": {
+    "id": "round-score",
+    "label": "Round Score",
+    "initialValue": 0,
+    "minimumDisplayDigits": 2,
+    "entry": { "tapToEdit": true, "quickAdjust": true, "replace": true, "adjust": true },
+    "entryModes": [
+      {
+        "type": "valuePicker",
+        "id": "cards",
+        "label": "Score",
+        "groups": [
+          {
+            "id": "slots",
+            "values": [
+              { "value": 5 }, { "value": 10 }, { "value": 15 }, { "value": 20 },
+              { "value": 25 }, { "value": 30 }, { "value": 35 }, { "value": 40 },
+              { "value": 45 }
+                        ]
+          },
+          {
+            "id": "racko",
+            "values": [{ "value": 75, "text": "Rack-O", "color": "#00D126" }]
+          },
+          {
+            "id": "runs",
+            "values": [
+              { "value": 50, "text": "Run 3", "color": "#F57C00" },
+              { "value": 100, "text": "Run 4", "color": "#F57C00" },
+              { "value": 200, "text": "Run 5", "color": "#F57C00" },
+              { "value": 400, "text": "Run 6+", "color": "#F57C00" }
+            ]
+          }
+        ],
+        "total": "({slots} + {runs} + {racko})"
+      }
+    ]
+  },
+  "scoreNotes": [
+    { "when": "{racko} > 0", "text": "Rack-o", "color": "#00D126" }
+  ]
+}

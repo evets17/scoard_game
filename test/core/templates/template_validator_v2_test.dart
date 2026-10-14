@@ -164,6 +164,102 @@ void main() {
     expect(problems.where((p) => p.startsWith('fields:')), isEmpty);
   });
 
+  test('score notes read fields, prompts, and tile groups', () {
+    final template = versionTwo(
+      fields: [
+        {
+          ...entered,
+          'entry': {'tapToEdit': true},
+          'entryModes': [
+            {
+              'type': 'valuePicker',
+              'id': 'cards',
+              'label': 'Cards',
+              'groups': [
+                {
+                  'id': 'bonus',
+                  'values': [
+                    {'value': 5, 'text': 'Bonus'},
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        calculated('scored', '{points} * 2'),
+      ],
+    )
+      ..['prompts'] = [
+        {'id': 'double', 'type': 'boolean', 'label': 'Double'},
+      ]
+      ..['scoreNotes'] = [
+        {
+          'when': '{bonus} > 0 and {scored} > highestOther(scored)',
+          'text': 'Bonus! from {points}',
+          'color': '#00AA00',
+        },
+        {'when': '{double} and countIn(bonus) == 0', 'text': '×2'},
+      ];
+    expect(problemsFor(template), isEmpty);
+
+    final preset = loadTemplateCatalog({
+      'test-game.json': jsonEncode(template),
+    }).catalog.byId('test-game');
+    expect(preset.scoreNotes.map((note) => note.text), ['Bonus! from {points}', '×2']);
+  });
+
+  test('score note mistakes are reported', () {
+    final template = versionTwo(
+      fields: [entered, calculated('scored', '{points}')],
+    )..['scoreNotes'] = [
+        {'when': '{nope} > 0', 'text': 'from {missing}', 'color': 'green'},
+        {'text': 'This note is far too long to fit under a score'},
+      ];
+
+    expect(problemsFor(template), [
+      'scoreNotes[0].text: unknown name "{missing}"; expected one of: '
+          'points, scored, playerCount, roundNumber',
+      'scoreNotes[0].color: "green" must look like #3A7BD5',
+      startsWith('scoreNotes[0].when: unknown name "nope"'),
+      'scoreNotes[1].text: must be at most 24 characters',
+      'scoreNotes[1].when: is required',
+    ]);
+  });
+
+  test('a tile group may not share a name that notes read', () {
+    final template = versionTwo(
+      fields: [
+        {
+          ...entered,
+          'entry': {'tapToEdit': true},
+          'entryModes': [
+            {
+              'type': 'valuePicker',
+              'id': 'cards',
+              'label': 'Cards',
+              'groups': [
+                {
+                  'id': 'scored',
+                  'values': [
+                    {'value': 1},
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        calculated('scored', '{points}'),
+      ],
+    )..['scoreNotes'] = [
+        {'when': '{scored} > 0', 'text': 'Scored'},
+      ];
+
+    expect(
+      problemsFor(template),
+      contains(startsWith('scoreNotes: tile group "scored" has the same name')),
+    );
+  });
+
   test('formulas can read prompts, and fields cannot reuse their ids', () {
     final template = versionTwo(
       fields: [entered, calculated('scored', '{points} * if({double}, 2, 1)')],

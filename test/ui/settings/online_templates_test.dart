@@ -14,9 +14,9 @@ import '../../support/fake_template_downloader.dart';
 import '../../support/test_templates.dart';
 
 String skyjo(void Function(Map<String, Object?> json) edit) {
-  final json = jsonDecode(
-    File('assets/templates/skyjo.json').readAsStringSync(),
-  ) as Map<String, Object?>;
+  final json =
+      jsonDecode(File('assets/templates/skyjo.json').readAsStringSync())
+          as Map<String, Object?>;
   edit(json);
   return jsonEncode(json);
 }
@@ -66,7 +66,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(downloader.requests, hasLength(1));
-    expect(find.text('Checked just now. Using 2 online templates.'), findsOneWidget);
+    expect(
+      find.text('Checked just now. Using 2 online templates.'),
+      findsOneWidget,
+    );
+    expect(find.text('Content last updated just now.'), findsOneWidget);
     expect(find.text('Check now'), findsOneWidget);
 
     // Score a Game lists the template that is only online.
@@ -104,6 +108,7 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(find.text('Content last updated just now.'), findsOneWidget);
   });
 
   testWidgets('the template URL can be changed and must be https', (
@@ -131,10 +136,14 @@ void main() {
   test('times read naturally', () {
     final now = DateTime(2026, 10, 13, 12);
     expect(describeWhen(now, now), 'just now');
-    expect(describeWhen(now.subtract(const Duration(minutes: 1)), now),
-        '1 minute ago');
-    expect(describeWhen(now.subtract(const Duration(hours: 5)), now),
-        '5 hours ago');
+    expect(
+      describeWhen(now.subtract(const Duration(minutes: 1)), now),
+      '1 minute ago',
+    );
+    expect(
+      describeWhen(now.subtract(const Duration(hours: 5)), now),
+      '5 hours ago',
+    );
     expect(describeWhen(DateTime(2026, 10, 2), now), 'on 2 Oct');
   });
 }

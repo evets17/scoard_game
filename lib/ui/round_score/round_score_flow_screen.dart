@@ -7,6 +7,7 @@ import 'package:scoard_game/application/models/scoring/marker_field_definition.d
 import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_pick.dart';
+import 'package:scoard_game/application/models/scoring/score_row_label.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/application/models/scoring/winner_rule.dart';
 import 'package:scoard_game/application/models/sessions/player_color.dart';
@@ -207,6 +208,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
                   entryMemory: _scoreEntryMemory,
                   priorRoundTotals: _priorRoundTotals(),
                   currentRoundScores: _currentRoundScores(),
+                  scoreNotes: _currentRoundNotes(),
                   entryPicks: _entryPicks,
                   onEntryPickChanged: _setEntryPick,
                   markers: _preset!.markerFields,
@@ -289,26 +291,41 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
   /// Each player's score for the round on screen, from what is entered so
   /// far. With a calculated score this can depend on the other players.
   Map<String, int> _currentRoundScores() {
-    final fieldDefinition = _preset!.scoreFields.first;
     return ScoreEngine.of(_preset!).scores(
-      [
-        for (final player in _selectedPlayers)
-          QuickScoreParticipantValues(
-            playerId: player.id,
-            displayName: player.displayName,
-            enteredValues: {
-              fieldDefinition.id: _parseEnteredScore(
-                    rawValue: _scoreControllers[player.id]?.text.trim() ?? '',
-                    fieldDefinition: fieldDefinition,
-                  ) ??
-                  0,
-              ..._markerValuesFor(player.id),
-            },
-          ),
-      ],
+      _currentRoundParticipants(),
       roundNumber: _currentRoundNumber,
       options: _formulaOptions,
     );
+  }
+
+  /// The template's note under each player's score for the round on screen.
+  Map<String, ScoreRowLabel> _currentRoundNotes() {
+    return ScoreEngine.of(_preset!).scoreNotes(
+      _currentRoundParticipants(),
+      roundNumber: _currentRoundNumber,
+      options: _formulaOptions,
+    );
+  }
+
+  /// What is entered so far this round, with any tiles picked.
+  List<QuickScoreParticipantValues> _currentRoundParticipants() {
+    final fieldDefinition = _preset!.scoreFields.first;
+    return [
+      for (final player in _selectedPlayers)
+        QuickScoreParticipantValues(
+          playerId: player.id,
+          displayName: player.displayName,
+          enteredValues: {
+            fieldDefinition.id: _parseEnteredScore(
+                  rawValue: _scoreControllers[player.id]?.text.trim() ?? '',
+                  fieldDefinition: fieldDefinition,
+                ) ??
+                0,
+            ..._markerValuesFor(player.id),
+          },
+          entryPicks: _entryPicksFor(player.id, fieldDefinition.id),
+        ),
+    ];
   }
 
   void _reorderPlayers(int oldIndex, int newIndex) {
@@ -1234,6 +1251,7 @@ class _RoundScoreEntryStep extends StatelessWidget {
     required this.entryMemory,
     required this.priorRoundTotals,
     required this.currentRoundScores,
+    required this.scoreNotes,
     required this.entryPicks,
     required this.onEntryPickChanged,
     required this.markers,
@@ -1262,6 +1280,9 @@ class _RoundScoreEntryStep extends StatelessWidget {
 
   /// Scores for this round from what is entered so far.
   final Map<String, int> currentRoundScores;
+
+  /// The template's note under each player's score, by player id.
+  final Map<String, ScoreRowLabel> scoreNotes;
 
   /// Value picker tiles behind each player's entry this round, by player id.
   final Map<String, ValuePickerPick> entryPicks;
@@ -1351,6 +1372,7 @@ class _RoundScoreEntryStep extends StatelessWidget {
                     roundScore: scoreIsCalculated
                         ? currentRoundScores[player.id]
                         : null,
+                    scoreNote: scoreNotes[player.id],
                     valueLabelMinimumDigits: 3,
                     // An entered score updates from the row's own value; a
                     // calculated one comes from the whole round.

@@ -8,6 +8,7 @@ library;
 import 'package:scoard_game/core/formulas/formula_checker.dart';
 import 'package:scoard_game/core/formulas/formula_parser.dart';
 import 'package:scoard_game/core/scoring/score_engine.dart';
+import 'package:scoard_game/core/scoring/score_note_text.dart';
 
 const supportedTemplateSchemaVersions = {1, 2};
 
@@ -29,6 +30,10 @@ const maximumTileTextLength = 6;
 
 /// Keeps a row label inside the space a score normally takes.
 const maximumRowLabelLength = 8;
+
+/// Keeps a score note to one short line under the score, as written
+/// (before any {name} is filled in).
+const maximumScoreNoteLength = 24;
 
 final _idPattern = RegExp(r'^[a-z0-9]+(-[a-z0-9]+)*$');
 final _colorPattern = RegExp(r'^#[0-9A-Fa-f]{6}$');
@@ -81,6 +86,7 @@ List<TemplateProblem> validateTemplateJson(
     'scoringModel',
     'winner',
     'prompts',
+    'scoreNotes',
     if (isVersion2) ...{'fields', 'score'} else 'scoreField',
   });
 
@@ -126,20 +132,31 @@ List<TemplateProblem> validateTemplateJson(
     }
   }
 
+  final groupIds = <String>{};
+  final Set<String> fieldIds;
   if (isVersion2) {
-    _validateFields(template, seenPromptIds);
+    fieldIds = _validateFields(template, seenPromptIds, groupIds);
   } else {
     final scoreField = template.object('scoreField', required: true);
-    if (scoreField != null) {
-      _validateEnteredField(scoreField);
-    }
+    final id = scoreField == null
+        ? null
+        : _validateEnteredField(scoreField, groupIds);
+    fieldIds = {?id};
   }
+
+  _validateScoreNotes(
+    template,
+    fieldIds: fieldIds,
+    promptIds: seenPromptIds,
+    groupIds: groupIds,
+  );
 
   return problems;
 }
 
-/// A field whose value players enter. Returns its id if it is valid.
-String? _validateEnteredField(_ObjectReader field) {
+/// A field whose value players enter. Returns its id if it is valid, and
+/// adds its value pickers' tile group ids to [groupIds].
+String? _validateEnteredField(_ObjectReader field, Set<String> groupIds) {
   field.allowOnlyKeys(const {
     'id',
     'label',
@@ -180,7 +197,7 @@ String? _validateEnteredField(_ObjectReader field) {
     final seenModeIds = <String>{};
     for (final mode in entryModes) {
       if (mode.isObject) {
-        _validateEntryMode(mode, seenModeIds);
+        groupIds.addAll(_validateEntryMode(mode, seenModeIds));
       }
     }
   }
@@ -213,11 +230,15 @@ String? _validateMarkerField(_ObjectReader field) {
 
 /// Version 2: `fields` (entered, calculated, and marker) and `score`.
 /// [promptIds] can be read by formulas, so fields may not reuse them.
-void _validateFields(_ObjectReader template, Set<String> promptIds) {
+Set<String> _validateFields(
+  _ObjectReader template,
+  Set<String> promptIds,
+  Set<String> groupIds,
+) {
   final fields = template.list('fields', required: true);
   final scoreId = template.identifier('score', required: true);
   if (fields == null) {
-    return;
+    return const {};
   }
 
   final fieldIds = <String>{};
@@ -245,7 +266,7 @@ void _validateFields(_ObjectReader template, Set<String> promptIds) {
 
     if (!field.has('formula')) {
       enteredCount += 1;
-      addId(field, _validateEnteredField(field));
+      addId(field, _validateEnteredField(field, groupIds));
       continue;
     }
 
@@ -305,9 +326,12 @@ void _validateFields(_ObjectReader template, Set<String> promptIds) {
       '"$scoreId" is not one of the fields: ${fieldIds.join(', ')}',
     );
   }
+
+  return fieldIds;
 }
 
-void _validateEntryMode(_ObjectReader mode, Set<String> seenModeIds) {
+/// Returns the picker's tile group ids.
+Set<String> _validateEntryMode(_ObjectReader mode, Set<String> seenModeIds) {
   mode.allowOnlyKeys(
     const {'type', 'id', 'label', 'values', 'groups', 'total', 'rowLabels'},
   );
@@ -326,7 +350,7 @@ void _validateEntryMode(_ObjectReader mode, Set<String> seenModeIds) {
       hasValues ? 'groups' : 'values',
       'use either "values" or "groups", not ${hasValues ? 'both' : 'neither'}',
     );
-    return;
+    return const {};
   }
 
   // Tiles are told apart by what they show, so "2" and "+2" can both exist.
@@ -457,6 +481,83 @@ void _validateEntryMode(_ObjectReader mode, Set<String> seenModeIds) {
       hasValues ? 'values' : 'groups',
       'has $tileCount tiles; the most is $maximumPickerValues',
     );
+  }
+
+  return groupIds;
+}
+
+/// The small line under a player's score. The first note whose `when` is
+/// true is shown. Notes read fields, prompts, built-in values, and the tile
+/// groups of the score's value pickers.
+void _validateScoreNotes(
+  _ObjectReader template, {
+  required Set<String> fieldIds,
+  required Set<String> promptIds,
+  required Set<String> groupIds,
+}) {
+  final notes = template.list('scoreNotes');
+  if (notes == null) {
+    return;
+  }
+
+  // {name} must mean one thing.
+  for (final groupId in groupIds) {
+    if (fieldIds.contains(groupId) ||
+        promptIds.contains(groupId) ||
+        formulaBuiltIns.contains(groupId)) {
+      template.problem(
+        'scoreNotes',
+        'tile group "$groupId" has the same name as a field, prompt, or '
+            'built-in value; rename one so {$groupId} is clear',
+      );
+    }
+  }
+  final textNames = {...fieldIds, ...promptIds, ...groupIds, ...formulaBuiltIns};
+
+  for (final note in notes) {
+    if (!note.isObject) {
+      continue;
+    }
+    note.allowOnlyKeys(const {'when', 'text', 'color'});
+
+    final text = note.text('text', required: true);
+    if (text != null) {
+      if (text.length > maximumScoreNoteLength) {
+        note.problem('text', 'must be at most $maximumScoreNoteLength characters');
+      }
+      for (final name in scoreNoteTextNames(text)) {
+        if (!textNames.contains(name)) {
+          note.problem(
+            'text',
+            'unknown name "{$name}"; expected one of: ${textNames.join(', ')}',
+          );
+        }
+      }
+    }
+
+    final color = note.text('color');
+    if (color != null && !_colorPattern.hasMatch(color)) {
+      note.problem('color', '"$color" must look like #3A7BD5');
+    }
+
+    final when = note.text('when', required: true);
+    if (when == null) {
+      continue;
+    }
+    try {
+      final problems = checkFormula(
+        Formula.parse(when),
+        fieldIds: fieldIds,
+        promptIds: promptIds,
+        groupIds: groupIds,
+        context: FormulaContext.note,
+      );
+      for (final problem in problems) {
+        note.problem('when', problem.toString());
+      }
+    } on FormulaSyntaxError catch (error) {
+      note.problem('when', error.toString());
+    }
   }
 }
 

@@ -8,6 +8,10 @@ enum FormulaContext {
 
   /// A value picker's total: reads the totals of its tile groups.
   picker,
+
+  /// A score note: reads everything a field formula can, plus the tile
+  /// groups of the score's value pickers.
+  note,
 }
 
 /// Values every field formula can use, like fields.
@@ -42,6 +46,15 @@ const _arityByContext = <FormulaContext, Map<String, (int, int?)>>{
     'countIn': (1, 1),
     'distinctIn': (1, 1),
   },
+  FormulaContext.note: {
+    ..._commonArity,
+    'highestOther': (1, 1),
+    'lowestOther': (1, 1),
+    'sumOthers': (1, 1),
+    'countOthers': (0, 0),
+    'countIn': (1, 1),
+    'distinctIn': (1, 1),
+  },
 };
 
 class FormulaProblem {
@@ -57,7 +70,8 @@ class FormulaProblem {
 }
 
 /// Checks [formula] against the names it may read: the template's fields
-/// and [promptIds], or for [FormulaContext.picker] the picker's tile groups.
+/// and [promptIds], or for [FormulaContext.picker] the picker's tile groups
+/// (given as [fieldIds]). A [FormulaContext.note] also reads [groupIds].
 ///
 /// Returns the problems found, and through [dependencies] the names the
 /// formula reads.
@@ -65,21 +79,35 @@ List<FormulaProblem> checkFormula(
   Formula formula, {
   required Set<String> fieldIds,
   Set<String> promptIds = const {},
+  Set<String> groupIds = const {},
   FormulaContext context = FormulaContext.field,
   Set<String>? dependencies,
 }) {
   final problems = <FormulaProblem>[];
   final reads = dependencies ?? <String>{};
   final arity = _arityByContext[context]!;
-  final builtIns = context == FormulaContext.field
-      ? {...formulaBuiltIns, ...promptIds}
-      : const <String>{};
-  final bareNameFunctions = context == FormulaContext.field
-      ? otherPlayerFunctions
-      : pickerGroupFunctions;
-  final nameKind = context == FormulaContext.field ? 'field' : 'group';
+  final builtIns = switch (context) {
+    FormulaContext.field => {...formulaBuiltIns, ...promptIds},
+    FormulaContext.picker => const <String>{},
+    FormulaContext.note => {...formulaBuiltIns, ...promptIds, ...groupIds},
+  };
 
-  void check(FormulaNode node, {bool fieldNameAllowed = false}) {
+  /// The bare names [function] takes, and what they are called, or null if
+  /// it takes values.
+  (Set<String>, String)? bareNamesFor(String function) {
+    if (context != FormulaContext.picker &&
+        otherPlayerFunctions.contains(function)) {
+      return (fieldIds, 'field');
+    }
+    if (pickerGroupFunctions.contains(function)) {
+      return context == FormulaContext.note
+          ? (groupIds, 'group')
+          : (fieldIds, 'group');
+    }
+    return null;
+  }
+
+  void check(FormulaNode node, {(Set<String>, String)? bareNames}) {
     switch (node) {
       case NumberNode():
         break;
@@ -96,7 +124,7 @@ List<FormulaProblem> checkFormula(
           );
         }
       case FieldNameNode(:final name, :final position):
-        if (!fieldNameAllowed) {
+        if (bareNames == null) {
           problems.add(
             FormulaProblem(
               fieldIds.contains(name) || builtIns.contains(name)
@@ -105,10 +133,12 @@ List<FormulaProblem> checkFormula(
               position,
             ),
           );
-        } else if (fieldIds.contains(name)) {
+        } else if (bareNames.$1.contains(name)) {
           reads.add(name);
         } else {
-          problems.add(FormulaProblem('unknown $nameKind "$name"', position));
+          problems.add(
+            FormulaProblem('unknown ${bareNames.$2} "$name"', position),
+          );
         }
       case UnaryNode(:final operand):
         check(operand);
@@ -145,19 +175,20 @@ List<FormulaProblem> checkFormula(
           );
         }
 
-        final takesName = bareNameFunctions.contains(name);
+        final bareNames = bareNamesFor(name);
         for (final argument in arguments) {
-          if (takesName && argument is! FieldNameNode) {
+          if (bareNames != null && argument is! FieldNameNode) {
+            final (names, kind) = bareNames;
             problems.add(
               FormulaProblem(
-                '$name needs a $nameKind name without braces, for example '
-                '$name(${fieldIds.isEmpty ? 'points' : fieldIds.first})',
+                '$name needs a $kind name without braces, for example '
+                '$name(${names.isEmpty ? 'points' : names.first})',
                 argument.position,
               ),
             );
             continue;
           }
-          check(argument, fieldNameAllowed: takesName);
+          check(argument, bareNames: bareNames);
         }
     }
   }

@@ -13,6 +13,10 @@
           { "blue": 3, "red": 0 },
           { "blue": 0, "red": 6 }
         ],
+        "roundNotes": [
+          { "blue": "from 7", "red": "from 4" },
+          { "blue": "from 3", "red": "from 9" }
+        ],
         "totals": { "blue": 3, "red": 6 },
         "winners": ["red"]
       }
@@ -29,6 +33,7 @@
           { "blue": 0, "red": 0 },
           { "blue": 0, "red": 0 }
         ],
+        "roundNotes": [{ "blue": "from 5", "red": "from 5" }, {}],
         "totals": { "blue": 0, "red": 0 }
       }
     },

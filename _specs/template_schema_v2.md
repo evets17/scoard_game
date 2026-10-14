@@ -13,7 +13,7 @@ Everything in [version 1](template_schema_v1.md) still applies except where this
 | `"schemaVersion": 1` | `"schemaVersion": 2` |
 | `scoreField` (one entered field, which is the score) | `fields` (entered and calculated fields) and `score` (which field is the score) |
 
-All other top-level keys (`id`, `version`, `name`, `subtitle`, `description`, `source`, `players`, `scoringModel`, `winner`, `prompts`) are unchanged. `scoreField` is not allowed in version 2.
+All other top-level keys (`id`, `version`, `name`, `subtitle`, `description`, `source`, `players`, `scoringModel`, `winner`, `prompts`, `scoreNotes`) are unchanged. Score notes can also read calculated fields and markers. `scoreField` is not allowed in version 2.
 
 ---
 
@@ -23,7 +23,7 @@ All other top-level keys (`id`, `version`, `name`, `subtitle`, `description`, `s
 {
   "schemaVersion": 2,
   "id": "cornhole",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "Cornhole",
   "subtitle": "Cancellation scoring",
   "description": "Each inning, the side with more points scores the difference. First to 21 wins.",
@@ -54,11 +54,14 @@ All other top-level keys (`id`, `version`, `name`, `subtitle`, `description`, `s
       "formula": "max(0, {inning-points} - highestOther(inning-points))"
     }
   ],
-  "score": "points-scored"
+  "score": "points-scored",
+  "scoreNotes": [
+    { "when": "{points-scored} != {inning-points}", "text": "from {inning-points}" }
+  ]
 }
 ```
 
-Players enter each side's inning points (with the Bags picker or the usual score entry). The app works out points scored, and that is what adds up, sorts, and decides the winner.
+Players enter each side's inning points (with the Bags picker or the usual score entry). The app works out points scored, and that is what adds up, sorts, and decides the winner. The score note shows the inning points under the points scored when they differ, for example 3 over "from 7". Without it, only the points scored would show: the app has no built-in note.
 
 ---
 

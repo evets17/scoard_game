@@ -59,7 +59,8 @@
         { "avery": { "round-score": 5, "first-out": 1 }, "jules": 9, "mina": 12 }
       ],
       "expected": {
-        "roundScores": [{ "avery": 5, "jules": 9, "mina": 12 }]
+        "roundScores": [{ "avery": 5, "jules": 9, "mina": 12 }],
+        "roundNotes": [{}]
       }
     },
     {
@@ -70,6 +71,7 @@
       ],
       "expected": {
         "roundScores": [{ "avery": 20, "jules": 4, "mina": 12 }],
+        "roundNotes": [{ "avery": "from 10" }],
         "totals": { "avery": 20, "jules": 4, "mina": 12 }
       }
     },

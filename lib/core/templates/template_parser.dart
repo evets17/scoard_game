@@ -3,6 +3,7 @@ import 'package:scoard_game/application/models/scoring/marker_field_definition.d
 import 'package:scoard_game/application/models/scoring/preset_prompt_behavior.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
+import 'package:scoard_game/application/models/scoring/score_note_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_input_kind.dart';
 import 'package:scoard_game/application/models/scoring/scoring_model.dart';
 import 'package:scoard_game/application/models/scoring/score_row_label.dart';
@@ -80,6 +81,15 @@ ScoringPreset parseTemplateJson(
           ),
     ],
     scoreFieldId: json['score'] as String?,
+    scoreNotes: [
+      for (final rawNote in (json['scoreNotes'] as List<Object?>?) ?? const [])
+        if (rawNote case final Map<String, Object?> note)
+          ScoreNoteDefinition(
+            when: note['when']! as String,
+            text: note['text']! as String,
+            color: note['color'] as String?,
+          ),
+    ],
     origin: origin,
   );
 }

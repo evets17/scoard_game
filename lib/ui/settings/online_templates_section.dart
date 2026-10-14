@@ -64,15 +64,36 @@ class OnlineTemplatesSection extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: Text(
-                              _statusText(
-                                status,
-                                isChecking: onlineTemplates.isChecking,
-                                now: (now ?? DateTime.now)(),
-                              ),
-                              style: theme.textTheme.bodyMedium,
+                            child: Builder(
+                              builder: (context) {
+                                final currentTime = (now ?? DateTime.now)();
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _statusText(
+                                        status,
+                                        isChecking: onlineTemplates.isChecking,
+                                        now: currentTime,
+                                      ),
+                                      style: theme.textTheme.bodyMedium,
+                                    ),
+                                    if (status != null) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _contentUpdatedText(
+                                          status,
+                                          now: currentTime,
+                                        ),
+                                        style: theme.textTheme.bodySmall,
+                                      ),
+                                    ],
+                                  ],
+                                );
+                              },
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -188,6 +209,17 @@ String _statusText(
         '$error. $using';
   }
   return 'Checked ${describeWhen(status.lastChecked!, now)}. $using';
+}
+
+String _contentUpdatedText(
+  OnlineTemplateStatus status, {
+  required DateTime now,
+}) {
+  final updated = status.lastUpdated;
+  if (updated == null) {
+    return 'Content last updated: not yet.';
+  }
+  return 'Content last updated ${describeWhen(updated, now)}.';
 }
 
 const _months = [

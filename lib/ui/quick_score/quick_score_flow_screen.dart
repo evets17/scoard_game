@@ -5,6 +5,7 @@ import 'package:scoard_game/application/models/players/player_list_item_model.da
 import 'package:scoard_game/application/models/results/quick_score_result.dart';
 import 'package:scoard_game/application/models/scoring/marker_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
+import 'package:scoard_game/application/models/scoring/score_row_label.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_pick.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
@@ -217,6 +218,7 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
                   roundScores: _preset!.calculatedFields.isEmpty
                       ? null
                       : _currentScores(),
+                  scoreNotes: _currentNotes(),
                   onBack: () => setState(() => _step = _QuickScoreStep.setup),
                   onSave: _saveQuickScoreSession,
                 ),
@@ -295,26 +297,44 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
       ).formulaValues;
 
   Map<String, int> _currentScores() {
-    final fieldDefinition = _preset!.scoreFields.first;
     return ScoreEngine.of(_preset!).scores(
-      [
-        for (final player in _selectedPlayers)
-          QuickScoreParticipantValues(
-            playerId: player.id,
-            displayName: player.displayName,
-            enteredValues: {
-              fieldDefinition.id: _parseEnteredScore(
-                    rawValue: _scoreControllers[player.id]?.text.trim() ?? '',
-                    fieldDefinition: fieldDefinition,
-                  ) ??
-                  0,
-              ..._markerValuesFor(player.id),
-            },
-          ),
-      ],
+      _currentParticipants(),
       roundNumber: 1,
       options: _formulaOptions,
     );
+  }
+
+  /// The template's note under each player's score.
+  Map<String, ScoreRowLabel> _currentNotes() {
+    return ScoreEngine.of(_preset!).scoreNotes(
+      _currentParticipants(),
+      roundNumber: 1,
+      options: _formulaOptions,
+    );
+  }
+
+  /// What is entered so far, with any tiles picked.
+  List<QuickScoreParticipantValues> _currentParticipants() {
+    final fieldDefinition = _preset!.scoreFields.first;
+    return [
+      for (final player in _selectedPlayers)
+        QuickScoreParticipantValues(
+          playerId: player.id,
+          displayName: player.displayName,
+          enteredValues: {
+            fieldDefinition.id: _parseEnteredScore(
+                  rawValue: _scoreControllers[player.id]?.text.trim() ?? '',
+                  fieldDefinition: fieldDefinition,
+                ) ??
+                0,
+            ..._markerValuesFor(player.id),
+          },
+          entryPicks: {
+            if (_entryPicks[player.id] case final ValuePickerPick pick)
+              fieldDefinition.id: pick,
+          },
+        ),
+    ];
   }
 
   void _reorderPlayers(int oldIndex, int newIndex) {
@@ -1048,6 +1068,7 @@ class _QuickScoreEntryStep extends StatelessWidget {
     required this.onMarkerChanged,
     required this.playerColors,
     required this.roundScores,
+    required this.scoreNotes,
     required this.onBack,
     required this.onSave,
   });
@@ -1078,6 +1099,10 @@ class _QuickScoreEntryStep extends StatelessWidget {
   /// Each player's calculated score, or null when the score is what was
   /// entered.
   final Map<String, int>? roundScores;
+
+  /// The template's note under each player's score, by player id.
+  final Map<String, ScoreRowLabel> scoreNotes;
+
   final VoidCallback onBack;
   final VoidCallback onSave;
 
@@ -1118,6 +1143,7 @@ class _QuickScoreEntryStep extends StatelessWidget {
                     onMarkerChanged: (markerId, isSet) =>
                         onMarkerChanged(player.id, markerId, isSet),
                     roundScore: roundScores?[player.id],
+                    scoreNote: scoreNotes[player.id],
                     playerColor: playerColors[player.id],
                     onEditorClosed: onScoreEditorClosed,
                   );

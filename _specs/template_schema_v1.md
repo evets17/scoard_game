@@ -67,6 +67,7 @@ That validates every bundled template and runs every scenario. A template is don
 | `winner` | yes | string | `highestScore` or `lowestScore`. |
 | `prompts` | no | array | Questions asked when a game starts. See below. |
 | `scoreField` | yes | object | The score entered for each player. See below. |
+| `scoreNotes` | no | array | A short line under a player's score, such as "Rack-o" or "from 4". See below. |
 
 Any key not listed here is an error.
 
@@ -238,6 +239,33 @@ For `replace`, the first matching label is used. Every matching `badge` is shown
 
 When a score is entered with a value picker and **Replace**, the tapped tiles are kept with that entry while the game is in progress (through resume, and when going back to an earlier round). Reopening the entry sheet for that player goes straight to the picker with those tiles, ready to adjust. Row labels come from the kept tiles. Changing the score any other way (− / +, the calculator, quick pick, or **Adjust**) drops the tiles, and with them any label.
 
+### `scoreNotes`
+
+A small line of text under a player's score, which stays the main number. The app shows whatever the template says; the template decides what a note means. For Rack-O, a Rack-O tile shows **Rack-o** under the 75:
+
+```json
+"scoreNotes": [
+  { "when": "{racko} > 0", "text": "Rack-o", "color": "#00D126" }
+]
+```
+
+| Key | Required | Rules |
+|---|---|---|
+| `when` | yes | A formula. The note shows when it is not 0. |
+| `text` | yes | At most 24 characters as written. `{name}` shows a value, for example `"from {round-score}"`. |
+| `color` | no | Text colour as `#RRGGBB`. Default: the usual quiet colour. |
+
+The first note whose `when` is true is shown, so put the most specific first. A note can read:
+
+* the score field, and in version 2 every field, including calculated fields and markers
+* the other players, with `highestOther`, `lowestOther`, `sumOthers`, and `countOthers`
+* prompts by `id`, `{playerCount}`, and `{roundNumber}`
+* the tile groups of the score's value pickers, with `{group}`, `countIn(group)`, and `distinctIn(group)`
+
+Tile groups are 0 unless the score was entered with the picker and **Replace** (see Remembered tiles), so a typed 75 is not a Rack-O. A tile group may not have the same `id` as a field or prompt, so `{name}` always means one thing.
+
+The same note shows in the entry sheet, as "Current score: 75 (Rack-o)".
+
 ---
 
 ## Scenario File
@@ -282,7 +310,7 @@ Each scenario:
 | `prompts` | no | Prompt answers by prompt `id`, for example `{ "low-score-wins": true }`. Unanswered prompts use their `default`. |
 | `scores` | `finalScore` only | One integer per player. |
 | `rounds` | `rounds` only | One object per round, with an integer per player. |
-| `expected` | yes | At least one of `totals`, `winners`, `placements`. |
+| `expected` | yes | At least one of `totals`, `winners`, `placements`, `roundNotes`. |
 
 `expected`:
 
@@ -291,6 +319,7 @@ Each scenario:
 | `totals` | Each player's final total. |
 | `winners` | The players in first place. More than one means a tie. Order does not matter. |
 | `placements` | Each player's place. Tied players share a place. |
+| `roundNotes` | `rounds` only. Each round's score notes by player, in round order, for example `[{ "avery": "from 10" }, {}]`. Players left out expect no note. |
 
 ### `pickerTotals`
 
@@ -315,6 +344,7 @@ Each check taps tiles in a value picker and states the score they should give. T
 | `expected` | yes | The score. |
 | `label` | no | The row label the taps should give, for example `"Bust"`, or `null` for no label. |
 | `badges` | no | The badge texts the taps should give, in order, for example `["7!"]`, or `[]` for none. |
+| `note` | no | The score note the taps should give, for example `"Rack-o"`, or `null` for none. |
 
 ### Coverage Rules
 
@@ -324,6 +354,7 @@ The test run fails unless a template's scenarios:
 * answer every prompt that has an `effect` with a non-default value at least once
 * include at least one `pickerTotals` check for every value picker with a `total`
 * include a `pickerTotals` check expecting each row label's `text`, in `label` or `badges`
+* expect every score note at least once, in a scenario's `roundNotes` or a `pickerTotals` `note`
 
 ---
 

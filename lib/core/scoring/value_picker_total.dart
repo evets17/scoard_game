@@ -22,6 +22,19 @@ int valuePickerTotal(ValuePickerDefinition picker, List<int> pickedIndexes) {
   return evaluateFormula(formula, _PickerScope(picker, picked));
 }
 
+/// The picked tiles' groups as formula values: `{group}` is the sum of that
+/// group's picked values, with `countIn` and `distinctIn`. Score notes read
+/// these.
+FormulaScope pickedTileGroupsScope(
+  ValuePickerDefinition picker,
+  List<int> pickedIndexes,
+) {
+  return _PickerScope(
+    picker,
+    [for (final index in pickedIndexes) picker.options[index]],
+  );
+}
+
 class _PickerScope extends FormulaScope {
   _PickerScope(ValuePickerDefinition picker, List<ValuePickerOption> picked) {
     for (final option in picker.options) {
