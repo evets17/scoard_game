@@ -31,8 +31,12 @@ class ScoreEngine {
     for (final field in preset.calculatedFields) {
       final formula = Formula.parse(field.formula);
       final reads = <String>{};
-      final problems =
-          checkFormula(formula, fieldIds: fieldIds, dependencies: reads);
+      final problems = checkFormula(
+        formula,
+        fieldIds: fieldIds,
+        promptIds: {for (final prompt in preset.promptDefinitions) prompt.id},
+        dependencies: reads,
+      );
       if (problems.isNotEmpty) {
         throw StateError(
           '${preset.id}: ${field.id}: ${problems.first}. '
@@ -54,9 +58,13 @@ class ScoreEngine {
   final List<(String, Formula)> _calculated;
 
   /// Every field's value for each player, keyed by player id.
+  ///
+  /// [options] are the game's prompt answers by prompt id, as
+  /// `ResolvedPresetOptions.formulaValues` gives them.
   Map<String, Map<String, int>> fieldValues(
     List<QuickScoreParticipantValues> participants, {
     required int roundNumber,
+    Map<String, int> options = const {},
   }) {
     final values = {
       for (final participant in participants)
@@ -68,6 +76,7 @@ class ScoreEngine {
         },
     };
     final builtIns = {
+      ...options,
       'playerCount': participants.length,
       'roundNumber': roundNumber,
     };
@@ -94,11 +103,15 @@ class ScoreEngine {
   Map<String, int> scores(
     List<QuickScoreParticipantValues> participants, {
     required int roundNumber,
+    Map<String, int> options = const {},
   }) {
     final scoreId = _preset.scoreId;
     return {
-      for (final entry
-          in fieldValues(participants, roundNumber: roundNumber).entries)
+      for (final entry in fieldValues(
+        participants,
+        roundNumber: roundNumber,
+        options: options,
+      ).entries)
         entry.key: entry.value[scoreId] ?? 0,
     };
   }

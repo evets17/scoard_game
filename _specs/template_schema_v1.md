@@ -103,7 +103,7 @@ Supported `effect` values:
 |---|---|---|
 | `lowScoreWins` | `boolean` | When answered true, the lowest score wins, whatever `winner` says. |
 
-A prompt without an `effect` is asked and saved with the game but does not change scoring yet.
+A prompt without an `effect` is asked and saved with the game. In version 2, formulas can read its answer; see `template_schema_v2.md`.
 
 ### `scoreField`
 

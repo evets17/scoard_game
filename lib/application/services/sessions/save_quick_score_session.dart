@@ -45,6 +45,7 @@ class SaveQuickScoreSession {
       preset: preset,
       completedAt: completedAt,
       winnerRule: resolvedOptions.winnerRule,
+      options: resolvedOptions.formulaValues,
       participantValues: participantValues,
     );
 

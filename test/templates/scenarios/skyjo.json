@@ -94,6 +94,28 @@
       }
     },
     {
+      "name": "House rule: a negative score doubles when not lowest",
+      "players": ["avery", "jules"],
+      "prompts": { "double-negatives": true },
+      "rounds": [
+        { "avery": { "round-score": -3, "first-out": 1 }, "jules": -5 }
+      ],
+      "expected": {
+        "roundScores": [{ "avery": -6, "jules": -5 }]
+      }
+    },
+    {
+      "name": "House rule: a negative lowest score outright is not doubled",
+      "players": ["avery", "jules"],
+      "prompts": { "double-negatives": true },
+      "rounds": [
+        { "avery": { "round-score": -5, "first-out": 1 }, "jules": -3 }
+      ],
+      "expected": {
+        "roundScores": [{ "avery": -5, "jules": -3 }]
+      }
+    },
+    {
       "name": "Doubling carries into the game total",
       "players": ["avery", "jules"],
       "rounds": [

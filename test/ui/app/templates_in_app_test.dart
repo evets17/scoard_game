@@ -35,13 +35,13 @@ void main() {
     await tester.tap(find.text('Skyjo'));
     await tester.pumpAndSettle();
 
-    // Skyjo has no options, but still opens its game page.
     expect(
       find.text(loadTestTemplateCatalog().byId('skyjo').description),
       findsOneWidget,
     );
     expect(find.text('2–8 players'), findsOneWidget);
-    expect(find.text('Options'), findsNothing);
+    expect(find.text('Options'), findsOneWidget);
+    expect(find.text('Double negative scores too'), findsOneWidget);
 
     await tester.tap(find.text('Start'));
     await tester.pumpAndSettle();

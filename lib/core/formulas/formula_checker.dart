@@ -56,22 +56,24 @@ class FormulaProblem {
   String toString() => '$message at position $position';
 }
 
-/// Checks [formula] against the names it may read: the template's fields,
-/// or for [FormulaContext.picker] the picker's tile groups.
+/// Checks [formula] against the names it may read: the template's fields
+/// and [promptIds], or for [FormulaContext.picker] the picker's tile groups.
 ///
 /// Returns the problems found, and through [dependencies] the names the
 /// formula reads.
 List<FormulaProblem> checkFormula(
   Formula formula, {
   required Set<String> fieldIds,
+  Set<String> promptIds = const {},
   FormulaContext context = FormulaContext.field,
   Set<String>? dependencies,
 }) {
   final problems = <FormulaProblem>[];
   final reads = dependencies ?? <String>{};
   final arity = _arityByContext[context]!;
-  final builtIns =
-      context == FormulaContext.field ? formulaBuiltIns : const <String>{};
+  final builtIns = context == FormulaContext.field
+      ? {...formulaBuiltIns, ...promptIds}
+      : const <String>{};
   final bareNameFunctions = context == FormulaContext.field
       ? otherPlayerFunctions
       : pickerGroupFunctions;

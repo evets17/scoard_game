@@ -10,11 +10,13 @@ QuickScoreResult calculateQuickScoreResult({
   required ScoringPreset preset,
   required DateTime completedAt,
   required WinnerRule winnerRule,
+  Map<String, int> options = const {},
   required List<QuickScoreParticipantValues> participantValues,
 }) {
   final scores = ScoreEngine.of(preset).scores(
     participantValues,
     roundNumber: 1,
+    options: options,
   );
   int scoreFor(QuickScoreParticipantValues participant) =>
       scores[participant.playerId] ?? 0;

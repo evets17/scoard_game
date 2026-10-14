@@ -183,7 +183,9 @@ class _ScenarioFile {
     }
 
     for (final prompt in template.promptDefinitions) {
-      if (prompt.behavior == null) {
+      final readByFormula = template.calculatedFields
+          .any((field) => field.formula.contains('{${prompt.id}}'));
+      if (prompt.behavior == null && !readByFormula) {
         continue;
       }
       final exercised = scenarios.any(
@@ -517,10 +519,12 @@ class _Scenario {
             value: (promptValues[prompt.id] as int?) ?? prompt.defaultIntegerValue!,
           ),
     ];
-    final winnerRule = resolvePresetOptions(
+    final resolved = resolvePresetOptions(
       preset: template,
       promptAnswers: answers,
-    ).winnerRule;
+    );
+    final winnerRule = resolved.winnerRule;
+    final options = resolved.formulaValues;
     final completedAt = DateTime(2026);
 
     QuickScoreParticipantValues valuesFor(
@@ -544,6 +548,7 @@ class _Scenario {
           preset: template,
           completedAt: completedAt,
           winnerRule: winnerRule,
+          options: options,
           participantValues: [
             for (final player in players) valuesFor(player, scores![player]!),
           ],
@@ -561,6 +566,7 @@ class _Scenario {
           preset: template,
           completedAt: completedAt,
           winnerRule: winnerRule,
+          options: options,
           rounds: [
             for (var index = 0; index < rounds!.length; index++)
               RoundScoreRoundValues(
@@ -600,6 +606,7 @@ class _Scenario {
               valuesFor(player, rounds![index][player]!),
           ],
           roundNumber: index + 1,
+          options: options,
         );
         expect(
           roundScores,

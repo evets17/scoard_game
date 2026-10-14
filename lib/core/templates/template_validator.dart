@@ -116,8 +116,8 @@ List<TemplateProblem> validateTemplateJson(
   }
 
   final prompts = template.list('prompts');
+  final seenPromptIds = <String>{};
   if (prompts != null) {
-    final seenPromptIds = <String>{};
     for (final prompt in prompts) {
       if (!prompt.isObject) {
         continue;
@@ -127,7 +127,7 @@ List<TemplateProblem> validateTemplateJson(
   }
 
   if (isVersion2) {
-    _validateFields(template);
+    _validateFields(template, seenPromptIds);
   } else {
     final scoreField = template.object('scoreField', required: true);
     if (scoreField != null) {
@@ -212,7 +212,8 @@ String? _validateMarkerField(_ObjectReader field) {
 }
 
 /// Version 2: `fields` (entered, calculated, and marker) and `score`.
-void _validateFields(_ObjectReader template) {
+/// [promptIds] can be read by formulas, so fields may not reuse them.
+void _validateFields(_ObjectReader template, Set<String> promptIds) {
   final fields = template.list('fields', required: true);
   final scoreId = template.identifier('score', required: true);
   if (fields == null) {
@@ -226,6 +227,9 @@ void _validateFields(_ObjectReader template) {
   void addId(_ObjectReader field, String? id) {
     if (id != null && !fieldIds.add(id)) {
       field.problem('id', 'duplicate field id "$id"');
+    }
+    if (id != null && (promptIds.contains(id) || formulaBuiltIns.contains(id))) {
+      field.problem('id', '"$id" is already the name of a prompt or built-in value');
     }
   }
 
@@ -276,6 +280,7 @@ void _validateFields(_ObjectReader template) {
     final problems = checkFormula(
       field.formula,
       fieldIds: fieldIds,
+      promptIds: promptIds,
       dependencies: reads,
     );
     for (final problem in problems) {

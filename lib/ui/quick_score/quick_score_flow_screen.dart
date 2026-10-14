@@ -288,6 +288,12 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
     setState(() => _scoreSortSnapshot = _currentScores());
   }
 
+  /// The game's prompt answers, as formulas read them.
+  Map<String, int> get _formulaOptions => resolvePresetOptions(
+        preset: _preset!,
+        promptAnswers: _promptAnswers,
+      ).formulaValues;
+
   Map<String, int> _currentScores() {
     final fieldDefinition = _preset!.scoreFields.first;
     return ScoreEngine.of(_preset!).scores(
@@ -307,6 +313,7 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
           ),
       ],
       roundNumber: 1,
+      options: _formulaOptions,
     );
   }
 

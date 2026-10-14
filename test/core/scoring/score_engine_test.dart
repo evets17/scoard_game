@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scoard_game/application/models/scoring/calculated_field_definition.dart';
+import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_input_kind.dart';
 import 'package:scoard_game/application/models/scoring/scoring_model.dart';
@@ -11,6 +12,7 @@ import 'package:scoard_game/core/scoring/score_engine.dart';
 ScoringPreset presetWith({
   List<CalculatedFieldDefinition> calculated = const [],
   String? scoreFieldId,
+  List<PresetPromptDefinition> prompts = const [],
 }) {
   return ScoringPreset(
     id: 'engine-test',
@@ -29,6 +31,7 @@ ScoringPreset presetWith({
       ),
     ],
     calculatedFields: calculated,
+    promptDefinitions: prompts,
     scoreFieldId: scoreFieldId,
   );
 }
@@ -100,6 +103,33 @@ void main() {
 
     expect(values['a'], {'points': 3, 'doubled': 12, 'leader': 0});
     expect(values['b'], {'points': 5, 'doubled': 16, 'leader': 1});
+  });
+
+  test('formulas read prompt answers passed as options', () {
+    final engine = ScoreEngine.of(
+      presetWith(
+        calculated: const [
+          CalculatedFieldDefinition(
+            id: 'scored',
+            label: 'Scored',
+            formula: '{points} * if({double} > 0, 2, 1)',
+          ),
+        ],
+        scoreFieldId: 'scored',
+        prompts: const [
+          PresetPromptDefinition.boolean(id: 'double', label: 'Double'),
+        ],
+      ),
+    );
+
+    expect(
+      engine.scores(entries({'a': 3}), roundNumber: 1, options: {'double': 1}),
+      {'a': 6},
+    );
+    expect(
+      engine.scores(entries({'a': 3}), roundNumber: 1, options: {'double': 0}),
+      {'a': 3},
+    );
   });
 
   test('field order follows dependencies and loops are named', () {

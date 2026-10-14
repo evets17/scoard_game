@@ -10,6 +10,7 @@ RoundScoreResult calculateRoundScoreResult({
   required ScoringPreset preset,
   required DateTime completedAt,
   required WinnerRule winnerRule,
+  Map<String, int> options = const {},
   required List<RoundScoreRoundValues> rounds,
 }) {
   final engine = ScoreEngine.of(preset);
@@ -20,6 +21,7 @@ RoundScoreResult calculateRoundScoreResult({
     final roundScores = engine.scores(
       round.participantValues,
       roundNumber: round.roundNumber,
+      options: options,
     );
     for (final participant in round.participantValues) {
       displayNames[participant.playerId] = participant.displayName;

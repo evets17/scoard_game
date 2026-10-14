@@ -163,4 +163,24 @@ void main() {
     // Markers do not count as the one entered number field.
     expect(problems.where((p) => p.startsWith('fields:')), isEmpty);
   });
+
+  test('formulas can read prompts, and fields cannot reuse their ids', () {
+    final template = versionTwo(
+      fields: [entered, calculated('scored', '{points} * if({double}, 2, 1)')],
+    )..['prompts'] = [
+        {'id': 'double', 'type': 'boolean', 'label': 'Double'},
+      ];
+    expect(problemsFor(template), isEmpty);
+
+    final clash = versionTwo(
+      fields: [entered, calculated('double', '{points}')],
+      score: 'double',
+    )..['prompts'] = [
+        {'id': 'double', 'type': 'boolean', 'label': 'Double'},
+      ];
+    expect(
+      problemsFor(clash),
+      ['fields[1].id: "double" is already the name of a prompt or built-in value'],
+    );
+  });
 }

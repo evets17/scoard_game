@@ -132,6 +132,7 @@ Formulas use whole numbers only. They are evaluated separately for each player, 
 | `{inning-points}` | This player's value for that field this round. |
 | `{playerCount}` | How many players are in the game. |
 | `{roundNumber}` | The current round, starting at 1 (always 1 for `finalScore`). |
+| `{double-points}` | A prompt's answer, by prompt `id`: 1 for true and 0 for false, or the number entered. Unanswered prompts use their `default` (0 if none). A field `id` may not be the same as a prompt `id`. |
 
 ### Operators
 
@@ -178,6 +179,7 @@ With no other players, `highestOther`, `lowestOther`, and `sumOthers` give 0.
 | Double the score in round 3 | `if({roundNumber} == 3, {points} * 2, {points})` |
 | A bonus of 5 for having the most | `{points} + if({points} > highestOther(points), 5, 0)` |
 | At most 10 per round | `min({points}, 10)` |
+| A house-rule option doubles the score | `if({double-points} > 0, {points} * 2, {points})` |
 
 ---
 
@@ -207,7 +209,7 @@ To switch on markers, give that player an object with the entered field and the 
 }
 ```
 
-Version 2 templates follow the same coverage rules as version 1 (a tie for first, and every prompt effect used). Templates whose formulas can divide should also include a scenario where the divisor is zero.
+Version 2 templates follow the same coverage rules as version 1 (a tie for first, and every prompt that has an effect or is read by a formula answered with a non-default value). Templates whose formulas can divide should also include a scenario where the divisor is zero.
 
 ---
 

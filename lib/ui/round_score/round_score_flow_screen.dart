@@ -254,6 +254,12 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
     };
   }
 
+  /// The game's prompt answers, as formulas read them.
+  Map<String, int> get _formulaOptions => resolvePresetOptions(
+        preset: _preset!,
+        promptAnswers: _promptAnswers,
+      ).formulaValues;
+
   /// Each player's total from every saved round except the one on screen.
   Map<String, int> _priorRoundTotals() {
     final engine = ScoreEngine.of(_preset!);
@@ -266,6 +272,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
       final scores = engine.scores(
         round.participantValues,
         roundNumber: round.roundNumber,
+        options: _formulaOptions,
       );
       for (final entry in scores.entries) {
         totals.update(
@@ -300,6 +307,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
           ),
       ],
       roundNumber: _currentRoundNumber,
+      options: _formulaOptions,
     );
   }
 
