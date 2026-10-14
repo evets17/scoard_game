@@ -294,7 +294,7 @@ void main() {
     expect(problems.where((p) => p.contains('"2"')), isEmpty);
   });
 
-  test('row labels are checked', () {
+  test('card text is checked, and picker row labels are gone', () {
     final problems = problemsFor((template) {
       child(template, 'scoreField')['entryModes'] = [
         {
@@ -310,43 +310,42 @@ void main() {
             },
           ],
           'rowLabels': [
-            {
-              'when': '{bust} > 0',
-              'text': 'Bust',
-              'color': '#C62828',
-              'size': 'small',
-            },
-            {'when': '1', 'text': 'Hi', 'show': 'badge', 'size': 'small'},
-            {'when': '{busted} > 0', 'text': 'Busted out', 'color': 'red'},
-            {'text': 'Odd', 'size': 2},
-          ],
-        },
-        {
-          'type': 'valuePicker',
-          'id': 'plain',
-          'label': 'Plain',
-          'values': [
-            {'value': 1},
-          ],
-          'rowLabels': [
-            {'when': '1', 'text': 'Hi'},
+            {'when': '{bust} > 0', 'text': 'Bust'},
           ],
         },
       ];
+      template['scoreLabels'] = [
+        {
+          'when': '{bust} > 0',
+          'text': 'Bust',
+          'color': '#C62828',
+          'size': 'small',
+        },
+        {'when': '{busted} > 0', 'text': 'Busted out', 'color': 'red'},
+        {'text': 'Odd', 'size': 'huge'},
+      ];
+      template['scoreSubLabels'] = [
+        {'when': '{round-score} > 0', 'text': 'from {round-score}'},
+        {'when': '1', 'text': 'Hi', 'size': 'small'},
+      ];
+      template['playerBadges'] = [
+        {
+          'when': '({roundNumber} - 1) % {playerCount} + 1 == {playerPosition}',
+          'text': '1st',
+        },
+        {'when': '{bust}', 'text': 'Busted!!!'},
+      ];
     });
 
-    expect(
-      problems,
-      containsAll([
-        'scoreField.entryModes[0].rowLabels[1].size: only applies to labels shown instead of the score',
-        'scoreField.entryModes[0].rowLabels[2].text: must be at most 8 characters',
-        'scoreField.entryModes[0].rowLabels[2].color: "red" must look like #3A7BD5',
-        'scoreField.entryModes[0].rowLabels[2].when: unknown name "busted"; expected one of: bust at position 1',
-        'scoreField.entryModes[0].rowLabels[3].size: must be a string',
-        'scoreField.entryModes[0].rowLabels[3].when: is required',
-        'scoreField.entryModes[1].rowLabels: needs "groups" so a label can say which tiles it is about',
-      ]),
-    );
-    expect(problems.where((p) => p.contains('rowLabels[0]')), isEmpty);
+    expect(problems, [
+      'scoreField.entryModes[0].rowLabels: unknown key',
+      'scoreLabels[1].text: must be at most 8 characters',
+      'scoreLabels[1].color: "red" must look like #3A7BD5',
+      startsWith('scoreLabels[1].when: unknown name "busted"'),
+      'scoreLabels[2].size: unsupported value "huge"; expected one of: small, medium, large',
+      'scoreLabels[2].when: is required',
+      'scoreSubLabels[1].size: unknown key',
+      'playerBadges[1].text: must be at most 8 characters',
+    ]);
   });
 }

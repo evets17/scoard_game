@@ -175,4 +175,23 @@ void main() {
     expect(inRow('Avery', '7!'), findsOneWidget);
     expect(inRow('Avery', '43'), findsWidgets);
   });
+
+  testWidgets('the 1st badge shows before scoring and moves a seat a round', (
+    tester,
+  ) async {
+    await startFlip7(tester);
+
+    // Play order is Avery, Jules, Mina.
+    String? firstPlayer() => [
+          for (final name in ['Avery', 'Jules', 'Mina'])
+            if (tester.any(inRow(name, '1st'))) name,
+        ].singleOrNull;
+
+    expect(firstPlayer(), 'Avery');
+    for (final expected in ['Jules', 'Mina', 'Avery']) {
+      await tester.tap(find.text('Next Round >>'));
+      await tester.pumpAndSettle();
+      expect(firstPlayer(), expected);
+    }
+  });
 }

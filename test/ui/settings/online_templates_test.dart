@@ -45,7 +45,7 @@ void main() {
   setUp(() {
     downloader = FakeTemplateDownloader(
       files: {
-        'skyjo.json': skyjo((json) => json['version'] = '2.2.0'),
+        'skyjo.json': skyjo((json) => json['version'] = '9.0.0'),
         'bocce.json': skyjo((json) {
           json['id'] = 'bocce';
           json['name'] = 'Bocce';
@@ -80,7 +80,7 @@ void main() {
 
     await tester.tap(find.text('Skyjo'));
     await tester.pumpAndSettle();
-    expect(find.text('Template v2.2.0 · online'), findsOneWidget);
+    expect(find.text('Template v9.0.0 · online'), findsOneWidget);
   });
 
   testWidgets('problems and failed checks are shown', (tester) async {

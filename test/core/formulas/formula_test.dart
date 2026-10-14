@@ -47,6 +47,23 @@ void main() {
       expect(eval('-7 / 2'), -4);
       expect(eval('5 / 0'), 0);
     });
+
+    test('remainder matches division and wraps seats round', () {
+      expect(eval('7 % 3'), 1);
+      expect(eval('6 % 3'), 0);
+      // Like / rounding down, so a positive divisor never gives a negative.
+      expect(eval('-1 % 4'), 3);
+      expect(eval('5 % 0'), 0);
+      expect(eval('2 * 5 % 3'), 1);
+      // Who goes first in each round with 4 players: 1, 2, 3, 4, then 1.
+      expect(
+        [
+          for (var round = 1; round <= 5; round++)
+            eval('({roundNumber} - 1) % 4 + 1', own: {'roundNumber': round}),
+        ],
+        [1, 2, 3, 4, 1],
+      );
+    });
   });
 
   group('comparison and logic', () {
@@ -152,7 +169,7 @@ void main() {
     test('unknown names and functions', () {
       expect(
         problemsFor('{score} + 1'),
-        ['unknown name "score"; expected one of: points, bonus, playerCount, roundNumber at position 1'],
+        ['unknown name "score"; expected one of: points, bonus, playerCount, roundNumber, playerPosition at position 1'],
       );
       expect(
         problemsFor('double({points})').single,

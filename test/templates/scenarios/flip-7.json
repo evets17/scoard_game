@@ -49,6 +49,35 @@
         "totals": { "avery": 40, "jules": 40, "mina": 20 },
         "winners": ["avery", "jules"]
       }
+    },
+    {
+      "name": "Bust, 7!, and the first player moving one seat each round",
+      "players": ["avery", "jules", "mina"],
+      "rounds": [
+        {
+          "avery": { "tiles": ["9", "Bust"] },
+          "jules": { "tiles": ["1", "2", "3", "4", "5", "6", "7"] },
+          "mina": 10
+        },
+        { "avery": 5, "jules": { "tiles": ["1", "2", "3", "4", "5", "6", "7"] }, "mina": 12 },
+        { "avery": 8, "jules": 6, "mina": 20 },
+        { "avery": 3, "jules": 4, "mina": 9 }
+      ],
+      "expected": {
+        "roundScores": [
+          { "avery": 0, "jules": 43, "mina": 10 },
+          { "avery": 5, "jules": 43, "mina": 12 },
+          { "avery": 8, "jules": 6, "mina": 20 },
+          { "avery": 3, "jules": 4, "mina": 9 }
+        ],
+        "roundScoreLabels": [{ "avery": "Bust" }, {}, {}, {}],
+        "roundPlayerBadges": [
+          { "avery": ["1st"], "jules": ["7!"] },
+          { "jules": ["7!", "1st"] },
+          { "mina": ["1st"] },
+          { "avery": ["1st"] }
+        ]
+      }
     }
   ],
   "pickerTotals": [
@@ -56,7 +85,6 @@
       "name": "Rulebook example: ×2 doubles the number cards, then +4",
       "picker": "cards",
       "taps": ["8", "6", "3", "×2", "+4"],
-      "label": null,
       "expected": 38
     },
     {
@@ -81,14 +109,12 @@
       "name": "A bust scores 0 whatever else is tapped",
       "picker": "cards",
       "taps": ["5", "9", "+6", "Bust"],
-      "label": "Bust",
       "expected": 0
     },
     {
       "name": "Seven different number cards earn 15",
       "picker": "cards",
       "taps": ["1", "2", "3", "4", "5", "6", "7"],
-      "badges": ["7!"],
       "expected": 43
     },
     {
@@ -101,7 +127,6 @@
       "name": "Seven cards with a repeat do not earn the bonus",
       "picker": "cards",
       "taps": ["1", "1", "2", "3", "4", "5", "6"],
-      "badges": [],
       "expected": 22
     }
   ]

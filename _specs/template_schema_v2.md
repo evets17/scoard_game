@@ -13,7 +13,7 @@ Everything in [version 1](template_schema_v1.md) still applies except where this
 | `"schemaVersion": 1` | `"schemaVersion": 2` |
 | `scoreField` (one entered field, which is the score) | `fields` (entered and calculated fields) and `score` (which field is the score) |
 
-All other top-level keys (`id`, `version`, `name`, `subtitle`, `description`, `source`, `players`, `scoringModel`, `winner`, `prompts`, `scoreNotes`) are unchanged. Score notes can also read calculated fields and markers. `scoreField` is not allowed in version 2.
+All other top-level keys (`id`, `version`, `name`, `subtitle`, `description`, `source`, `players`, `scoringModel`, `winner`, `prompts`, `scoreLabels`, `scoreSubLabels`, `playerBadges`) are unchanged. Card text (see [Player Card](template_schema_v1.md#player-card)) can also read calculated fields and markers. `scoreField` is not allowed in version 2.
 
 ---
 
@@ -23,7 +23,7 @@ All other top-level keys (`id`, `version`, `name`, `subtitle`, `description`, `s
 {
   "schemaVersion": 2,
   "id": "cornhole",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "name": "Cornhole",
   "subtitle": "Cancellation scoring",
   "description": "Each inning, the side with more points scores the difference. First to 21 wins.",
@@ -55,13 +55,13 @@ All other top-level keys (`id`, `version`, `name`, `subtitle`, `description`, `s
     }
   ],
   "score": "points-scored",
-  "scoreNotes": [
+  "scoreSubLabels": [
     { "when": "{points-scored} != {inning-points}", "text": "from {inning-points}" }
   ]
 }
 ```
 
-Players enter each side's inning points (with the Bags picker or the usual score entry). The app works out points scored, and that is what adds up, sorts, and decides the winner. The score note shows the inning points under the points scored when they differ, for example 3 over "from 7". Without it, only the points scored would show: the app has no built-in note.
+Players enter each side's inning points (with the Bags picker or the usual score entry). The app works out points scored, and that is what adds up, sorts, and decides the winner. The score sub label shows the inning points under the points scored when they differ, for example 3 over "from 7". Without it, only the points scored would show: the app has no built-in text.
 
 ---
 
@@ -136,6 +136,7 @@ Formulas use whole numbers only. They are evaluated separately for each player, 
 | `{inning-points}` | This player's value for that field this round. |
 | `{playerCount}` | How many players are in the game. |
 | `{roundNumber}` | The current round, starting at 1 (always 1 for `finalScore`). |
+| `{playerPosition}` | The player's seat in play order, starting at 1. Changes if players are reordered. |
 | `{double-points}` | A prompt's answer, by prompt `id`: 1 for true and 0 for false, or the number entered. Unanswered prompts use their `default` (0 if none). A field `id` may not be the same as a prompt `id`. |
 
 ### Operators
@@ -145,7 +146,7 @@ Listed from first to last applied. Use parentheses to change the order.
 | Operators | Meaning |
 |---|---|
 | `-` (before a value) | Negative. |
-| `*` `/` | Multiply, divide. Division rounds down to a whole number (`7 / 2` is 3, `-7 / 2` is -4). Dividing by zero gives 0. |
+| `*` `/` `%` | Multiply, divide, remainder. Division rounds down to a whole number (`7 / 2` is 3, `-7 / 2` is -4). The remainder matches it (`7 % 2` is 1, `-1 % 4` is 3), so it is never negative for a positive divisor. Dividing by zero gives 0 for both. |
 | `+` `-` | Add, subtract. |
 | `>` `>=` `<` `<=` `==` `!=` | Compare. True is 1, false is 0. Comparisons cannot be chained: write `a < b and b < c`. |
 | `not` | 1 if the value is 0, otherwise 0. |
@@ -181,6 +182,7 @@ With no other players, `highestOther`, `lowestOther`, and `sumOthers` give 0.
 | Score the difference over the best other player, never below 0 | `max(0, {points} - highestOther(points))` |
 | Half the points, rounded down | `{points} / 2` |
 | Double the score in round 3 | `if({roundNumber} == 3, {points} * 2, {points})` |
+| The first player moves one seat each round | `({roundNumber} - 1) % {playerCount} + 1 == {playerPosition}` |
 | A bonus of 5 for having the most | `{points} + if({points} > highestOther(points), 5, 0)` |
 | At most 10 per round | `min({points}, 10)` |
 | A house-rule option doubles the score | `if({double-points} > 0, {points} * 2, {points})` |
@@ -223,7 +225,7 @@ Formula problems name the field, the problem, and the 1-based position in the fo
 
 ```text
 assets/templates/cornhole.json: fields[1].formula: expected ")" but found the end at position 16
-assets/templates/cornhole.json: fields[1].formula: unknown name "bonus"; expected one of: inning-points, points-scored, playerCount, roundNumber at position 1
+assets/templates/cornhole.json: fields[1].formula: unknown name "bonus"; expected one of: inning-points, points-scored, playerCount, roundNumber, playerPosition at position 1
 assets/templates/cornhole.json: fields[1].formula: circular reference: scored -> subtotal -> scored
 ```
 

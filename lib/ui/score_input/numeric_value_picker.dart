@@ -16,7 +16,7 @@ Future<ScoreValueEditRequest?> showNumericValuePicker(
   required int currentValue,
   bool hasCurrentValue = true,
   int? currentRoundScore,
-  String? currentScoreNote,
+  String? currentScoreSubLabel,
   required bool allowReplace,
   required bool allowAdjust,
   ScoreEntryMemory? entryMemory,
@@ -34,7 +34,7 @@ Future<ScoreValueEditRequest?> showNumericValuePicker(
       currentValue: currentValue,
       hasCurrentValue: hasCurrentValue,
       currentRoundScore: currentRoundScore,
-      currentScoreNote: currentScoreNote,
+      currentScoreSubLabel: currentScoreSubLabel,
       allowReplace: allowReplace,
       allowAdjust: allowAdjust,
       entryMemory: entryMemory ?? ScoreEntryMemory(),
@@ -53,7 +53,7 @@ class _NumericValuePicker extends StatefulWidget {
     required this.currentValue,
     required this.hasCurrentValue,
     this.currentRoundScore,
-    this.currentScoreNote,
+    this.currentScoreSubLabel,
     required this.allowReplace,
     required this.allowAdjust,
     required this.entryMemory,
@@ -75,8 +75,8 @@ class _NumericValuePicker extends StatefulWidget {
   /// score (such as Skyjo doubling), or null.
   final int? currentRoundScore;
 
-  /// The template's note for the score, such as "from 10", or null.
-  final String? currentScoreNote;
+  /// The template's score sub label, such as "from 10", or null.
+  final String? currentScoreSubLabel;
   final bool allowReplace;
   final bool allowAdjust;
   final ScoreEntryMemory entryMemory;
@@ -116,17 +116,17 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
 
   static String _pickerKey(String id) => 'picker:$id';
 
-  /// "No score yet", "Current score: 10", or with the template's note,
-  /// "Current score: 20 (from 10)".
+  /// "No score yet", "Current score: 10", or with the template's score sub
+  /// label, "Current score: 20 (from 10)".
   String get _currentScoreText {
     if (!widget.hasCurrentValue) {
       return 'No score yet';
     }
     final score = widget.currentRoundScore ?? widget.currentValue;
-    final note = widget.currentScoreNote;
-    return note == null
+    final subLabel = widget.currentScoreSubLabel;
+    return subLabel == null
         ? 'Current score: $score'
-        : 'Current score: $score ($note)';
+        : 'Current score: $score ($subLabel)';
   }
 
   ValuePickerDefinition? get _initialPickPicker {

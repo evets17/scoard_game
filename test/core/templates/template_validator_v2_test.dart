@@ -164,7 +164,7 @@ void main() {
     expect(problems.where((p) => p.startsWith('fields:')), isEmpty);
   });
 
-  test('score notes read fields, prompts, and tile groups', () {
+  test('card text reads fields, prompts, and tile groups', () {
     final template = versionTwo(
       fields: [
         {
@@ -192,7 +192,7 @@ void main() {
       ..['prompts'] = [
         {'id': 'double', 'type': 'boolean', 'label': 'Double'},
       ]
-      ..['scoreNotes'] = [
+      ..['scoreSubLabels'] = [
         {
           'when': '{bonus} > 0 and {scored} > highestOther(scored)',
           'text': 'Bonus! from {points}',
@@ -205,28 +205,31 @@ void main() {
     final preset = loadTemplateCatalog({
       'test-game.json': jsonEncode(template),
     }).catalog.byId('test-game');
-    expect(preset.scoreNotes.map((note) => note.text), ['Bonus! from {points}', '×2']);
+    expect(
+      preset.scoreSubLabels.map((subLabel) => subLabel.text),
+      ['Bonus! from {points}', '×2'],
+    );
   });
 
-  test('score note mistakes are reported', () {
+  test('card text mistakes are reported', () {
     final template = versionTwo(
       fields: [entered, calculated('scored', '{points}')],
-    )..['scoreNotes'] = [
+    )..['scoreSubLabels'] = [
         {'when': '{nope} > 0', 'text': 'from {missing}', 'color': 'green'},
         {'text': 'This note is far too long to fit under a score'},
       ];
 
     expect(problemsFor(template), [
-      'scoreNotes[0].text: unknown name "{missing}"; expected one of: '
-          'points, scored, playerCount, roundNumber',
-      'scoreNotes[0].color: "green" must look like #3A7BD5',
-      startsWith('scoreNotes[0].when: unknown name "nope"'),
-      'scoreNotes[1].text: must be at most 24 characters',
-      'scoreNotes[1].when: is required',
+      'scoreSubLabels[0].text: unknown name "{missing}"; expected one of: '
+          'points, scored, playerCount, roundNumber, playerPosition',
+      'scoreSubLabels[0].color: "green" must look like #3A7BD5',
+      startsWith('scoreSubLabels[0].when: unknown name "nope"'),
+      'scoreSubLabels[1].text: must be at most 24 characters',
+      'scoreSubLabels[1].when: is required',
     ]);
   });
 
-  test('a tile group may not share a name that notes read', () {
+  test('a tile group may not share a name that card text reads', () {
     final template = versionTwo(
       fields: [
         {
@@ -250,13 +253,13 @@ void main() {
         },
         calculated('scored', '{points}'),
       ],
-    )..['scoreNotes'] = [
+    )..['scoreSubLabels'] = [
         {'when': '{scored} > 0', 'text': 'Scored'},
       ];
 
     expect(
       problemsFor(template),
-      contains(startsWith('scoreNotes: tile group "scored" has the same name')),
+      contains(startsWith('scoreSubLabels: tile group "scored" has the same name')),
     );
   });
 

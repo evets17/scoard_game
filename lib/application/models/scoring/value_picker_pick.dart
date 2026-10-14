@@ -1,5 +1,5 @@
 /// The tiles tapped in a value picker for one entry, kept so the picker can
-/// reopen with them, and so row labels can be worked out from them.
+/// reopen with them, and so card text can read them.
 ///
 /// Tiles are recorded by what they show ("8", "+4", "×2") rather than by
 /// position, so a later change to the template cannot point at the wrong

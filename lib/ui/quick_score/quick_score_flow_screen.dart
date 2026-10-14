@@ -5,7 +5,7 @@ import 'package:scoard_game/application/models/players/player_list_item_model.da
 import 'package:scoard_game/application/models/results/quick_score_result.dart';
 import 'package:scoard_game/application/models/scoring/marker_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
-import 'package:scoard_game/application/models/scoring/score_row_label.dart';
+import 'package:scoard_game/application/models/scoring/card_text.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_pick.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
@@ -218,7 +218,7 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
                   roundScores: _preset!.calculatedFields.isEmpty
                       ? null
                       : _currentScores(),
-                  scoreNotes: _currentNotes(),
+                  cardTexts: _currentCardTexts(),
                   onBack: () => setState(() => _step = _QuickScoreStep.setup),
                   onSave: _saveQuickScoreSession,
                 ),
@@ -304,9 +304,9 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
     );
   }
 
-  /// The template's note under each player's score.
-  Map<String, ScoreRowLabel> _currentNotes() {
-    return ScoreEngine.of(_preset!).scoreNotes(
+  /// What the template shows on each player's card.
+  Map<String, PlayerCardTexts> _currentCardTexts() {
+    return ScoreEngine.of(_preset!).cardTexts(
       _currentParticipants(),
       roundNumber: 1,
       options: _formulaOptions,
@@ -1068,7 +1068,7 @@ class _QuickScoreEntryStep extends StatelessWidget {
     required this.onMarkerChanged,
     required this.playerColors,
     required this.roundScores,
-    required this.scoreNotes,
+    required this.cardTexts,
     required this.onBack,
     required this.onSave,
   });
@@ -1100,8 +1100,8 @@ class _QuickScoreEntryStep extends StatelessWidget {
   /// entered.
   final Map<String, int>? roundScores;
 
-  /// The template's note under each player's score, by player id.
-  final Map<String, ScoreRowLabel> scoreNotes;
+  /// What the template shows on each player's card, by player id.
+  final Map<String, PlayerCardTexts> cardTexts;
 
   final VoidCallback onBack;
   final VoidCallback onSave;
@@ -1143,7 +1143,7 @@ class _QuickScoreEntryStep extends StatelessWidget {
                     onMarkerChanged: (markerId, isSet) =>
                         onMarkerChanged(player.id, markerId, isSet),
                     roundScore: roundScores?[player.id],
-                    scoreNote: scoreNotes[player.id],
+                    cardTexts: cardTexts[player.id] ?? PlayerCardTexts.none,
                     playerColor: playerColors[player.id],
                     onEditorClosed: onScoreEditorClosed,
                   );

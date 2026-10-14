@@ -63,7 +63,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('the template note shows under the score, which stays', (
+  testWidgets('the score sub label shows under the score, which stays', (
     tester,
   ) async {
     await startRackO(tester);
@@ -77,7 +77,7 @@ void main() {
     expect(inRow('Jules', '75'), findsWidgets);
     expect(inRow('Jules', 'Rack-o'), findsNothing);
 
-    // Changing the score another way drops the tiles, and the note.
+    // Changing the score another way drops the tiles, and the sub label.
     await tester.tap(
       find.descendant(
         of: rowFor('Avery'),

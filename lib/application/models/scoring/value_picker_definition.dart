@@ -1,5 +1,3 @@
-import 'package:scoard_game/application/models/scoring/score_row_label.dart';
-
 /// A template-defined way to enter a score by tapping the values in front of
 /// a player, such as Skyjo cards.
 ///
@@ -12,7 +10,6 @@ class ValuePickerDefinition {
     required this.label,
     required this.options,
     this.total,
-    this.rowLabels = const [],
   });
 
   final String id;
@@ -25,10 +22,6 @@ class ValuePickerDefinition {
 
   /// Formula for the score from the tapped tiles, or null to add them up.
   final String? total;
-
-  /// Labels shown on the row instead of the score when the picked tiles
-  /// match, checked in order. The first match is used.
-  final List<ValuePickerRowLabel> rowLabels;
 }
 
 class ValuePickerOption {
@@ -57,28 +50,3 @@ class ValuePickerOption {
   String get displayText => text ?? '$value';
 }
 
-/// A label to show on the player's row when [when] is true for the picked
-/// tiles, for example "Bust" when the bust tile was picked.
-class ValuePickerRowLabel {
-  const ValuePickerRowLabel({
-    required this.when,
-    required this.text,
-    this.isBadge = false,
-    this.size = RowLabelSize.large,
-    this.color,
-  });
-
-  /// Formula over the picker's groups; non-zero means the label applies.
-  final String when;
-  final String text;
-
-  /// True to show as a small badge beside the player's name, keeping the
-  /// score visible. False to show instead of the score.
-  final bool isBadge;
-
-  /// Text size when shown instead of the score.
-  final RowLabelSize size;
-
-  /// Text colour, or the badge colour, as `#RRGGBB`.
-  final String? color;
-}

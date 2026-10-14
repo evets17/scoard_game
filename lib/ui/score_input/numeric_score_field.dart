@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:scoard_game/application/models/scoring/card_text.dart';
 import 'package:scoard_game/application/models/scoring/marker_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
-import 'package:scoard_game/application/models/scoring/score_row_label.dart';
-import 'package:scoard_game/application/models/scoring/value_picker_definition.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_pick.dart';
 import 'package:scoard_game/application/models/sessions/player_color.dart';
-import 'package:scoard_game/core/scoring/value_picker_total.dart';
 import 'package:scoard_game/ui/players/player_color_halo.dart';
 import 'package:scoard_game/ui/score_input/numeric_value_picker.dart';
 import 'package:scoard_game/ui/score_input/score_entry_mode.dart';
@@ -26,7 +24,7 @@ class NumericScoreField extends StatefulWidget {
     this.activeMarkers = const {},
     this.onMarkerChanged,
     this.roundScore,
-    this.scoreNote,
+    this.cardTexts = PlayerCardTexts.none,
     this.playerColor,
     this.onEntryPickChanged,
     this.compact = false,
@@ -43,7 +41,7 @@ class NumericScoreField extends StatefulWidget {
   final VoidCallback? onEditorClosed;
 
   /// The value picker tiles the score was entered with, if any. Reopening
-  /// the entry sheet starts with them, and row labels such as "Bust" come
+  /// the entry sheet starts with them, and card text such as "Bust" reads
   /// from them.
   final ValuePickerPick? entryPick;
 
@@ -61,10 +59,11 @@ class NumericScoreField extends StatefulWidget {
   /// the entered value.
   final int? roundScore;
 
-  /// The template's note for this score, shown in small text under it,
-  /// such as "from 4" or "Rack-o". The app shows it; the template decides
-  /// what it says.
-  final ScoreRowLabel? scoreNote;
+  /// What the template shows on this card: a score label instead of the
+  /// score ("Bust"), a score sub label under it ("from 4"), and player
+  /// badges after the name ("1st"). The app shows them; the template decides
+  /// what they say.
+  final PlayerCardTexts cardTexts;
 
   /// The player's colour for this game, shown as a halo around the row.
   final PlayerColor? playerColor;
@@ -141,10 +140,10 @@ const double _compactIconButtonSize = 40;
 
 /// Font sizes for labels shown instead of the score. The score number keeps
 /// its own size; these only apply while a label is showing.
-double _rowLabelFontSize(RowLabelSize size) => switch (size) {
-      RowLabelSize.small => 18,
-      RowLabelSize.medium => 23,
-      RowLabelSize.large => 28,
+double _scoreLabelFontSize(CardTextSize size) => switch (size) {
+      CardTextSize.small => 18,
+      CardTextSize.medium => 23,
+      CardTextSize.large => 28,
     };
 
 /// Shown in place of a score that has not been entered yet.
@@ -199,12 +198,13 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isEmpty = widget.controller.text.trim().isEmpty;
-    final rowLabel = _rowLabel;
+    final scoreLabel = widget.cardTexts.scoreLabel;
+    // Player badges show from the start of the round, before any score.
     final badges = [
       for (final marker in widget.markers)
         if (widget.activeMarkers.contains(marker.id))
-          ScoreRowLabel(text: marker.badge, color: marker.color),
-      if (!isEmpty) ..._badges,
+          CardText(text: marker.badge, color: marker.color),
+      ...widget.cardTexts.playerBadges,
     ];
     final currentValue = int.tryParse(widget.controller.text.trim()) ??
         (widget.fieldDefinition.initialIntegerValue ?? 0);
@@ -279,17 +279,17 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
                       ),
                       // A dash means nothing has been entered yet; it still
                       // counts as the starting value if play moves on.
-                      child: !isEmpty && rowLabel != null
+                      child: !isEmpty && scoreLabel != null
                           ? Semantics(
-                              label: '${rowLabel.text}, score '
+                              label: '${scoreLabel.text}, score '
                                   '$currentValue',
                               excludeSemantics: true,
                               child: Text(
-                                rowLabel.text,
+                                scoreLabel.text,
                                 textAlign: TextAlign.center,
                                 style: scoreTextStyle?.copyWith(
-                                  fontSize: _rowLabelFontSize(rowLabel.size),
-                                  color: parseTileColor(rowLabel.color),
+                                  fontSize: _scoreLabelFontSize(scoreLabel.size),
+                                  color: parseTileColor(scoreLabel.color),
                                 ),
                               ),
                             )
@@ -309,7 +309,7 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
                           : _ScoreNumber(
                               enteredValue: currentValue,
                               roundScore: widget.roundScore,
-                              note: widget.scoreNote,
+                              note: widget.cardTexts.scoreSubLabel,
                               style: scoreTextStyle,
                             ),
                     ),
@@ -363,7 +363,7 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
       currentValue: currentValue,
       hasCurrentValue: widget.controller.text.trim().isNotEmpty,
       currentRoundScore: widget.roundScore,
-      currentScoreNote: widget.scoreNote?.text,
+      currentScoreSubLabel: widget.cardTexts.scoreSubLabel?.text,
       allowReplace: widget.fieldDefinition.allowReplace,
       allowAdjust: widget.fieldDefinition.allowAdjust,
       entryMemory: widget.entryMemory,
@@ -399,30 +399,6 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
     widget.controller.text = value.toString();
   }
 
-  /// The value picker behind the score and the tiles picked in it, if any.
-  (ValuePickerDefinition, List<int>)? get _pickedTiles {
-    final pick = widget.entryPick;
-    if (pick == null) {
-      return null;
-    }
-    final picker = widget.fieldDefinition.valuePickers
-        .where((picker) => picker.id == pick.pickerId)
-        .firstOrNull;
-    return picker == null ? null : (picker, pickedIndexesFor(picker, pick));
-  }
-
-  /// The row label (such as "Bust") shown instead of the score.
-  ScoreRowLabel? get _rowLabel => switch (_pickedTiles) {
-        (final picker, final picked) => valuePickerRowLabel(picker, picked),
-        null => null,
-      };
-
-  /// Badges (such as "7!") shown beside the player's name.
-  List<ScoreRowLabel> get _badges => switch (_pickedTiles) {
-        (final picker, final picked) => valuePickerBadges(picker, picked),
-        null => const [],
-      };
-
   double _minimumWidthForDigits(
     BuildContext context,
     TextStyle? style,
@@ -449,7 +425,7 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
 class _ScoreBadge extends StatelessWidget {
   const _ScoreBadge({required this.badge});
 
-  final ScoreRowLabel badge;
+  final CardText badge;
 
   @override
   Widget build(BuildContext context) {
@@ -492,7 +468,7 @@ class _ScoreNumber extends StatelessWidget {
 
   final int enteredValue;
   final int? roundScore;
-  final ScoreRowLabel? note;
+  final CardText? note;
   final TextStyle? style;
 
   @override

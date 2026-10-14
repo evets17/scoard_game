@@ -1,12 +1,12 @@
+import 'package:scoard_game/application/models/scoring/card_text.dart';
+import 'package:scoard_game/application/models/scoring/card_text_definition.dart';
 import 'package:scoard_game/application/models/scoring/calculated_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/marker_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_behavior.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
-import 'package:scoard_game/application/models/scoring/score_note_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_input_kind.dart';
 import 'package:scoard_game/application/models/scoring/scoring_model.dart';
-import 'package:scoard_game/application/models/scoring/score_row_label.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/application/models/scoring/template_origin.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_definition.dart';
@@ -81,15 +81,9 @@ ScoringPreset parseTemplateJson(
           ),
     ],
     scoreFieldId: json['score'] as String?,
-    scoreNotes: [
-      for (final rawNote in (json['scoreNotes'] as List<Object?>?) ?? const [])
-        if (rawNote case final Map<String, Object?> note)
-          ScoreNoteDefinition(
-            when: note['when']! as String,
-            text: note['text']! as String,
-            color: note['color'] as String?,
-          ),
-    ],
+    scoreLabels: _parseCardTexts(json['scoreLabels']),
+    scoreSubLabels: _parseCardTexts(json['scoreSubLabels']),
+    playerBadges: _parseCardTexts(json['playerBadges']),
     origin: origin,
   );
 }
@@ -147,18 +141,6 @@ ValuePickerDefinition _parseValuePicker(Map<String, Object?> mode) {
     label: mode['label']! as String,
     options: options,
     total: mode['total'] as String?,
-    rowLabels: [
-      for (final rawLabel in (mode['rowLabels'] as List<Object?>?) ?? const [])
-        if (rawLabel case final Map<String, Object?> label)
-          ValuePickerRowLabel(
-            when: label['when']! as String,
-            text: label['text']! as String,
-            color: label['color'] as String?,
-            isBadge: label['show'] == 'badge',
-            size: RowLabelSize.values.asNameMap()[label['size']] ??
-                RowLabelSize.large,
-          ),
-    ],
   );
 }
 
@@ -187,4 +169,18 @@ PresetPromptDefinition _parsePrompt(Map<String, Object?> prompt) {
         defaultBooleanValue: (prompt['default'] as bool?) ?? false,
       ),
   };
+}
+
+List<CardTextDefinition> _parseCardTexts(Object? rawList) {
+  return [
+    for (final raw in (rawList as List<Object?>?) ?? const [])
+      if (raw case final Map<String, Object?> cardText)
+        CardTextDefinition(
+          when: cardText['when']! as String,
+          text: cardText['text']! as String,
+          color: cardText['color'] as String?,
+          size: CardTextSize.values.asNameMap()[cardText['size']] ??
+              CardTextSize.large,
+        ),
+  ];
 }

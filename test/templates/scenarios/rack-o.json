@@ -26,29 +26,43 @@
         "totals": { "avery": 100, "jules": 100 },
         "winners": ["avery", "jules"]
       }
+    },
+    {
+      "name": "Rack-O shows under the score; 75 from cards alone does not",
+      "players": ["avery", "jules", "mina"],
+      "rounds": [
+        {
+          "avery": { "tiles": ["Rack-O"] },
+          "jules": { "tiles": ["30", "45"] },
+          "mina": 75
+        },
+        {
+          "avery": { "tiles": ["Rack-O", "Run 3"] },
+          "jules": { "tiles": ["5", "10"] },
+          "mina": 20
+        }
+      ],
+      "expected": {
+        "roundScores": [
+          { "avery": 75, "jules": 75, "mina": 75 },
+          { "avery": 125, "jules": 15, "mina": 20 }
+        ],
+        "roundScoreSubLabels": [{ "avery": "Rack-o" }, { "avery": "Rack-o" }]
+      }
     }
   ],
   "pickerTotals": [
     {
-      "name": "Rack-O scores 75 and says so under the score",
+      "name": "Rack-O scores 75",
       "picker": "cards",
       "taps": ["Rack-O"],
-      "expected": 75,
-      "note": "Rack-o"
-    },
-    {
-      "name": "75 from cards alone is not a Rack-O",
-      "picker": "cards",
-      "taps": ["30", "45"],
-      "expected": 75,
-      "note": null
+      "expected": 75
     },
     {
       "name": "Rack-O with a run adds both",
       "picker": "cards",
       "taps": ["Rack-O", "Run 3"],
-      "expected": 125,
-      "note": "Rack-o"
+      "expected": 125
     },
     {
       "name": "Cards and a run add up",

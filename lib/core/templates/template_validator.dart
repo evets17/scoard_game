@@ -8,7 +8,7 @@ library;
 import 'package:scoard_game/core/formulas/formula_checker.dart';
 import 'package:scoard_game/core/formulas/formula_parser.dart';
 import 'package:scoard_game/core/scoring/score_engine.dart';
-import 'package:scoard_game/core/scoring/score_note_text.dart';
+import 'package:scoard_game/core/scoring/card_text_values.dart';
 
 const supportedTemplateSchemaVersions = {1, 2};
 
@@ -28,12 +28,13 @@ const maximumPickerValues = 24;
 /// Keeps tile text readable on a small tile, for example "+10" or "Bust".
 const maximumTileTextLength = 6;
 
-/// Keeps a row label inside the space a score normally takes.
-const maximumRowLabelLength = 8;
+/// Keeps a score label inside the space a score normally takes, and a badge
+/// (player or marker) short beside a name.
+const maximumCardLabelLength = 8;
 
-/// Keeps a score note to one short line under the score, as written
+/// Keeps a score sub label to one short line under the score, as written
 /// (before any {name} is filled in).
-const maximumScoreNoteLength = 24;
+const maximumScoreSubLabelLength = 24;
 
 final _idPattern = RegExp(r'^[a-z0-9]+(-[a-z0-9]+)*$');
 final _colorPattern = RegExp(r'^#[0-9A-Fa-f]{6}$');
@@ -86,7 +87,9 @@ List<TemplateProblem> validateTemplateJson(
     'scoringModel',
     'winner',
     'prompts',
-    'scoreNotes',
+    'scoreLabels',
+    'scoreSubLabels',
+    'playerBadges',
     if (isVersion2) ...{'fields', 'score'} else 'scoreField',
   });
 
@@ -144,7 +147,7 @@ List<TemplateProblem> validateTemplateJson(
     fieldIds = {?id};
   }
 
-  _validateScoreNotes(
+  _validateCardTexts(
     template,
     fieldIds: fieldIds,
     promptIds: seenPromptIds,
@@ -215,8 +218,8 @@ String? _validateMarkerField(_ObjectReader field) {
   if (marker != null) {
     marker.allowOnlyKeys(const {'badge', 'color', 'onePerRound'});
     final badge = marker.text('badge', required: true);
-    if (badge != null && badge.length > maximumRowLabelLength) {
-      marker.problem('badge', 'must be at most $maximumRowLabelLength characters');
+    if (badge != null && badge.length > maximumCardLabelLength) {
+      marker.problem('badge', 'must be at most $maximumCardLabelLength characters');
     }
     final color = marker.text('color');
     if (color != null && !_colorPattern.hasMatch(color)) {
@@ -333,7 +336,7 @@ Set<String> _validateFields(
 /// Returns the picker's tile group ids.
 Set<String> _validateEntryMode(_ObjectReader mode, Set<String> seenModeIds) {
   mode.allowOnlyKeys(
-    const {'type', 'id', 'label', 'values', 'groups', 'total', 'rowLabels'},
+    const {'type', 'id', 'label', 'values', 'groups', 'total'},
   );
   mode.oneOf('type', templateEntryModeTypes, required: true);
 
@@ -393,9 +396,6 @@ Set<String> _validateEntryMode(_ObjectReader mode, Set<String> seenModeIds) {
     if (mode.has('total')) {
       mode.problem('total', 'needs "groups"; without groups the tiles are added up');
     }
-    if (mode.has('rowLabels')) {
-      mode.problem('rowLabels', 'needs "groups" so a label can say which tiles it is about');
-    }
   } else {
     final groups = mode.list('groups', required: true) ?? const [];
     if (groups.isEmpty) {
@@ -435,45 +435,6 @@ Set<String> _validateEntryMode(_ObjectReader mode, Set<String> seenModeIds) {
       }
     }
 
-    for (final rowLabel in mode.list('rowLabels') ?? const <_ObjectReader>[]) {
-      if (!rowLabel.isObject) {
-        continue;
-      }
-      rowLabel.allowOnlyKeys(const {'when', 'text', 'color', 'show', 'size'});
-      final show = rowLabel.oneOf('show', const {'replace', 'badge'});
-      final size =
-          rowLabel.oneOf('size', const {'small', 'medium', 'large'});
-      if (show == 'badge' && size != null) {
-        rowLabel.problem('size', 'only applies to labels shown instead of the score');
-      }
-      final text = rowLabel.text('text', required: true);
-      if (text != null && text.length > maximumRowLabelLength) {
-        rowLabel.problem(
-          'text',
-          'must be at most $maximumRowLabelLength characters',
-        );
-      }
-      final color = rowLabel.text('color');
-      if (color != null && !_colorPattern.hasMatch(color)) {
-        rowLabel.problem('color', '"$color" must look like #3A7BD5');
-      }
-      final when = rowLabel.text('when', required: true);
-      if (when == null) {
-        continue;
-      }
-      try {
-        final problems = checkFormula(
-          Formula.parse(when),
-          fieldIds: groupIds,
-          context: FormulaContext.picker,
-        );
-        for (final problem in problems) {
-          rowLabel.problem('when', problem.toString());
-        }
-      } on FormulaSyntaxError catch (error) {
-        rowLabel.problem('when', error.toString());
-      }
-    }
   }
 
   if (tileCount > maximumPickerValues) {
@@ -486,17 +447,26 @@ Set<String> _validateEntryMode(_ObjectReader mode, Set<String> seenModeIds) {
   return groupIds;
 }
 
-/// The small line under a player's score. The first note whose `when` is
-/// true is shown. Notes read fields, prompts, built-in values, and the tile
-/// groups of the score's value pickers.
-void _validateScoreNotes(
+/// Text a template shows on the player card: `scoreLabels` (instead of the
+/// score), `scoreSubLabels` (under it), and `playerBadges` (after the name).
+/// Each reads fields, prompts, built-in values, and the tile groups of the
+/// score's value pickers.
+void _validateCardTexts(
   _ObjectReader template, {
   required Set<String> fieldIds,
   required Set<String> promptIds,
   required Set<String> groupIds,
 }) {
-  final notes = template.list('scoreNotes');
-  if (notes == null) {
+  const kinds = {
+    'scoreLabels': maximumCardLabelLength,
+    'scoreSubLabels': maximumScoreSubLabelLength,
+    'playerBadges': maximumCardLabelLength,
+  };
+  final lists = {
+    for (final key in kinds.keys)
+      if (template.list(key) case final List<_ObjectReader> list) key: list,
+  };
+  if (lists.isEmpty) {
     return;
   }
 
@@ -506,7 +476,7 @@ void _validateScoreNotes(
         promptIds.contains(groupId) ||
         formulaBuiltIns.contains(groupId)) {
       template.problem(
-        'scoreNotes',
+        lists.keys.first,
         'tile group "$groupId" has the same name as a field, prompt, or '
             'built-in value; rename one so {$groupId} is clear',
       );
@@ -514,49 +484,56 @@ void _validateScoreNotes(
   }
   final textNames = {...fieldIds, ...promptIds, ...groupIds, ...formulaBuiltIns};
 
-  for (final note in notes) {
-    if (!note.isObject) {
-      continue;
-    }
-    note.allowOnlyKeys(const {'when', 'text', 'color'});
-
-    final text = note.text('text', required: true);
-    if (text != null) {
-      if (text.length > maximumScoreNoteLength) {
-        note.problem('text', 'must be at most $maximumScoreNoteLength characters');
+  for (final MapEntry(key: kind, value: entries) in lists.entries) {
+    final maximumLength = kinds[kind]!;
+    for (final entry in entries) {
+      if (!entry.isObject) {
+        continue;
       }
-      for (final name in scoreNoteTextNames(text)) {
-        if (!textNames.contains(name)) {
-          note.problem(
-            'text',
-            'unknown name "{$name}"; expected one of: ${textNames.join(', ')}',
-          );
+      final isScoreLabel = kind == 'scoreLabels';
+      entry.allowOnlyKeys({'when', 'text', 'color', if (isScoreLabel) 'size'});
+      if (isScoreLabel) {
+        entry.oneOf('size', const {'small', 'medium', 'large'});
+      }
+
+      final text = entry.text('text', required: true);
+      if (text != null) {
+        if (text.length > maximumLength) {
+          entry.problem('text', 'must be at most $maximumLength characters');
+        }
+        for (final name in cardTextNames(text)) {
+          if (!textNames.contains(name)) {
+            entry.problem(
+              'text',
+              'unknown name "{$name}"; expected one of: ${textNames.join(', ')}',
+            );
+          }
         }
       }
-    }
 
-    final color = note.text('color');
-    if (color != null && !_colorPattern.hasMatch(color)) {
-      note.problem('color', '"$color" must look like #3A7BD5');
-    }
-
-    final when = note.text('when', required: true);
-    if (when == null) {
-      continue;
-    }
-    try {
-      final problems = checkFormula(
-        Formula.parse(when),
-        fieldIds: fieldIds,
-        promptIds: promptIds,
-        groupIds: groupIds,
-        context: FormulaContext.note,
-      );
-      for (final problem in problems) {
-        note.problem('when', problem.toString());
+      final color = entry.text('color');
+      if (color != null && !_colorPattern.hasMatch(color)) {
+        entry.problem('color', '"$color" must look like #3A7BD5');
       }
-    } on FormulaSyntaxError catch (error) {
-      note.problem('when', error.toString());
+
+      final when = entry.text('when', required: true);
+      if (when == null) {
+        continue;
+      }
+      try {
+        final problems = checkFormula(
+          Formula.parse(when),
+          fieldIds: fieldIds,
+          promptIds: promptIds,
+          groupIds: groupIds,
+          context: FormulaContext.card,
+        );
+        for (final problem in problems) {
+          entry.problem('when', problem.toString());
+        }
+      } on FormulaSyntaxError catch (error) {
+        entry.problem('when', error.toString());
+      }
     }
   }
 }

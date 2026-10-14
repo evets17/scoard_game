@@ -1,4 +1,3 @@
-import 'package:scoard_game/application/models/scoring/score_row_label.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_definition.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_pick.dart';
 import 'package:scoard_game/core/formulas/formula_evaluator.dart';
@@ -23,7 +22,7 @@ int valuePickerTotal(ValuePickerDefinition picker, List<int> pickedIndexes) {
 }
 
 /// The picked tiles' groups as formula values: `{group}` is the sum of that
-/// group's picked values, with `countIn` and `distinctIn`. Score notes read
+/// group's picked values, with `countIn` and `distinctIn`. Card text reads
 /// these.
 FormulaScope pickedTileGroupsScope(
   ValuePickerDefinition picker,
@@ -60,62 +59,6 @@ class _PickerScope extends FormulaScope {
   @override
   int distinctIn(String groupId) =>
       (_picked[groupId] ?? const []).map((option) => option.displayText).toSet().length;
-}
-
-final _parsedConditions = Expando<Formula>('ValuePickerRowLabelWhen');
-
-/// The label to show instead of the score for these picked tiles: the first
-/// non-badge row label whose condition is true, or null.
-ScoreRowLabel? valuePickerRowLabel(
-  ValuePickerDefinition picker,
-  List<int> pickedIndexes,
-) {
-  if (picker.rowLabels.isEmpty || pickedIndexes.isEmpty) {
-    return null;
-  }
-
-  return _matchingRowLabels(picker, pickedIndexes)
-      .where((rowLabel) => !rowLabel.isBadge)
-      .map(
-        (rowLabel) => ScoreRowLabel(
-          text: rowLabel.text,
-          color: rowLabel.color,
-          size: rowLabel.size,
-        ),
-      )
-      .firstOrNull;
-}
-
-/// The badges to show beside the player's name for these picked tiles: every
-/// badge-style row label whose condition is true, in template order.
-List<ScoreRowLabel> valuePickerBadges(
-  ValuePickerDefinition picker,
-  List<int> pickedIndexes,
-) {
-  return [
-    for (final rowLabel in _matchingRowLabels(picker, pickedIndexes))
-      if (rowLabel.isBadge)
-        ScoreRowLabel(text: rowLabel.text, color: rowLabel.color),
-  ];
-}
-
-Iterable<ValuePickerRowLabel> _matchingRowLabels(
-  ValuePickerDefinition picker,
-  List<int> pickedIndexes,
-) sync* {
-  if (picker.rowLabels.isEmpty || pickedIndexes.isEmpty) {
-    return;
-  }
-
-  final picked = [for (final index in pickedIndexes) picker.options[index]];
-  final scope = _PickerScope(picker, picked);
-  for (final rowLabel in picker.rowLabels) {
-    final condition =
-        _parsedConditions[rowLabel] ??= Formula.parse(rowLabel.when);
-    if (evaluateFormula(condition, scope) != 0) {
-      yield rowLabel;
-    }
-  }
 }
 
 /// The picker's tiles for a saved [pick], as indexes into its options. Tiles

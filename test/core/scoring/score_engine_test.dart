@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:scoard_game/application/models/scoring/card_text.dart';
 import 'package:scoard_game/application/models/scoring/calculated_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
@@ -136,13 +137,13 @@ void main() {
     );
   });
 
-  test('score notes read tiles, fields, other players, and prompts', () {
+  test('card text reads tiles, fields, other players, prompts, and seats', () {
     final preset = loadTemplateCatalog({
-      'notes.json': jsonEncode({
+      'cards.json': jsonEncode({
         'schemaVersion': 2,
-        'id': 'notes',
+        'id': 'cards',
         'version': '1.0.0',
-        'name': 'Notes',
+        'name': 'Cards',
         'description': 'x',
         'players': {'minimum': 2},
         'scoringModel': 'rounds',
@@ -181,7 +182,10 @@ void main() {
           {'id': 'scored', 'label': 'Scored', 'formula': '{points} * 2'},
         ],
         'score': 'scored',
-        'scoreNotes': [
+        'scoreLabels': [
+          {'when': '{points} == 0', 'text': 'Zero', 'size': 'small'},
+        ],
+        'scoreSubLabels': [
           {
             'when': '{bonus} > 0 and {bonus-note}',
             'text': 'Bonus +{bonus}',
@@ -192,10 +196,19 @@ void main() {
             'text': 'from {points}, top',
           },
         ],
+        'playerBadges': [
+          {'when': '{bonus} > 0', 'text': 'Bonus'},
+          {
+            'when': '({roundNumber} - 1) % {playerCount} + 1 == '
+                '{playerPosition}',
+            'text': '1st',
+          },
+        ],
       }),
-    }).catalog.byId('notes');
+    }).catalog.byId('cards');
     final engine = ScoreEngine.of(preset);
 
+    // In play order: a sits first, b second, c third.
     final participants = [
       QuickScoreParticipantValues(
         playerId: 'a',
@@ -210,28 +223,38 @@ void main() {
         displayName: 'b',
         enteredValues: {'points': 2},
       ),
+      const QuickScoreParticipantValues(
+        playerId: 'c',
+        displayName: 'c',
+        enteredValues: {'points': 0},
+      ),
     ];
 
-    // With the option on, the tile note comes first.
-    final withOption = engine.scoreNotes(
+    final round1 = engine.cardTexts(
       participants,
       roundNumber: 1,
       options: const {'bonus-note': 1},
     );
-    expect(withOption.keys, ['a']);
-    expect(withOption['a']!.text, 'Bonus +10');
-    expect(withOption['a']!.color, '#00AA00');
+    // With the option on, the tile sub label comes first.
+    expect(round1['a']!.scoreSubLabel!.text, 'Bonus +10');
+    expect(round1['a']!.scoreSubLabel!.color, '#00AA00');
+    // Every badge that applies, in template order.
+    expect(round1['a']!.playerBadges.map((badge) => badge.text), ['Bonus', '1st']);
+    expect(round1['b']!.playerBadges, isEmpty);
+    expect(round1['b']!.scoreSubLabel, isNull);
+    expect(round1['c']!.scoreLabel!.text, 'Zero');
+    expect(round1['c']!.scoreLabel!.size, CardTextSize.small);
 
-    // Without it, the next note that applies is used; b has none.
-    final withoutOption = engine.scoreNotes(
+    // Without the option the next sub label applies. The first seat moves
+    // one along each round and wraps after the last.
+    final round5 = engine.cardTexts(
       participants,
-      roundNumber: 1,
+      roundNumber: 5,
       options: const {'bonus-note': 0},
     );
-    expect(
-      {for (final entry in withoutOption.entries) entry.key: entry.value.text},
-      {'a': 'from 11, top'},
-    );
+    expect(round5['a']!.scoreSubLabel!.text, 'from 11, top');
+    expect(round5['a']!.playerBadges.map((badge) => badge.text), ['Bonus']);
+    expect(round5['b']!.playerBadges.map((badge) => badge.text), ['1st']);
   });
 
   test('field order follows dependencies and loops are named', () {

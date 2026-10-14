@@ -9,13 +9,15 @@ enum FormulaContext {
   /// A value picker's total: reads the totals of its tile groups.
   picker,
 
-  /// A score note: reads everything a field formula can, plus the tile
-  /// groups of the score's value pickers.
-  note,
+  /// Text a template shows on the player card (score labels, score sub
+  /// labels, player badges): reads everything a field formula can, plus the
+  /// tile groups of the score's value pickers.
+  card,
 }
 
-/// Values every field formula can use, like fields.
-const formulaBuiltIns = {'playerCount', 'roundNumber'};
+/// Values every field formula can use, like fields. `playerPosition` is the
+/// player's place in play order, from 1.
+const formulaBuiltIns = {'playerCount', 'roundNumber', 'playerPosition'};
 
 /// Functions that look at the other players. Their one argument is a bare
 /// field name, for example `highestOther(inning-points)`.
@@ -46,7 +48,7 @@ const _arityByContext = <FormulaContext, Map<String, (int, int?)>>{
     'countIn': (1, 1),
     'distinctIn': (1, 1),
   },
-  FormulaContext.note: {
+  FormulaContext.card: {
     ..._commonArity,
     'highestOther': (1, 1),
     'lowestOther': (1, 1),
@@ -71,7 +73,7 @@ class FormulaProblem {
 
 /// Checks [formula] against the names it may read: the template's fields
 /// and [promptIds], or for [FormulaContext.picker] the picker's tile groups
-/// (given as [fieldIds]). A [FormulaContext.note] also reads [groupIds].
+/// (given as [fieldIds]). A [FormulaContext.card] also reads [groupIds].
 ///
 /// Returns the problems found, and through [dependencies] the names the
 /// formula reads.
@@ -89,7 +91,7 @@ List<FormulaProblem> checkFormula(
   final builtIns = switch (context) {
     FormulaContext.field => {...formulaBuiltIns, ...promptIds},
     FormulaContext.picker => const <String>{},
-    FormulaContext.note => {...formulaBuiltIns, ...promptIds, ...groupIds},
+    FormulaContext.card => {...formulaBuiltIns, ...promptIds, ...groupIds},
   };
 
   /// The bare names [function] takes, and what they are called, or null if
@@ -100,7 +102,7 @@ List<FormulaProblem> checkFormula(
       return (fieldIds, 'field');
     }
     if (pickerGroupFunctions.contains(function)) {
-      return context == FormulaContext.note
+      return context == FormulaContext.card
           ? (groupIds, 'group')
           : (fieldIds, 'group');
     }

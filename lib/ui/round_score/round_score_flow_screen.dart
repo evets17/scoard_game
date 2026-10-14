@@ -7,7 +7,7 @@ import 'package:scoard_game/application/models/scoring/marker_field_definition.d
 import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_pick.dart';
-import 'package:scoard_game/application/models/scoring/score_row_label.dart';
+import 'package:scoard_game/application/models/scoring/card_text.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/application/models/scoring/winner_rule.dart';
 import 'package:scoard_game/application/models/sessions/player_color.dart';
@@ -208,7 +208,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
                   entryMemory: _scoreEntryMemory,
                   priorRoundTotals: _priorRoundTotals(),
                   currentRoundScores: _currentRoundScores(),
-                  scoreNotes: _currentRoundNotes(),
+                  cardTexts: _currentRoundCardTexts(),
                   entryPicks: _entryPicks,
                   onEntryPickChanged: _setEntryPick,
                   markers: _preset!.markerFields,
@@ -298,9 +298,9 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
     );
   }
 
-  /// The template's note under each player's score for the round on screen.
-  Map<String, ScoreRowLabel> _currentRoundNotes() {
-    return ScoreEngine.of(_preset!).scoreNotes(
+  /// What the template shows on each player's card for the round on screen.
+  Map<String, PlayerCardTexts> _currentRoundCardTexts() {
+    return ScoreEngine.of(_preset!).cardTexts(
       _currentRoundParticipants(),
       roundNumber: _currentRoundNumber,
       options: _formulaOptions,
@@ -1251,7 +1251,7 @@ class _RoundScoreEntryStep extends StatelessWidget {
     required this.entryMemory,
     required this.priorRoundTotals,
     required this.currentRoundScores,
-    required this.scoreNotes,
+    required this.cardTexts,
     required this.entryPicks,
     required this.onEntryPickChanged,
     required this.markers,
@@ -1281,8 +1281,8 @@ class _RoundScoreEntryStep extends StatelessWidget {
   /// Scores for this round from what is entered so far.
   final Map<String, int> currentRoundScores;
 
-  /// The template's note under each player's score, by player id.
-  final Map<String, ScoreRowLabel> scoreNotes;
+  /// What the template shows on each player's card, by player id.
+  final Map<String, PlayerCardTexts> cardTexts;
 
   /// Value picker tiles behind each player's entry this round, by player id.
   final Map<String, ValuePickerPick> entryPicks;
@@ -1372,7 +1372,7 @@ class _RoundScoreEntryStep extends StatelessWidget {
                     roundScore: scoreIsCalculated
                         ? currentRoundScores[player.id]
                         : null,
-                    scoreNote: scoreNotes[player.id],
+                    cardTexts: cardTexts[player.id] ?? PlayerCardTexts.none,
                     valueLabelMinimumDigits: 3,
                     // An entered score updates from the row's own value; a
                     // calculated one comes from the whole round.

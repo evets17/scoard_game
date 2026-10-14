@@ -52,6 +52,7 @@ int _evaluate(FormulaNode node, FormulaScope scope) {
         '-' => a - b,
         '*' => a * b,
         '/' => _divideRoundingDown(a, b),
+        '%' => _remainder(a, b),
         '>' => _bool(a > b),
         '>=' => _bool(a >= b),
         '<' => _bool(a < b),
@@ -109,4 +110,14 @@ int _divideRoundingDown(int left, int right) {
   final quotient = left ~/ right;
   final hasRemainder = quotient * right != left;
   return hasRemainder && (left < 0) != (right < 0) ? quotient - 1 : quotient;
+}
+
+/// What is left after dividing, matching `/`, which rounds down: so
+/// `a == (a / b) * b + a % b`. With a positive [right] it is never negative,
+/// and dividing by zero gives 0.
+int _remainder(int left, int right) {
+  if (right == 0) {
+    return 0;
+  }
+  return left - _divideRoundingDown(left, right) * right;
 }

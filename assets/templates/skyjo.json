@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "skyjo",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "name": "Skyjo",
   "description": "Add up each round's cards. Mark who went out first: unless they have the lowest score outright, their round score is doubled (only if it is positive). Lowest total wins. Game ends once someone reaches 100.\n\nHouse rule option: double negative scores too.",
   "source": "https://officialgamerules.org/game-rules/skyjo/",
@@ -61,7 +61,7 @@
     }
   ],
   "score": "points",
-  "scoreNotes": [
+  "scoreSubLabels": [
     { "when": "{points} != {round-score}", "text": "from {round-score}" }
   ]
 }

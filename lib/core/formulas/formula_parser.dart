@@ -97,7 +97,7 @@ class _Token {
 
 final _namePattern = RegExp(r'[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*');
 final _numberPattern = RegExp(r'[0-9]+');
-const _symbols = ['>=', '<=', '==', '!=', '+', '-', '*', '/', '(', ')', ',', '>', '<'];
+const _symbols = ['>=', '<=', '==', '!=', '+', '-', '*', '/', '%', '(', ')', ',', '>', '<'];
 
 List<_Token> _tokenize(String source) {
   final tokens = <_Token>[];
@@ -249,7 +249,7 @@ class _Parser {
 
   FormulaNode _parseMultiplicative() {
     var left = _parseUnary();
-    while (_isSymbol('*') || _isSymbol('/')) {
+    while (_isSymbol('*') || _isSymbol('/') || _isSymbol('%')) {
       final token = _advance();
       left = BinaryNode(token.text, left, _parseUnary(), token.position);
     }

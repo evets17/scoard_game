@@ -67,7 +67,9 @@ That validates every bundled template and runs every scenario. A template is don
 | `winner` | yes | string | `highestScore` or `lowestScore`. |
 | `prompts` | no | array | Questions asked when a game starts. See below. |
 | `scoreField` | yes | object | The score entered for each player. See below. |
-| `scoreNotes` | no | array | A short line under a player's score, such as "Rack-o" or "from 4". See below. |
+| `scoreLabels` | no | array | Text shown instead of the score. See Player Card. |
+| `scoreSubLabels` | no | array | Text shown under the score. See Player Card. |
+| `playerBadges` | no | array | Chips shown after the player's name. See Player Card. |
 
 Any key not listed here is an error.
 
@@ -209,62 +211,69 @@ The tiles are shown in template order, groups one after another, in one grid. Gi
 
 The players see the total update as they tap, and Replace or Adjust uses it.
 
-#### `rowLabels`
-
-Optional, and only with `groups`. Shows a word on the player's row in place of their score when the tapped tiles match, so the table can see at a glance what happened. For Flip 7, a bust shows **Bust** in red instead of 0:
-
-```json
-"rowLabels": [
-  { "when": "{bust} > 0", "text": "Bust", "color": "#C62828", "size": "small" }
-]
-```
-
-| Key | Required | Rules |
-|---|---|---|
-| `when` | yes | A formula over the groups, like `total`. The label shows when it is not 0. |
-| `text` | yes | At most 8 characters. |
-| `show` | no | `replace` (default): shown instead of the score. `badge`: a small chip beside the player's name, keeping the score visible. |
-| `color` | no | Text colour for `replace`, chip colour for `badge`, as `#RRGGBB`. |
-| `size` | no | `replace` labels only: `small`, `medium`, or `large` (default). Use `small` to keep a word like "Bust" quieter than a score. The score number always keeps its normal size. Sizes follow the phone's text-size setting. |
-
-Use `replace` only when the outcome always has the same score (a Flip 7 bust is always 0), and `badge` when the score still matters (a Flip 7 bonus round scores differently each time):
-
-```json
-{ "when": "{bust} == 0 and distinctIn(numbers) >= 7", "text": "7!", "show": "badge", "color": "#2E7D32" }
-```
-
-For `replace`, the first matching label is used. Every matching `badge` is shown. The score itself still counts as normal.
-
 #### Remembered tiles
 
-When a score is entered with a value picker and **Replace**, the tapped tiles are kept with that entry while the game is in progress (through resume, and when going back to an earlier round). Reopening the entry sheet for that player goes straight to the picker with those tiles, ready to adjust. Row labels come from the kept tiles. Changing the score any other way (− / +, the calculator, quick pick, or **Adjust**) drops the tiles, and with them any label.
+When a score is entered with a value picker and **Replace**, the tapped tiles are kept with that entry while the game is in progress (through resume, and when going back to an earlier round). Reopening the entry sheet for that player goes straight to the picker with those tiles, ready to adjust. Card text that reads tile groups comes from the kept tiles. Changing the score any other way (− / +, the calculator, quick pick, or **Adjust**) drops the tiles, and with them any text that depended on them.
 
-### `scoreNotes`
+---
 
-A small line of text under a player's score, which stays the main number. The app shows whatever the template says; the template decides what a note means. For Rack-O, a Rack-O tile shows **Rack-o** under the 75:
+## Player Card
+
+Each player has a card on the scoring screen:
+
+| Part | What it is | Set by |
+|---|---|---|
+| Player Name | The player | the players |
+| Score | This round's score (Round Score), or the game's score in Quick Score | `scoreField` (version 2: `fields` and `score`) |
+| Total Score | Running total, round games only | the app |
+| Score Label | A word shown **instead of** the score, such as "Bust" | `scoreLabels` |
+| Score Sub Label | Small text **under** the score, such as "from 10" | `scoreSubLabels` |
+| Player Badge | A chip **after** the name, such as "1st" or "7!" | `playerBadges`, and markers (version 2) |
+| Player Color | A halo around the card | the players |
+
+The app shows whatever text the template gives; the template decides what it means. There is no built-in text.
+
+### Card Text: `scoreLabels`, `scoreSubLabels`, `playerBadges`
+
+Three optional top-level lists with the same shape. For Flip 7:
 
 ```json
-"scoreNotes": [
-  { "when": "{racko} > 0", "text": "Rack-o", "color": "#00D126" }
+"scoreLabels": [
+  { "when": "{bust} > 0", "text": "Bust", "color": "#C62828", "size": "small" }
+],
+"playerBadges": [
+  { "when": "{bust} == 0 and distinctIn(numbers) >= 7", "text": "7!", "color": "#2E7D32" },
+  { "when": "({roundNumber} - 1) % {playerCount} + 1 == {playerPosition}", "text": "1st", "color": "#1565C0" }
 ]
 ```
 
 | Key | Required | Rules |
 |---|---|---|
-| `when` | yes | A formula. The note shows when it is not 0. |
-| `text` | yes | At most 24 characters as written. `{name}` shows a value, for example `"from {round-score}"`. |
-| `color` | no | Text colour as `#RRGGBB`. Default: the usual quiet colour. |
+| `when` | yes | A formula. The text shows when it is not 0. |
+| `text` | yes | `{name}` shows a value, for example `"from {round-score}"`. At most 8 characters as written for score labels and player badges, 24 for score sub labels. |
+| `color` | no | `#RRGGBB`: the text colour for labels, the chip colour for badges. |
+| `size` | no | Score labels only: `small`, `medium`, or `large` (default). Use `small` to keep a word like "Bust" quieter than a score. The score number always keeps its normal size. |
 
-The first note whose `when` is true is shown, so put the most specific first. A note can read:
+Which entries show:
+
+| List | Shows | When |
+|---|---|---|
+| `scoreLabels` | the first that applies, instead of the score | once a score is entered |
+| `scoreSubLabels` | the first that applies, under the score | once a score is entered, and not with a score label |
+| `playerBadges` | every one that applies, in template order | always, even before a score is entered |
+
+Put the most specific entry first in `scoreLabels` and `scoreSubLabels`. Use a score label only when the outcome always has the same score (a Flip 7 bust is always 0); otherwise keep the score showing and use a sub label or badge.
+
+Card text formulas can read:
 
 * the score field, and in version 2 every field, including calculated fields and markers
 * the other players, with `highestOther`, `lowestOther`, `sumOthers`, and `countOthers`
-* prompts by `id`, `{playerCount}`, and `{roundNumber}`
+* prompts by `id`, `{playerCount}`, `{roundNumber}`, and `{playerPosition}` (the player's seat in play order, from 1)
 * the tile groups of the score's value pickers, with `{group}`, `countIn(group)`, and `distinctIn(group)`
 
 Tile groups are 0 unless the score was entered with the picker and **Replace** (see Remembered tiles), so a typed 75 is not a Rack-O. A tile group may not have the same `id` as a field or prompt, so `{name}` always means one thing.
 
-The same note shows in the entry sheet, as "Current score: 75 (Rack-o)".
+The score sub label also shows in the entry sheet, as "Current score: 75 (Rack-o)".
 
 ---
 
@@ -309,8 +318,19 @@ Each scenario:
 | `players` | yes | At least `players.minimum` unique player names. |
 | `prompts` | no | Prompt answers by prompt `id`, for example `{ "low-score-wins": true }`. Unanswered prompts use their `default`. |
 | `scores` | `finalScore` only | One integer per player. |
-| `rounds` | `rounds` only | One object per round, with an integer per player. |
-| `expected` | yes | At least one of `totals`, `winners`, `placements`, `roundNotes`. |
+| `rounds` | `rounds` only | One object per round, with an entry per player. |
+| `expected` | yes | At least one of `totals`, `winners`, `placements`, or a `round...` key below. |
+
+A player's entry (in `scores` or a round) is the score as a whole number, or an object:
+
+| Key | Meaning |
+|---|---|
+| the score field `id` | The score, for example `{ "round-score": 10 }`. |
+| a marker `id` | `1` to set the marker (version 2). |
+| `tiles` | Tiles tapped in a value picker, by their text or value, for example `{ "tiles": ["9", "Bust"] }`. Without a score, the score is the picker's total. Card text reads these tiles. |
+| `picker` | The value picker's `id`, needed only when the score has more than one. |
+
+Players are in play order, which sets `{playerPosition}`.
 
 `expected`:
 
@@ -319,11 +339,16 @@ Each scenario:
 | `totals` | Each player's final total. |
 | `winners` | The players in first place. More than one means a tie. Order does not matter. |
 | `placements` | Each player's place. Tied players share a place. |
-| `roundNotes` | `rounds` only. Each round's score notes by player, in round order, for example `[{ "avery": "from 10" }, {}]`. Players left out expect no note. |
+| `roundScores` | Each round's score per player, in round order. Every player in every round. |
+| `roundScoreLabels` | Each round's score labels by player, for example `[{ "avery": "Bust" }, {}]`. Players left out expect none. |
+| `roundScoreSubLabels` | The same for score sub labels, for example `[{ "avery": "from 10" }]`. |
+| `roundPlayerBadges` | Each round's player badges by player, in template order, for example `[{ "avery": ["1st"], "jules": ["7!"] }]`. Players left out expect none. |
+
+The `round...` keys apply to `rounds` templates only and need one entry per round.
 
 ### `pickerTotals`
 
-Each check taps tiles in a value picker and states the score they should give. Tiles are named by what they show. Use the rulebook's own examples where it has them.
+Each check taps tiles in a value picker and states the score they should give. What tiles show on the player card is checked in scenarios, with `tiles` entries. Tiles are named by what they show. Use the rulebook's own examples where it has them.
 
 ```json
 "pickerTotals": [
@@ -342,9 +367,6 @@ Each check taps tiles in a value picker and states the score they should give. T
 | `picker` | yes | The `id` of a value picker in the template. |
 | `taps` | yes | Tiles in the order they are tapped, by their text or value. |
 | `expected` | yes | The score. |
-| `label` | no | The row label the taps should give, for example `"Bust"`, or `null` for no label. |
-| `badges` | no | The badge texts the taps should give, in order, for example `["7!"]`, or `[]` for none. |
-| `note` | no | The score note the taps should give, for example `"Rack-o"`, or `null` for none. |
 
 ### Coverage Rules
 
@@ -353,8 +375,7 @@ The test run fails unless a template's scenarios:
 * include at least one tie for first place
 * answer every prompt that has an `effect` with a non-default value at least once
 * include at least one `pickerTotals` check for every value picker with a `total`
-* include a `pickerTotals` check expecting each row label's `text`, in `label` or `badges`
-* expect every score note at least once, in a scenario's `roundNotes` or a `pickerTotals` `note`
+* expect every score label, score sub label, and player badge at least once, in a scenario's `roundScoreLabels`, `roundScoreSubLabels`, or `roundPlayerBadges`
 
 ---
 
