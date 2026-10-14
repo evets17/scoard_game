@@ -7,6 +7,7 @@ import 'package:scoard_game/application/models/scoring/score_input_kind.dart';
 import 'package:scoard_game/application/models/scoring/scoring_model.dart';
 import 'package:scoard_game/application/models/scoring/score_row_label.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
+import 'package:scoard_game/application/models/scoring/template_origin.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_definition.dart';
 import 'package:scoard_game/application/models/scoring/winner_rule.dart';
 
@@ -15,7 +16,10 @@ import 'package:scoard_game/application/models/scoring/winner_rule.dart';
 ///
 /// Version 1's `scoreField` and version 2's `fields` and `score` produce the
 /// same model: entered fields, calculated fields, and which one is the score.
-ScoringPreset parseTemplateJson(Map<String, Object?> json) {
+ScoringPreset parseTemplateJson(
+  Map<String, Object?> json, {
+  TemplateOrigin origin = TemplateOrigin.bundled,
+}) {
   final players = json['players']! as Map<String, Object?>;
   final prompts = (json['prompts'] as List<Object?>?) ?? const [];
   final fields = [
@@ -76,6 +80,7 @@ ScoringPreset parseTemplateJson(Map<String, Object?> json) {
           ),
     ],
     scoreFieldId: json['score'] as String?,
+    origin: origin,
   );
 }
 

@@ -3,6 +3,7 @@ import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart
 import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_kind.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
+import 'package:scoard_game/application/models/scoring/template_origin.dart';
 import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -24,6 +25,16 @@ class GamePageScreen extends StatefulWidget {
 
   @override
   State<GamePageScreen> createState() => _GamePageScreenState();
+}
+
+/// "v2.1.0 · online" or "v2.1.0 · built in", so it is clear which copy of a
+/// template a game will use.
+String templateVersionLabel(ScoringPreset preset) {
+  final origin = switch (preset.origin) {
+    TemplateOrigin.bundled => 'built in',
+    TemplateOrigin.online => 'online',
+  };
+  return 'Template v${preset.version} · $origin';
 }
 
 Future<bool> _openInBrowser(Uri uri) {
@@ -116,6 +127,18 @@ class _GamePageScreenState extends State<GamePageScreen> {
                     openLink: widget.openLink,
                   ),
                 ],
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.description_outlined,
+                      size: 20,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(templateVersionLabel(preset), style: secondaryStyle),
+                  ],
+                ),
                 if (preset.promptDefinitions.isNotEmpty) ...[
                   const SizedBox(height: 24),
                   Text('Options', style: theme.textTheme.titleLarge),

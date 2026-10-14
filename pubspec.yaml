@@ -10,6 +10,7 @@ dependencies:
   drift: ^2.28.2
   flutter:
     sdk: flutter
+  http: ^1.6.0
   path: ^1.9.1
   path_provider: ^2.1.5
   shared_preferences: ^2.5.3

@@ -3,6 +3,7 @@ import 'package:scoard_game/application/models/scoring/marker_field_definition.d
 import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
 import 'package:scoard_game/application/models/scoring/scoring_model.dart';
+import 'package:scoard_game/application/models/scoring/template_origin.dart';
 import 'package:scoard_game/application/models/scoring/winner_rule.dart';
 
 /// A scoring template, as read from a template file.
@@ -24,6 +25,7 @@ class ScoringPreset {
     this.calculatedFields = const [],
     this.markerFields = const [],
     this.scoreFieldId,
+    this.origin = TemplateOrigin.bundled,
   });
 
   final String id;
@@ -62,6 +64,9 @@ class ScoringPreset {
 
   /// Where the scoring rules came from.
   final String? source;
+
+  /// Where this template was loaded from.
+  final TemplateOrigin origin;
 
   /// The id of the field that is each player's score.
   String get scoreId => scoreFieldId ?? scoreFields.first.id;

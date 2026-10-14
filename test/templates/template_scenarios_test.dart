@@ -20,6 +20,7 @@ import 'package:scoard_game/core/scoring/resolve_preset_options.dart';
 import 'package:scoard_game/core/scoring/score_engine.dart';
 import 'package:scoard_game/core/scoring/value_picker_total.dart';
 import 'package:scoard_game/core/templates/template_catalog.dart';
+import 'package:scoard_game/core/templates/template_index.dart';
 
 const _templateDirectory = 'assets/templates';
 const _scenarioDirectory = 'test/templates/scenarios';
@@ -95,7 +96,7 @@ List<File> _jsonFilesIn(String directory) {
   return dir
       .listSync()
       .whereType<File>()
-      .where((file) => file.path.endsWith('.json'))
+      .where((file) => isTemplateFilePath(file.path))
       .toList()
     ..sort((left, right) => left.path.compareTo(right.path));
 }

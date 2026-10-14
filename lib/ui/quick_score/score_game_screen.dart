@@ -9,17 +9,39 @@ import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
 import 'package:scoard_game/ui/game_page/game_page_screen.dart';
 
 class ScoreGameScreen extends StatefulWidget {
-  const ScoreGameScreen({required this.loadScoreGameChoices, super.key});
+  const ScoreGameScreen({
+    required this.loadScoreGameChoices,
+    this.templatesChanged,
+    super.key,
+  });
 
   final LoadScoreGameChoices loadScoreGameChoices;
+
+  /// Fires when the templates change, for example after an online update.
+  final Listenable? templatesChanged;
 
   @override
   State<ScoreGameScreen> createState() => _ScoreGameScreenState();
 }
 
 class _ScoreGameScreenState extends State<ScoreGameScreen> {
-  late final Future<ScoreGameChoices> _choicesFuture =
-      widget.loadScoreGameChoices();
+  late Future<ScoreGameChoices> _choicesFuture = widget.loadScoreGameChoices();
+
+  @override
+  void initState() {
+    super.initState();
+    widget.templatesChanged?.addListener(_reload);
+  }
+
+  @override
+  void dispose() {
+    widget.templatesChanged?.removeListener(_reload);
+    super.dispose();
+  }
+
+  void _reload() {
+    setState(() => _choicesFuture = widget.loadScoreGameChoices());
+  }
 
   @override
   Widget build(BuildContext context) {

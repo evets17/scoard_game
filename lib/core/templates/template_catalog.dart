@@ -1,23 +1,40 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:scoard_game/application/models/scoring/scoring_model.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
+import 'package:scoard_game/application/models/scoring/template_origin.dart';
 import 'package:scoard_game/core/templates/template_parser.dart';
 import 'package:scoard_game/core/templates/template_validator.dart';
 
 /// Every available scoring template, looked up synchronously after startup.
-class TemplateCatalog {
+///
+/// The templates can be replaced when online templates are updated.
+/// Listeners are told, so lists of templates can refresh. A game already
+/// open keeps the template it started with.
+class TemplateCatalog extends ChangeNotifier {
   TemplateCatalog(List<ScoringPreset> templates)
-      : templates = List.unmodifiable(
-          [...templates]..sort(
-              (left, right) => left.displayName
-                  .toLowerCase()
-                  .compareTo(right.displayName.toLowerCase()),
-            ),
-        );
+      : _templates = _sorted(templates);
+
+  List<ScoringPreset> _templates;
 
   /// Sorted by name, as listed in Score a Game.
-  final List<ScoringPreset> templates;
+  List<ScoringPreset> get templates => _templates;
+
+  void replaceTemplates(List<ScoringPreset> templates) {
+    _templates = _sorted(templates);
+    notifyListeners();
+  }
+
+  static List<ScoringPreset> _sorted(List<ScoringPreset> templates) {
+    return List.unmodifiable(
+      [...templates]..sort(
+          (left, right) => left.displayName
+              .toLowerCase()
+              .compareTo(right.displayName.toLowerCase()),
+        ),
+    );
+  }
 
   ScoringPreset? maybeById(String id) {
     for (final template in templates) {
@@ -69,7 +86,10 @@ class TemplateCatalogLoadResult {
 /// Validates and parses template files, keyed by file path.
 ///
 /// The template id each file must declare is its file name without `.json`.
-TemplateCatalogLoadResult loadTemplateCatalog(Map<String, String> filesByPath) {
+TemplateCatalogLoadResult loadTemplateCatalog(
+  Map<String, String> filesByPath, {
+  TemplateOrigin origin = TemplateOrigin.bundled,
+}) {
   final templates = <ScoringPreset>[];
   final problemsByFile = <String, List<TemplateProblem>>{};
   final pathsById = <String, String>{};
@@ -103,7 +123,9 @@ TemplateCatalogLoadResult loadTemplateCatalog(Map<String, String> filesByPath) {
     }
 
     pathsById[expectedId] = path;
-    templates.add(parseTemplateJson(json! as Map<String, Object?>));
+    templates.add(
+      parseTemplateJson(json! as Map<String, Object?>, origin: origin),
+    );
   }
 
   return TemplateCatalogLoadResult(

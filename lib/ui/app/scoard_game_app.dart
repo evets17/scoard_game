@@ -73,6 +73,7 @@ class ScoardGameApp extends StatelessWidget {
                 ),
             AppRoutes.newGame: (_) => ScoreGameScreen(
                   loadScoreGameChoices: environment.loadScoreGameChoices,
+                  templatesChanged: environment.templateCatalog,
                 ),
             AppRoutes.playStats: (_) => const PlaceholderScreen(
                   title: 'Play Stats',
@@ -83,6 +84,7 @@ class ScoardGameApp extends StatelessWidget {
             AppRoutes.settings: (_) => SettingsScreen(
                   themeController: environment.themeController,
                   stayAwakeController: environment.stayAwakeController,
+                  onlineTemplates: environment.onlineTemplates,
                 ),
           },
           onGenerateRoute: (settings) {

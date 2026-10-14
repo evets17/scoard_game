@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:scoard_game/core/templates/template_catalog.dart';
+import 'package:scoard_game/core/templates/template_index.dart';
 
 TemplateCatalog? _cached;
 
@@ -13,7 +14,7 @@ TemplateCatalog loadTestTemplateCatalog() {
     final files = Directory('assets/templates')
         .listSync()
         .whereType<File>()
-        .where((file) => file.path.endsWith('.json'));
+        .where((file) => isTemplateFilePath(file.path));
     final result = loadTemplateCatalog({
       for (final file in files) file.path: file.readAsStringSync(),
     });

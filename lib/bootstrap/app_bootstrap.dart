@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:scoard_game/application/repositories/online_template_repository.dart';
 import 'package:scoard_game/application/repositories/player_repository.dart';
 import 'package:scoard_game/application/repositories/session_repository.dart';
 import 'package:scoard_game/application/repositories/setup_preferences_repository.dart';
@@ -24,30 +28,42 @@ import 'package:scoard_game/application/services/sessions/save_quick_score_activ
 import 'package:scoard_game/application/services/sessions/save_round_score_active_session.dart';
 import 'package:scoard_game/application/services/sessions/save_round_score_session.dart';
 import 'package:scoard_game/application/services/sessions/save_quick_score_session.dart';
+import 'package:scoard_game/application/services/templates/online_templates.dart';
 import 'package:scoard_game/bootstrap/app_environment.dart';
 import 'package:scoard_game/core/templates/template_catalog.dart';
 import 'package:scoard_game/infrastructure/memory/memory_game_repository.dart';
+import 'package:scoard_game/infrastructure/memory/memory_online_template_cache.dart';
 import 'package:scoard_game/infrastructure/memory/memory_player_repository.dart';
 import 'package:scoard_game/infrastructure/memory/memory_session_repository.dart';
 import 'package:scoard_game/infrastructure/memory/memory_setup_preferences_repository.dart';
+import 'package:scoard_game/infrastructure/memory/memory_template_source_preferences.dart';
 import 'package:scoard_game/infrastructure/persistence/db/app_database.dart';
 import 'package:scoard_game/infrastructure/persistence/preferences/setup_preference_store.dart';
 import 'package:scoard_game/infrastructure/persistence/preferences/stay_awake_preference_store.dart';
+import 'package:scoard_game/infrastructure/persistence/preferences/template_source_preference_store.dart';
 import 'package:scoard_game/infrastructure/persistence/preferences/theme_preference_store.dart';
 import 'package:scoard_game/infrastructure/persistence/repositories/persistent_player_repository.dart';
 import 'package:scoard_game/infrastructure/persistence/repositories/persistent_session_repository.dart';
 import 'package:scoard_game/infrastructure/templates/bundled_template_files.dart';
+import 'package:scoard_game/infrastructure/templates/file_online_template_cache.dart';
+import 'package:scoard_game/infrastructure/templates/http_template_downloader.dart';
 import 'package:scoard_game/ui/settings/stay_awake_controller.dart';
 import 'package:scoard_game/ui/theme/app_theme_controller.dart';
 
 class AppBootstrap {
+  /// [templateDownloader] and [templateSourcePreferences] let tests replace
+  /// the network and the online template settings.
   static Future<AppEnvironment> initialize({
     bool usePersistentStorage = false,
     TemplateCatalog? templateCatalog,
+    TemplateDownloader? templateDownloader,
+    TemplateSourcePreferences? templateSourcePreferences,
   }) async {
     await Future<void>.microtask(() {});
 
     final catalog = templateCatalog ?? await _loadTemplateCatalog();
+    final OnlineTemplateCache onlineTemplateCache;
+    final TemplateSourcePreferences sourcePreferences;
     final gameRepository = MemoryGameRepository.seeded();
     final PlayerRepository playerRepository;
     final SessionRepository sessionRepository;
@@ -60,6 +76,13 @@ class AppBootstrap {
       final themePreferenceStore = await ThemePreferenceStore.create();
       final stayAwakePreferenceStore = await StayAwakePreferenceStore.create();
       setupPreferences = await SetupPreferenceStore.create();
+      sourcePreferences = templateSourcePreferences ??
+          await TemplateSourcePreferenceStore.create();
+      onlineTemplateCache = FileOnlineTemplateCache(
+        Directory(
+          '${(await getApplicationSupportDirectory()).path}/online_templates',
+        ),
+      );
 
       playerRepository = PersistentPlayerRepository(appDatabase);
       sessionRepository = PersistentSessionRepository(appDatabase);
@@ -77,7 +100,21 @@ class AppBootstrap {
       themeController = AppThemeController();
       stayAwakeController = StayAwakeController();
       setupPreferences = MemorySetupPreferencesRepository();
+      sourcePreferences =
+          templateSourcePreferences ?? MemoryTemplateSourcePreferences();
+      onlineTemplateCache = MemoryOnlineTemplateCache();
     }
+
+    // Off by default in debug builds, so an older online copy never hides a
+    // template being edited locally.
+    final onlineTemplates = OnlineTemplates(
+      catalog: catalog,
+      downloader: templateDownloader ?? HttpTemplateDownloader(),
+      cache: onlineTemplateCache,
+      preferences: sourcePreferences,
+      enabledByDefault: usePersistentStorage && !kDebugMode,
+    );
+    await onlineTemplates.loadSaved();
 
     return AppEnvironment(
       playerRepository: playerRepository,
@@ -90,6 +127,7 @@ class AppBootstrap {
       themeController: themeController,
       stayAwakeController: stayAwakeController,
       templateCatalog: catalog,
+      onlineTemplates: onlineTemplates,
       loadScoreGameChoices: LoadScoreGameChoices(
         templateCatalog: catalog,
         sessionRepository: sessionRepository,

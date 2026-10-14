@@ -6,6 +6,7 @@ import 'package:scoard_game/ui/settings/settings_screen.dart';
 import 'package:scoard_game/ui/settings/stay_awake_controller.dart';
 import 'package:scoard_game/ui/theme/app_theme_controller.dart';
 
+import '../../support/fake_template_downloader.dart';
 import '../../support/test_templates.dart';
 
 void main() {
@@ -113,6 +114,7 @@ void main() {
         home: SettingsScreen(
           themeController: AppThemeController(),
           stayAwakeController: controller,
+          onlineTemplates: testOnlineTemplates(),
         ),
       ),
     );

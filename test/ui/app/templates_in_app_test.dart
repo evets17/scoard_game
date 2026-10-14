@@ -40,8 +40,9 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('2–8 players'), findsOneWidget);
+    expect(find.text('Template v2.1.0 · built in'), findsOneWidget);
     expect(find.text('Options'), findsOneWidget);
-    expect(find.text('Double negative scores too'), findsOneWidget);
+    expect(find.text('Double negative scores'), findsOneWidget);
 
     await tester.tap(find.text('Start'));
     await tester.pumpAndSettle();

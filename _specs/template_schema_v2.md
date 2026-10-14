@@ -72,6 +72,7 @@ Rules:
 * any number of calculated fields and markers
 * every `id` unique across all fields, in the same format as the template `id`
 * a calculated field may read entered and other calculated fields, but not itself, directly or through other fields
+* once a template is published, never rename or remove a field, marker, value picker, or prompt `id`; add new ones instead. Games in progress are scored again with the current template when resumed, and their saved entries are found by these ids
 
 ### Entered Field
 
@@ -222,3 +223,30 @@ assets/templates/cornhole.json: fields[1].formula: expected ")" but found the en
 assets/templates/cornhole.json: fields[1].formula: unknown name "bonus"; expected one of: inning-points, points-scored, playerCount, roundNumber at position 1
 assets/templates/cornhole.json: fields[1].formula: circular reference: scored -> subtotal -> scored
 ```
+
+---
+
+## Publishing A Template Change
+
+The app can load templates from a URL instead of only those built in (Settings > Templates). By default it reads this repository's `assets/templates/` folder from GitHub, so pushing to `main` publishes.
+
+`assets/templates/index.json` lists the template files, because a raw GitHub URL can't list a folder:
+
+```json
+{ "indexVersion": 1, "templates": ["cornhole.json", "skyjo.json"] }
+```
+
+To publish a change:
+
+1. Edit the template and its scenario file. A new template also goes in `index.json`.
+2. Bump `version`: patch for wording, minor for scoring changes. The online copy is used even without a bump, but the version shows on the game page ("Template v2.1.0 · online"), which confirms which copy a phone has.
+3. Run `flutter test`. The validator, scenarios, and a check that `index.json` matches the folder must pass.
+4. Commit and push to `main`.
+5. On the phone, open Settings and tap Check now. GitHub caches files for up to 5 minutes, so a change pushed just before may not show yet.
+
+How the app chooses:
+
+* An online template replaces the built-in one with the same id, unless the built-in `version` is higher.
+* An online file that fails validation is skipped and listed under problems in Settings. Its last good copy, if any, is kept.
+* A template using a feature this app version doesn't know fails validation, so release the app before pushing templates that need it.
+* Online templates are off by default in debug builds, so an older online copy never hides a template being edited locally.

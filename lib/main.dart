@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:scoard_game/bootstrap/app_bootstrap.dart';
@@ -11,4 +13,9 @@ Future<void> main() async {
   );
 
   runApp(ScoardGameApp(environment: environment));
+
+  // One check for template updates per start, once the first screen shows.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(environment.onlineTemplates.checkOnStart());
+  });
 }

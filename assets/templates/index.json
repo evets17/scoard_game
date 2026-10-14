@@ -1,0 +1,10 @@
+{
+  "indexVersion": 1,
+  "templates": [
+    "cornhole.json",
+    "flip-7.json",
+    "quick-final-score-basic.json",
+    "round-score-basic.json",
+    "skyjo.json"
+  ]
+}
