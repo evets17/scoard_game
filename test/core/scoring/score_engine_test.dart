@@ -2,9 +2,9 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scoard_game/application/models/scoring/card_text.dart';
-import 'package:scoard_game/application/models/scoring/calculated_field_definition.dart';
+import 'package:scoard_game/application/models/scoring/calculated_line_definition.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
-import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
+import 'package:scoard_game/application/models/scoring/entered_line_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_input_kind.dart';
 import 'package:scoard_game/application/models/scoring/scoring_model.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
@@ -15,8 +15,8 @@ import 'package:scoard_game/core/scoring/score_engine.dart';
 import 'package:scoard_game/core/templates/template_catalog.dart';
 
 ScoringPreset presetWith({
-  List<CalculatedFieldDefinition> calculated = const [],
-  String? scoreFieldId,
+  List<CalculatedLineDefinition> calculated = const [],
+  String? scoreLineId,
   List<PresetPromptDefinition> prompts = const [],
 }) {
   return ScoringPreset(
@@ -26,8 +26,8 @@ ScoringPreset presetWith({
     scoringModel: ScoringModel.rounds,
     minimumPlayers: 2,
     winnerRule: WinnerRule.highestScoreWins,
-    scoreFields: const [
-      ScoreFieldDefinition(
+    enteredLines: const [
+      EnteredLineDefinition(
         id: 'points',
         label: 'Points',
         inputKind: ScoreInputKind.integer,
@@ -35,9 +35,9 @@ ScoringPreset presetWith({
         contributesToFinalResult: true,
       ),
     ],
-    calculatedFields: calculated,
+    calculatedLines: calculated,
     promptDefinitions: prompts,
-    scoreFieldId: scoreFieldId,
+    scoreLineId: scoreLineId,
   );
 }
 
@@ -51,7 +51,7 @@ List<QuickScoreParticipantValues> entries(Map<String, int> pointsByPlayer) => [
     ];
 
 void main() {
-  test('without calculated fields the entered value is the score', () {
+  test('without calculated lines the entered value is the score', () {
     final engine = ScoreEngine.of(presetWith());
 
     expect(
@@ -64,13 +64,13 @@ void main() {
     final engine = ScoreEngine.of(
       presetWith(
         calculated: const [
-          CalculatedFieldDefinition(
+          CalculatedLineDefinition(
             id: 'scored',
             label: 'Scored',
             formula: 'max(0, {points} - highestOther(points))',
           ),
         ],
-        scoreFieldId: 'scored',
+        scoreLineId: 'scored',
       ),
     );
 
@@ -84,27 +84,27 @@ void main() {
     );
   });
 
-  test('a field can read another player\'s calculated field', () {
+  test('a line can read another player\'s calculated line', () {
     // "leader" is listed before what it reads, so order must be worked out.
     final engine = ScoreEngine.of(
       presetWith(
         calculated: const [
-          CalculatedFieldDefinition(
+          CalculatedLineDefinition(
             id: 'leader',
             label: 'Leader',
             formula: 'if({doubled} > highestOther(doubled), 1, 0)',
           ),
-          CalculatedFieldDefinition(
+          CalculatedLineDefinition(
             id: 'doubled',
             label: 'Doubled',
             formula: '{points} * 2 + {roundNumber} + {playerCount}',
           ),
         ],
-        scoreFieldId: 'leader',
+        scoreLineId: 'leader',
       ),
     );
 
-    final values = engine.fieldValues(entries({'a': 3, 'b': 5}), roundNumber: 4);
+    final values = engine.lineValues(entries({'a': 3, 'b': 5}), roundNumber: 4);
 
     expect(values['a'], {'points': 3, 'doubled': 12, 'leader': 0});
     expect(values['b'], {'points': 5, 'doubled': 16, 'leader': 1});
@@ -114,13 +114,13 @@ void main() {
     final engine = ScoreEngine.of(
       presetWith(
         calculated: const [
-          CalculatedFieldDefinition(
+          CalculatedLineDefinition(
             id: 'scored',
             label: 'Scored',
             formula: '{points} * if({double} > 0, 2, 1)',
           ),
         ],
-        scoreFieldId: 'scored',
+        scoreLineId: 'scored',
         prompts: const [
           PresetPromptDefinition.boolean(id: 'double', label: 'Double'),
         ],
@@ -137,10 +137,10 @@ void main() {
     );
   });
 
-  test('card text reads tiles, fields, other players, prompts, and seats', () {
+  test('card text reads tiles, lines, other players, prompts, and seats', () {
     final preset = loadTemplateCatalog({
       'cards.json': jsonEncode({
-        'schemaVersion': 2,
+        'schemaVersion': 1,
         'id': 'cards',
         'version': '1.0.0',
         'name': 'Cards',
@@ -151,7 +151,7 @@ void main() {
         'prompts': [
           {'id': 'bonus-note', 'type': 'boolean', 'label': 'Bonus note'},
         ],
-        'fields': [
+        'lines': [
           {
             'id': 'points',
             'label': 'Points',
@@ -257,16 +257,16 @@ void main() {
     expect(round5['b']!.playerBadges.map((badge) => badge.text), ['1st']);
   });
 
-  test('field order follows dependencies and loops are named', () {
+  test('line order follows dependencies and loops are named', () {
     expect(
-      orderCalculatedFields({
+      orderCalculatedLines({
         'total': {'subtotal', 'points'},
         'subtotal': {'points'},
       }),
       ['subtotal', 'total'],
     );
     expect(
-      () => orderCalculatedFields({
+      () => orderCalculatedLines({
         'a': {'b'},
         'b': {'c'},
         'c': {'a'},

@@ -1,6 +1,6 @@
 /// Checks a decoded template file against the template schema.
 ///
-/// See `_specs/template_schema_v1.md` and `template_schema_v2.md`. Every
+/// See `_specs/template_schema.md`. Every
 /// problem is reported, not just the first, so a template can be fixed in
 /// one pass.
 library;
@@ -10,7 +10,7 @@ import 'package:scoard_game/core/formulas/formula_parser.dart';
 import 'package:scoard_game/core/scoring/score_engine.dart';
 import 'package:scoard_game/core/scoring/card_text_values.dart';
 
-const supportedTemplateSchemaVersions = {1, 2};
+const supportedTemplateSchemaVersions = {1};
 
 const templateScoringModels = {'finalScore', 'rounds'};
 const templateWinnerRules = {'highestScore', 'lowestScore'};
@@ -72,8 +72,6 @@ List<TemplateProblem> validateTemplateJson(
           '${supportedTemplateSchemaVersions.join(', ')}',
     );
   }
-  final isVersion2 = schemaVersion == 2;
-
   template.allowOnlyKeys({
     'schemaVersion',
     'id',
@@ -90,7 +88,8 @@ List<TemplateProblem> validateTemplateJson(
     'scoreLabels',
     'scoreSubLabels',
     'playerBadges',
-    if (isVersion2) ...{'fields', 'score'} else 'scoreField',
+    'lines',
+    'score',
   });
 
   final id = template.identifier('id', required: true);
@@ -136,20 +135,11 @@ List<TemplateProblem> validateTemplateJson(
   }
 
   final groupIds = <String>{};
-  final Set<String> fieldIds;
-  if (isVersion2) {
-    fieldIds = _validateFields(template, seenPromptIds, groupIds);
-  } else {
-    final scoreField = template.object('scoreField', required: true);
-    final id = scoreField == null
-        ? null
-        : _validateEnteredField(scoreField, groupIds);
-    fieldIds = {?id};
-  }
+  final lineIds = _validateLines(template, seenPromptIds, groupIds);
 
   _validateCardTexts(
     template,
-    fieldIds: fieldIds,
+    lineIds: lineIds,
     promptIds: seenPromptIds,
     groupIds: groupIds,
   );
@@ -157,10 +147,10 @@ List<TemplateProblem> validateTemplateJson(
   return problems;
 }
 
-/// A field whose value players enter. Returns its id if it is valid, and
+/// A line whose value players enter. Returns its id if it is valid, and
 /// adds its value pickers' tile group ids to [groupIds].
-String? _validateEnteredField(_ObjectReader field, Set<String> groupIds) {
-  field.allowOnlyKeys(const {
+String? _validateEnteredLine(_ObjectReader line, Set<String> groupIds) {
+  line.allowOnlyKeys(const {
     'id',
     'label',
     'initialValue',
@@ -168,16 +158,16 @@ String? _validateEnteredField(_ObjectReader field, Set<String> groupIds) {
     'entry',
     'entryModes',
   });
-  final id = field.identifier('id', required: true);
-  field.text('label', required: true);
-  field.integer('initialValue');
-  final digits = field.integer('minimumDisplayDigits');
+  final id = line.identifier('id', required: true);
+  line.text('label', required: true);
+  line.integer('initialValue');
+  final digits = line.integer('minimumDisplayDigits');
   if (digits != null && digits < 1) {
-    field.problem('minimumDisplayDigits', 'must be at least 1');
+    line.problem('minimumDisplayDigits', 'must be at least 1');
   }
 
   var tapToEdit = false;
-  final entry = field.object('entry');
+  final entry = line.object('entry');
   if (entry != null) {
     const entryKeys = {'tapToEdit', 'quickAdjust', 'replace', 'adjust'};
     entry.allowOnlyKeys(entryKeys);
@@ -189,9 +179,9 @@ String? _validateEnteredField(_ObjectReader field, Set<String> groupIds) {
     }
   }
 
-  final entryModes = field.list('entryModes');
+  final entryModes = line.list('entryModes');
   if (entryModes != null && entryModes.isNotEmpty && !tapToEdit) {
-    field.problem(
+    line.problem(
       'entryModes',
       'need entry.tapToEdit to be true, or the entry sheet never opens',
     );
@@ -209,12 +199,12 @@ String? _validateEnteredField(_ObjectReader field, Set<String> groupIds) {
 }
 
 /// A flag players set by hand each round. Returns its id if it is valid.
-String? _validateMarkerField(_ObjectReader field) {
-  field.allowOnlyKeys(const {'id', 'label', 'marker'});
-  final id = field.identifier('id', required: true);
-  field.text('label', required: true);
+String? _validateMarkerLine(_ObjectReader line) {
+  line.allowOnlyKeys(const {'id', 'label', 'marker'});
+  final id = line.identifier('id', required: true);
+  line.text('label', required: true);
 
-  final marker = field.object('marker', required: true);
+  final marker = line.object('marker', required: true);
   if (marker != null) {
     marker.allowOnlyKeys(const {'badge', 'color', 'onePerRound'});
     final badge = marker.text('badge', required: true);
@@ -231,67 +221,68 @@ String? _validateMarkerField(_ObjectReader field) {
   return id;
 }
 
-/// Version 2: `fields` (entered, calculated, and marker) and `score`.
-/// [promptIds] can be read by formulas, so fields may not reuse them.
-Set<String> _validateFields(
+/// The score sheet: `lines` (entered, calculated, and marker) and `score`,
+/// which may be left out when the one entered line is the score.
+/// [promptIds] can be read by formulas, so lines may not reuse them.
+Set<String> _validateLines(
   _ObjectReader template,
   Set<String> promptIds,
   Set<String> groupIds,
 ) {
-  final fields = template.list('fields', required: true);
-  final scoreId = template.identifier('score', required: true);
-  if (fields == null) {
+  final lines = template.list('lines', required: true);
+  final scoreId = template.identifier('score');
+  if (lines == null) {
     return const {};
   }
 
-  final fieldIds = <String>{};
+  final lineIds = <String>{};
   final calculated = <({_ObjectReader reader, String id, Formula formula})>[];
   var enteredCount = 0;
 
-  void addId(_ObjectReader field, String? id) {
-    if (id != null && !fieldIds.add(id)) {
-      field.problem('id', 'duplicate field id "$id"');
+  void addId(_ObjectReader line, String? id) {
+    if (id != null && !lineIds.add(id)) {
+      line.problem('id', 'duplicate line id "$id"');
     }
     if (id != null && (promptIds.contains(id) || formulaBuiltIns.contains(id))) {
-      field.problem('id', '"$id" is already the name of a prompt or built-in value');
+      line.problem('id', '"$id" is already the name of a prompt or built-in value');
     }
   }
 
-  for (final field in fields) {
-    if (!field.isObject) {
+  for (final line in lines) {
+    if (!line.isObject) {
       continue;
     }
 
-    if (field.has('marker')) {
-      addId(field, _validateMarkerField(field));
+    if (line.has('marker')) {
+      addId(line, _validateMarkerLine(line));
       continue;
     }
 
-    if (!field.has('formula')) {
+    if (!line.has('formula')) {
       enteredCount += 1;
-      addId(field, _validateEnteredField(field, groupIds));
+      addId(line, _validateEnteredLine(line, groupIds));
       continue;
     }
 
-    field.allowOnlyKeys(const {'id', 'label', 'formula'});
-    final id = field.identifier('id', required: true);
-    field.text('label', required: true);
-    final source = field.text('formula', required: true);
-    addId(field, id);
+    line.allowOnlyKeys(const {'id', 'label', 'formula'});
+    final id = line.identifier('id', required: true);
+    line.text('label', required: true);
+    final source = line.text('formula', required: true);
+    addId(line, id);
     if (id == null || source == null) {
       continue;
     }
     try {
-      calculated.add((reader: field, id: id, formula: Formula.parse(source)));
+      calculated.add((reader: line, id: id, formula: Formula.parse(source)));
     } on FormulaSyntaxError catch (error) {
-      field.problem('formula', error.toString());
+      line.problem('formula', error.toString());
     }
   }
 
   if (enteredCount != 1) {
     template.problem(
-      'fields',
-      'needs exactly one entered field (a field without a formula); '
+      'lines',
+      'needs exactly one entered line (a line without a formula or marker); '
           'found $enteredCount',
     );
   }
@@ -299,38 +290,38 @@ Set<String> _validateFields(
   // Names and functions first; loops only make sense once names are right.
   final dependencies = <String, Set<String>>{};
   var formulasAreSound = true;
-  for (final field in calculated) {
+  for (final line in calculated) {
     final reads = <String>{};
     final problems = checkFormula(
-      field.formula,
-      fieldIds: fieldIds,
+      line.formula,
+      lineIds: lineIds,
       promptIds: promptIds,
       dependencies: reads,
     );
     for (final problem in problems) {
-      field.reader.problem('formula', problem.toString());
+      line.reader.problem('formula', problem.toString());
     }
     formulasAreSound = formulasAreSound && problems.isEmpty;
-    dependencies[field.id] = reads;
+    dependencies[line.id] = reads;
   }
 
   if (formulasAreSound) {
     try {
-      orderCalculatedFields(dependencies);
+      orderCalculatedLines(dependencies);
     } on CircularFormulaError catch (error) {
-      final start = calculated.firstWhere((field) => field.id == error.loop.first);
+      final start = calculated.firstWhere((line) => line.id == error.loop.first);
       start.reader.problem('formula', error.toString());
     }
   }
 
-  if (scoreId != null && fieldIds.isNotEmpty && !fieldIds.contains(scoreId)) {
+  if (scoreId != null && lineIds.isNotEmpty && !lineIds.contains(scoreId)) {
     template.problem(
       'score',
-      '"$scoreId" is not one of the fields: ${fieldIds.join(', ')}',
+      '"$scoreId" is not one of the lines: ${lineIds.join(', ')}',
     );
   }
 
-  return fieldIds;
+  return lineIds;
 }
 
 /// Returns the picker's tile group ids.
@@ -424,7 +415,7 @@ Set<String> _validateEntryMode(_ObjectReader mode, Set<String> seenModeIds) {
       try {
         final problems = checkFormula(
           Formula.parse(total),
-          fieldIds: groupIds,
+          lineIds: groupIds,
           context: FormulaContext.picker,
         );
         for (final problem in problems) {
@@ -449,11 +440,11 @@ Set<String> _validateEntryMode(_ObjectReader mode, Set<String> seenModeIds) {
 
 /// Text a template shows on the player card: `scoreLabels` (instead of the
 /// score), `scoreSubLabels` (under it), and `playerBadges` (after the name).
-/// Each reads fields, prompts, built-in values, and the tile groups of the
+/// Each reads lines, prompts, built-in values, and the tile groups of the
 /// score's value pickers.
 void _validateCardTexts(
   _ObjectReader template, {
-  required Set<String> fieldIds,
+  required Set<String> lineIds,
   required Set<String> promptIds,
   required Set<String> groupIds,
 }) {
@@ -472,17 +463,17 @@ void _validateCardTexts(
 
   // {name} must mean one thing.
   for (final groupId in groupIds) {
-    if (fieldIds.contains(groupId) ||
+    if (lineIds.contains(groupId) ||
         promptIds.contains(groupId) ||
         formulaBuiltIns.contains(groupId)) {
       template.problem(
         lists.keys.first,
-        'tile group "$groupId" has the same name as a field, prompt, or '
+        'tile group "$groupId" has the same name as a line, prompt, or '
             'built-in value; rename one so {$groupId} is clear',
       );
     }
   }
-  final textNames = {...fieldIds, ...promptIds, ...groupIds, ...formulaBuiltIns};
+  final textNames = {...lineIds, ...promptIds, ...groupIds, ...formulaBuiltIns};
 
   for (final MapEntry(key: kind, value: entries) in lists.entries) {
     final maximumLength = kinds[kind]!;
@@ -523,7 +514,7 @@ void _validateCardTexts(
       try {
         final problems = checkFormula(
           Formula.parse(when),
-          fieldIds: fieldIds,
+          lineIds: lineIds,
           promptIds: promptIds,
           groupIds: groupIds,
           context: FormulaContext.card,

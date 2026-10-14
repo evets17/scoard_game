@@ -1,8 +1,8 @@
-import 'package:scoard_game/application/models/scoring/calculated_field_definition.dart';
+import 'package:scoard_game/application/models/scoring/calculated_line_definition.dart';
 import 'package:scoard_game/application/models/scoring/card_text_definition.dart';
-import 'package:scoard_game/application/models/scoring/marker_field_definition.dart';
+import 'package:scoard_game/application/models/scoring/marker_line_definition.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
-import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
+import 'package:scoard_game/application/models/scoring/entered_line_definition.dart';
 import 'package:scoard_game/application/models/scoring/scoring_model.dart';
 import 'package:scoard_game/application/models/scoring/template_origin.dart';
 import 'package:scoard_game/application/models/scoring/winner_rule.dart';
@@ -18,17 +18,17 @@ class ScoringPreset {
     required this.scoringModel,
     required this.minimumPlayers,
     required this.winnerRule,
-    required this.scoreFields,
+    required this.enteredLines,
     this.version = '1.0.0',
     this.maximumPlayers,
     this.source,
     this.promptDefinitions = const [],
-    this.calculatedFields = const [],
-    this.markerFields = const [],
+    this.calculatedLines = const [],
+    this.markerLines = const [],
     this.scoreLabels = const [],
     this.scoreSubLabels = const [],
     this.playerBadges = const [],
-    this.scoreFieldId,
+    this.scoreLineId,
     this.origin = TemplateOrigin.bundled,
   });
 
@@ -52,14 +52,14 @@ class ScoringPreset {
   final int? maximumPlayers;
   final WinnerRule winnerRule;
 
-  /// The entered fields.
-  final List<ScoreFieldDefinition> scoreFields;
+  /// The entered lines.
+  final List<EnteredLineDefinition> enteredLines;
 
-  /// Fields worked out from formulas.
-  final List<CalculatedFieldDefinition> calculatedFields;
+  /// Lines worked out from formulas.
+  final List<CalculatedLineDefinition> calculatedLines;
 
   /// Flags players set by hand each round, such as "Went out first".
-  final List<MarkerFieldDefinition> markerFields;
+  final List<MarkerLineDefinition> markerLines;
 
   /// Text shown on the player card instead of the score, such as "Bust".
   /// The first that applies is shown.
@@ -73,8 +73,8 @@ class ScoringPreset {
   /// applies is shown.
   final List<CardTextDefinition> playerBadges;
 
-  /// The field that is each player's score. Defaults to the entered field.
-  final String? scoreFieldId;
+  /// The line that is each player's score. Defaults to the entered line.
+  final String? scoreLineId;
   final List<PresetPromptDefinition> promptDefinitions;
   final String version;
 
@@ -84,6 +84,6 @@ class ScoringPreset {
   /// Where this template was loaded from.
   final TemplateOrigin origin;
 
-  /// The id of the field that is each player's score.
-  String get scoreId => scoreFieldId ?? scoreFields.first.id;
+  /// The id of the line that is each player's score.
+  String get scoreId => scoreLineId ?? enteredLines.first.id;
 }

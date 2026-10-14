@@ -10,7 +10,7 @@ import '../../support/test_templates.dart';
 
 void main() {
   final skyjoCards =
-      loadTestTemplateCatalog().byId('skyjo').scoreFields.single.valuePickers;
+      loadTestTemplateCatalog().byId('skyjo').enteredLines.single.valuePickers;
 
   Future<void> openSheet(
     WidgetTester tester, {
@@ -132,7 +132,7 @@ void main() {
     expect(find.text('Tap at least one value.'), findsOneWidget);
   });
 
-  testWidgets('fields without a picker start in the calculator', (tester) async {
+  testWidgets('lines without a picker start in the calculator', (tester) async {
     await openSheet(tester, memory: ScoreEntryMemory(), valuePickers: const []);
 
     expect(find.text('Score value'), findsOneWidget);
@@ -169,7 +169,7 @@ void main() {
 
   group('Flip 7 cards', () {
     final flip7Cards =
-        loadTestTemplateCatalog().byId('flip-7').scoreFields.single.valuePickers;
+        loadTestTemplateCatalog().byId('flip-7').enteredLines.single.valuePickers;
 
     testWidgets('×2 doubles the number cards as they are tapped', (
       tester,

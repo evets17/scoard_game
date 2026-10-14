@@ -2,25 +2,25 @@ import 'package:scoard_game/core/formulas/formula_parser.dart';
 
 /// Where a formula is used, which decides the names and functions it may use.
 enum FormulaContext {
-  /// A calculated field: reads the player's fields, built-in values, and the
+  /// A calculated line: reads the player's lines, built-in values, and the
   /// other players through functions.
-  field,
+  line,
 
   /// A value picker's total: reads the totals of its tile groups.
   picker,
 
   /// Text a template shows on the player card (score labels, score sub
-  /// labels, player badges): reads everything a field formula can, plus the
+  /// labels, player badges): reads everything a line formula can, plus the
   /// tile groups of the score's value pickers.
   card,
 }
 
-/// Values every field formula can use, like fields. `playerPosition` is the
+/// Values every line formula can use, like lines. `playerPosition` is the
 /// player's place in play order, from 1.
 const formulaBuiltIns = {'playerCount', 'roundNumber', 'playerPosition'};
 
 /// Functions that look at the other players. Their one argument is a bare
-/// field name, for example `highestOther(inning-points)`.
+/// line name, for example `highestOther(inning-points)`.
 const otherPlayerFunctions = {'highestOther', 'lowestOther', 'sumOthers'};
 
 /// Functions that look at one tile group of a value picker. Their one
@@ -36,7 +36,7 @@ const _commonArity = <String, (int, int?)>{
 
 /// Allowed argument counts per context. Null maximum means any number.
 const _arityByContext = <FormulaContext, Map<String, (int, int?)>>{
-  FormulaContext.field: {
+  FormulaContext.line: {
     ..._commonArity,
     'highestOther': (1, 1),
     'lowestOther': (1, 1),
@@ -71,25 +71,25 @@ class FormulaProblem {
   String toString() => '$message at position $position';
 }
 
-/// Checks [formula] against the names it may read: the template's fields
+/// Checks [formula] against the names it may read: the template's lines
 /// and [promptIds], or for [FormulaContext.picker] the picker's tile groups
-/// (given as [fieldIds]). A [FormulaContext.card] also reads [groupIds].
+/// (given as [lineIds]). A [FormulaContext.card] also reads [groupIds].
 ///
 /// Returns the problems found, and through [dependencies] the names the
 /// formula reads.
 List<FormulaProblem> checkFormula(
   Formula formula, {
-  required Set<String> fieldIds,
+  required Set<String> lineIds,
   Set<String> promptIds = const {},
   Set<String> groupIds = const {},
-  FormulaContext context = FormulaContext.field,
+  FormulaContext context = FormulaContext.line,
   Set<String>? dependencies,
 }) {
   final problems = <FormulaProblem>[];
   final reads = dependencies ?? <String>{};
   final arity = _arityByContext[context]!;
   final builtIns = switch (context) {
-    FormulaContext.field => {...formulaBuiltIns, ...promptIds},
+    FormulaContext.line => {...formulaBuiltIns, ...promptIds},
     FormulaContext.picker => const <String>{},
     FormulaContext.card => {...formulaBuiltIns, ...promptIds, ...groupIds},
   };
@@ -99,12 +99,12 @@ List<FormulaProblem> checkFormula(
   (Set<String>, String)? bareNamesFor(String function) {
     if (context != FormulaContext.picker &&
         otherPlayerFunctions.contains(function)) {
-      return (fieldIds, 'field');
+      return (lineIds, 'line');
     }
     if (pickerGroupFunctions.contains(function)) {
       return context == FormulaContext.card
           ? (groupIds, 'group')
-          : (fieldIds, 'group');
+          : (lineIds, 'group');
     }
     return null;
   }
@@ -114,10 +114,10 @@ List<FormulaProblem> checkFormula(
       case NumberNode():
         break;
       case ReferenceNode(:final name, :final position):
-        if (fieldIds.contains(name)) {
+        if (lineIds.contains(name)) {
           reads.add(name);
         } else if (!builtIns.contains(name)) {
-          final known = [...fieldIds, ...builtIns];
+          final known = [...lineIds, ...builtIns];
           problems.add(
             FormulaProblem(
               'unknown name "$name"; expected one of: ${known.join(', ')}',
@@ -129,7 +129,7 @@ List<FormulaProblem> checkFormula(
         if (bareNames == null) {
           problems.add(
             FormulaProblem(
-              fieldIds.contains(name) || builtIns.contains(name)
+              lineIds.contains(name) || builtIns.contains(name)
                   ? 'use {$name} to read a value'
                   : 'unexpected name "$name"',
               position,

@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:scoard_game/application/models/players/player_list_item_model.dart';
 import 'package:scoard_game/application/models/results/round_score_result.dart';
-import 'package:scoard_game/application/models/scoring/marker_field_definition.dart';
+import 'package:scoard_game/application/models/scoring/marker_line_definition.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
-import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
+import 'package:scoard_game/application/models/scoring/entered_line_definition.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_pick.dart';
 import 'package:scoard_game/application/models/scoring/card_text.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
@@ -156,9 +156,9 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
               onSelected: _setSortMode,
             ),
             ScoringHelpButton(
-              fieldDefinition: preset.scoreFields.first,
+              lineDefinition: preset.enteredLines.first,
               isRoundScoring: true,
-              markers: preset.markerFields,
+              markers: preset.markerLines,
             ),
           ],
         ],
@@ -197,7 +197,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
                 ),
               _RoundScoreStep.roundEntry => _RoundScoreEntryStep(
                   currentRoundNumber: _currentRoundNumber,
-                  fieldDefinition: _preset!.scoreFields.first,
+                  lineDefinition: _preset!.enteredLines.first,
                   players: _selectedPlayers,
                   sortMode: _sortMode,
                   winnerRule: resolvePresetOptions(
@@ -211,11 +211,11 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
                   cardTexts: _currentRoundCardTexts(),
                   entryPicks: _entryPicks,
                   onEntryPickChanged: _setEntryPick,
-                  markers: _preset!.markerFields,
+                  markers: _preset!.markerLines,
                   activeMarkers: _markers,
                   playerColors: _playerColors,
                   onMarkerChanged: _setMarker,
-                  scoreIsCalculated: _preset!.calculatedFields.isNotEmpty,
+                  scoreIsCalculated: _preset!.calculatedLines.isNotEmpty,
                   scoreSortSnapshot: _scoreSortSnapshot,
                   onPlayerTap: (player) => _handlePlayerTap(setupModel, player),
                   onReorder: _reorderPlayers,
@@ -309,21 +309,21 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
 
   /// What is entered so far this round, with any tiles picked.
   List<QuickScoreParticipantValues> _currentRoundParticipants() {
-    final fieldDefinition = _preset!.scoreFields.first;
+    final lineDefinition = _preset!.enteredLines.first;
     return [
       for (final player in _selectedPlayers)
         QuickScoreParticipantValues(
           playerId: player.id,
           displayName: player.displayName,
           enteredValues: {
-            fieldDefinition.id: _parseEnteredScore(
+            lineDefinition.id: _parseEnteredScore(
                   rawValue: _scoreControllers[player.id]?.text.trim() ?? '',
-                  fieldDefinition: fieldDefinition,
+                  lineDefinition: lineDefinition,
                 ) ??
                 0,
             ..._markerValuesFor(player.id),
           },
-          entryPicks: _entryPicksFor(player.id, fieldDefinition.id),
+          entryPicks: _entryPicksFor(player.id, lineDefinition.id),
         ),
     ];
   }
@@ -737,8 +737,8 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
 
   RoundScoreRoundValues? _buildCurrentRoundValues({required bool requireScores}) {
     final preset = _preset!;
-    final fieldDefinition = preset.scoreFields.first;
-    final scoreFieldId = preset.scoreFields.first.id;
+    final lineDefinition = preset.enteredLines.first;
+    final scoreLineId = preset.enteredLines.first.id;
     final participantValues = <QuickScoreParticipantValues>[];
     final rawValues = _selectedPlayers
         .map((player) => _scoreControllers[player.id]!.text.trim())
@@ -753,7 +753,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
       final rawValue = rawValues[index];
       final parsedScore = _parseEnteredScore(
         rawValue: rawValue,
-        fieldDefinition: fieldDefinition,
+        lineDefinition: lineDefinition,
       );
       if (parsedScore == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -767,10 +767,10 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
           playerId: player.id,
           displayName: player.displayName,
           enteredValues: {
-            scoreFieldId: parsedScore,
+            scoreLineId: parsedScore,
             ..._markerValuesFor(player.id),
           },
-          entryPicks: _entryPicksFor(player.id, scoreFieldId),
+          entryPicks: _entryPicksFor(player.id, scoreLineId),
         ),
       );
     }
@@ -791,7 +791,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
     _markers = {
       for (final participant in participants)
         participant.playerId: {
-          for (final marker in _preset!.markerFields)
+          for (final marker in _preset!.markerLines)
             if ((participant.enteredValues[marker.id] ?? 0) != 0) marker.id,
         },
     };
@@ -799,7 +799,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
 
   void _setMarker(String playerId, String markerId, bool isSet) {
     final marker =
-        _preset!.markerFields.firstWhere((marker) => marker.id == markerId);
+        _preset!.markerLines.firstWhere((marker) => marker.id == markerId);
     setState(() {
       // A one-per-round marker moves to the player it was just set for.
       if (isSet && marker.onePerRound) {
@@ -827,20 +827,20 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
 
   Map<String, ValuePickerPick> _entryPicksFor(
     String playerId,
-    String scoreFieldId,
+    String scoreLineId,
   ) {
     final entryPick = _entryPicks[playerId];
-    return entryPick == null ? const {} : {scoreFieldId: entryPick};
+    return entryPick == null ? const {} : {scoreLineId: entryPick};
   }
 
   /// Puts back the value picker tiles saved with a round's entries.
   void _loadEntryPicks(
     List<QuickScoreParticipantValues> participants,
-    String scoreFieldId,
+    String scoreLineId,
   ) {
     _entryPicks = {
       for (final participant in participants)
-        if (participant.entryPicks[scoreFieldId] case final ValuePickerPick pick)
+        if (participant.entryPicks[scoreLineId] case final ValuePickerPick pick)
           participant.playerId: pick,
     };
   }
@@ -899,13 +899,13 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
   }
 
   void _loadRoundValues(RoundScoreRoundValues round) {
-    final scoreFieldId = _preset!.scoreFields.first.id;
+    final scoreLineId = _preset!.enteredLines.first.id;
     final valuesByPlayerId = {
       for (final participant in round.participantValues)
-        participant.playerId: participant.enteredValues[scoreFieldId] ?? 0,
+        participant.playerId: participant.enteredValues[scoreLineId] ?? 0,
     };
 
-    _loadEntryPicks(round.participantValues, scoreFieldId);
+    _loadEntryPicks(round.participantValues, scoreLineId);
     _loadMarkers(round.participantValues);
     for (final player in _selectedPlayers) {
       final controller = _scoreControllers[player.id]!;
@@ -934,10 +934,10 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
 
   int? _parseEnteredScore({
     required String rawValue,
-    required ScoreFieldDefinition fieldDefinition,
+    required EnteredLineDefinition lineDefinition,
   }) {
     if (rawValue.isEmpty) {
-      return fieldDefinition.initialIntegerValue;
+      return lineDefinition.initialIntegerValue;
     }
 
     return int.tryParse(rawValue);
@@ -961,13 +961,13 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
     }
 
     // Players with nothing entered yet stay empty (shown as "–").
-    final scoreFieldId = _preset!.scoreFields.first.id;
+    final scoreLineId = _preset!.enteredLines.first.id;
     final currentValuesByPlayerId = {
       for (final participant in session.currentRoundParticipantValues)
-        if (participant.enteredValues[scoreFieldId] case final int value)
+        if (participant.enteredValues[scoreLineId] case final int value)
           participant.playerId: value,
     };
-    _loadEntryPicks(session.currentRoundParticipantValues, scoreFieldId);
+    _loadEntryPicks(session.currentRoundParticipantValues, scoreLineId);
     _loadMarkers(session.currentRoundParticipantValues);
     for (final player in session.selectedPlayers) {
       _scoreControllers[player.id]!.text =
@@ -989,7 +989,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
   void _handleScoreChanged() {
     // A calculated score can depend on other players' entries, so every
     // row's total has to refresh, not just the one that changed.
-    if (mounted && (_preset?.calculatedFields.isNotEmpty ?? false)) {
+    if (mounted && (_preset?.calculatedLines.isNotEmpty ?? false)) {
       setState(() {});
     }
     unawaited(_autosaveCurrentSession());
@@ -1007,7 +1007,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
 
     // Untouched rows are saved without a value, so they come back empty
     // (shown as "–") when the game is resumed.
-    final scoreFieldId = preset.scoreFields.first.id;
+    final scoreLineId = preset.enteredLines.first.id;
     final currentRoundParticipantValues = _selectedPlayers
         .map((player) {
           final value =
@@ -1016,10 +1016,10 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
             playerId: player.id,
             displayName: player.displayName,
             enteredValues: {
-              scoreFieldId: ?value,
+              scoreLineId: ?value,
               ..._markerValuesFor(player.id),
             },
-            entryPicks: _entryPicksFor(player.id, scoreFieldId),
+            entryPicks: _entryPicksFor(player.id, scoreLineId),
           );
         })
         .toList(growable: false);
@@ -1243,7 +1243,7 @@ class _RoundScoreSelectionEmptyState extends StatelessWidget {
 class _RoundScoreEntryStep extends StatelessWidget {
   const _RoundScoreEntryStep({
     required this.currentRoundNumber,
-    required this.fieldDefinition,
+    required this.lineDefinition,
     required this.players,
     required this.sortMode,
     required this.winnerRule,
@@ -1269,7 +1269,7 @@ class _RoundScoreEntryStep extends StatelessWidget {
   });
 
   final int currentRoundNumber;
-  final ScoreFieldDefinition fieldDefinition;
+  final EnteredLineDefinition lineDefinition;
   final List<QuickScoreAvailablePlayer> players;
   final Map<String, TextEditingController> controllers;
   final ScoreEntryMemory entryMemory;
@@ -1290,7 +1290,7 @@ class _RoundScoreEntryStep extends StatelessWidget {
       onEntryPickChanged;
 
   /// The template's markers and the ones set this round, by player id.
-  final List<MarkerFieldDefinition> markers;
+  final List<MarkerLineDefinition> markers;
   final Map<String, Set<String>> activeMarkers;
   final void Function(String playerId, String markerId, bool isSet)
       onMarkerChanged;
@@ -1342,7 +1342,7 @@ class _RoundScoreEntryStep extends StatelessWidget {
                 context,
                 rowCount: displayedPlayers.length,
                 availableHeight: constraints.maxHeight,
-                fieldDefinition: fieldDefinition,
+                lineDefinition: lineDefinition,
                 hasValueLabel: true,
               );
 
@@ -1356,7 +1356,7 @@ class _RoundScoreEntryStep extends StatelessWidget {
                   final player = displayedPlayers[index];
                   return NumericScoreField(
                     label: player.displayName,
-                    fieldDefinition: fieldDefinition,
+                    lineDefinition: lineDefinition,
                     controller: controllers[player.id]!,
                     compact: compact,
                     entryMemory: entryMemory,

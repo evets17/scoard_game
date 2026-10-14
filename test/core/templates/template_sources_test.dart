@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
+import 'package:scoard_game/application/models/scoring/entered_line_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_input_kind.dart';
 import 'package:scoard_game/application/models/scoring/scoring_model.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
@@ -19,8 +19,8 @@ ScoringPreset template(
     scoringModel: ScoringModel.rounds,
     minimumPlayers: 2,
     winnerRule: WinnerRule.highestScoreWins,
-    scoreFields: const [
-      ScoreFieldDefinition(
+    enteredLines: const [
+      EnteredLineDefinition(
         id: 'points',
         label: 'Points',
         inputKind: ScoreInputKind.integer,

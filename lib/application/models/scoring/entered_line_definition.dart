@@ -1,8 +1,8 @@
 import 'package:scoard_game/application/models/scoring/score_input_kind.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_definition.dart';
 
-class ScoreFieldDefinition {
-  const ScoreFieldDefinition({
+class EnteredLineDefinition {
+  const EnteredLineDefinition({
     required this.id,
     required this.label,
     required this.inputKind,

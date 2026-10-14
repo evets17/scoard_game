@@ -4,12 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:scoard_game/core/templates/template_catalog.dart';
 import 'package:scoard_game/core/templates/template_validator.dart';
 
-Map<String, Object?> versionTwo({
-  required List<Map<String, Object?>> fields,
-  String score = 'scored',
+/// A template with these [lines], whose score is [score].
+Map<String, Object?> sheet({
+  required List<Map<String, Object?>> lines,
+  String? score = 'scored',
 }) {
   return {
-    'schemaVersion': 2,
+    'schemaVersion': 1,
     'id': 'test-game',
     'version': '1.0.0',
     'name': 'Test Game',
@@ -17,8 +18,8 @@ Map<String, Object?> versionTwo({
     'players': {'minimum': 2},
     'scoringModel': 'rounds',
     'winner': 'highestScore',
-    'fields': fields,
-    'score': score,
+    'lines': lines,
+    'score': ?score,
   };
 }
 
@@ -35,9 +36,9 @@ void main() {
     ).map((problem) => problem.toString()).toList();
   }
 
-  test('a good version 2 template has no problems and parses', () {
-    final template = versionTwo(
-      fields: [
+  test('a good score sheet has no problems and parses', () {
+    final template = sheet(
+      lines: [
         entered,
         calculated('scored', 'max(0, {points} - highestOther(points))'),
       ],
@@ -48,46 +49,60 @@ void main() {
     final preset = loadTemplateCatalog({
       'test-game.json': jsonEncode(template),
     }).catalog.byId('test-game');
-    expect(preset.scoreFields.single.id, 'points');
-    expect(preset.calculatedFields.single.id, 'scored');
+    expect(preset.enteredLines.single.id, 'points');
+    expect(preset.calculatedLines.single.id, 'scored');
     expect(preset.scoreId, 'scored');
   });
 
-  test('version 2 uses fields and score, not scoreField', () {
-    final template = versionTwo(fields: [entered], score: 'points')
-      ..['scoreField'] = entered;
+  test('the old scoreField and fields shapes are gone', () {
+    final template = sheet(lines: [entered], score: 'points')
+      ..['scoreField'] = entered
+      ..['fields'] = [entered];
 
-    expect(problemsFor(template), contains('scoreField: unknown key'));
+    expect(
+      problemsFor(template),
+      containsAll(['scoreField: unknown key', 'fields: unknown key']),
+    );
   });
 
-  test('formula syntax errors give the field and position', () {
+  test('score can be left out when the one entered line is the score', () {
+    final template = sheet(lines: [entered], score: null);
+
+    expect(problemsFor(template), isEmpty);
+    final preset = loadTemplateCatalog({
+      'test-game.json': jsonEncode(template),
+    }).catalog.byId('test-game');
+    expect(preset.scoreId, 'points');
+  });
+
+  test('formula syntax errors give the line and position', () {
     final problems = problemsFor(
-      versionTwo(fields: [entered, calculated('scored', 'max(0, {points}')]),
+      sheet(lines: [entered, calculated('scored', 'max(0, {points}')]),
     );
 
     expect(
       problems,
-      ['fields[1].formula: expected ")" but found the end at position 16'],
+      ['lines[1].formula: expected ")" but found the end at position 16'],
     );
   });
 
-  test('formula names are checked against the template\'s fields', () {
+  test('formula names are checked against the template\'s lines', () {
     final problems = problemsFor(
-      versionTwo(
-        fields: [entered, calculated('scored', '{bonus} + highestOther(points)')],
+      sheet(
+        lines: [entered, calculated('scored', '{bonus} + highestOther(points)')],
       ),
     );
 
     expect(
       problems.single,
-      startsWith('fields[1].formula: unknown name "bonus"'),
+      startsWith('lines[1].formula: unknown name "bonus"'),
     );
   });
 
   test('circular references are reported once with the loop', () {
     final problems = problemsFor(
-      versionTwo(
-        fields: [
+      sheet(
+        lines: [
           entered,
           calculated('scored', '{subtotal} + 1'),
           calculated('subtotal', '{scored} * 2'),
@@ -97,14 +112,14 @@ void main() {
 
     expect(
       problems,
-      ['fields[1].formula: circular reference: scored -> subtotal -> scored'],
+      ['lines[1].formula: circular reference: scored -> subtotal -> scored'],
     );
   });
 
-  test('exactly one entered field, unique ids, and a real score', () {
+  test('exactly one entered line, unique ids, and a real score', () {
     final problems = problemsFor(
-      versionTwo(
-        fields: [
+      sheet(
+        lines: [
           entered,
           {'id': 'points', 'label': 'Again'},
         ],
@@ -115,16 +130,16 @@ void main() {
     expect(
       problems,
       containsAll([
-        'fields[1].id: duplicate field id "points"',
-        'fields: needs exactly one entered field (a field without a formula); found 2',
-        'score: "total" is not one of the fields: points',
+        'lines[1].id: duplicate line id "points"',
+        'lines: needs exactly one entered line (a line without a formula or marker); found 2',
+        'score: "total" is not one of the lines: points',
       ]),
     );
   });
 
-  test('marker fields are checked and readable by formulas', () {
-    final good = versionTwo(
-      fields: [
+  test('marker lines are checked and readable by formulas', () {
+    final good = sheet(
+      lines: [
         entered,
         {
           'id': 'first-out',
@@ -137,8 +152,8 @@ void main() {
     expect(problemsFor(good), isEmpty);
 
     final problems = problemsFor(
-      versionTwo(
-        fields: [
+      sheet(
+        lines: [
           entered,
           {
             'id': 'flag',
@@ -154,19 +169,19 @@ void main() {
     expect(
       problems,
       containsAll([
-        'fields[1].marker.badge: must be at most 8 characters',
-        'fields[1].marker.color: "blue" must look like #3A7BD5',
-        'fields[1].marker.size: unknown key',
-        'fields[2].marker.badge: is required',
+        'lines[1].marker.badge: must be at most 8 characters',
+        'lines[1].marker.color: "blue" must look like #3A7BD5',
+        'lines[1].marker.size: unknown key',
+        'lines[2].marker.badge: is required',
       ]),
     );
-    // Markers do not count as the one entered number field.
-    expect(problems.where((p) => p.startsWith('fields:')), isEmpty);
+    // Markers do not count as the one entered number line.
+    expect(problems.where((p) => p.startsWith('lines:')), isEmpty);
   });
 
-  test('card text reads fields, prompts, and tile groups', () {
-    final template = versionTwo(
-      fields: [
+  test('card text reads lines, prompts, and tile groups', () {
+    final template = sheet(
+      lines: [
         {
           ...entered,
           'entry': {'tapToEdit': true},
@@ -212,8 +227,8 @@ void main() {
   });
 
   test('card text mistakes are reported', () {
-    final template = versionTwo(
-      fields: [entered, calculated('scored', '{points}')],
+    final template = sheet(
+      lines: [entered, calculated('scored', '{points}')],
     )..['scoreSubLabels'] = [
         {'when': '{nope} > 0', 'text': 'from {missing}', 'color': 'green'},
         {'text': 'This note is far too long to fit under a score'},
@@ -230,8 +245,8 @@ void main() {
   });
 
   test('a tile group may not share a name that card text reads', () {
-    final template = versionTwo(
-      fields: [
+    final template = sheet(
+      lines: [
         {
           ...entered,
           'entry': {'tapToEdit': true},
@@ -263,23 +278,23 @@ void main() {
     );
   });
 
-  test('formulas can read prompts, and fields cannot reuse their ids', () {
-    final template = versionTwo(
-      fields: [entered, calculated('scored', '{points} * if({double}, 2, 1)')],
+  test('formulas can read prompts, and lines cannot reuse their ids', () {
+    final template = sheet(
+      lines: [entered, calculated('scored', '{points} * if({double}, 2, 1)')],
     )..['prompts'] = [
         {'id': 'double', 'type': 'boolean', 'label': 'Double'},
       ];
     expect(problemsFor(template), isEmpty);
 
-    final clash = versionTwo(
-      fields: [entered, calculated('double', '{points}')],
+    final clash = sheet(
+      lines: [entered, calculated('double', '{points}')],
       score: 'double',
     )..['prompts'] = [
         {'id': 'double', 'type': 'boolean', 'label': 'Double'},
       ];
     expect(
       problemsFor(clash),
-      ['fields[1].id: "double" is already the name of a prompt or built-in value'],
+      ['lines[1].id: "double" is already the name of a prompt or built-in value'],
     );
   });
 }

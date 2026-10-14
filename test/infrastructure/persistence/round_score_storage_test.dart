@@ -68,17 +68,17 @@ void main() {
       ],
     );
 
-    final storedFieldValues = await database.loadRoundScoreFieldValues(
+    final storedLineValues = await database.loadRoundScoreLineValues(
       sessionId: 'round-score-test',
     );
     final storedResults = await database.loadRoundScorePlayerResults(
       sessionId: 'round-score-test',
     );
 
-    expect(storedFieldValues.length, 4);
-    expect(storedFieldValues.first.roundNumber, 1);
-    expect(storedFieldValues.first.fieldId, 'round-score');
-    expect(storedFieldValues.first.integerValue, 10);
+    expect(storedLineValues.length, 4);
+    expect(storedLineValues.first.roundNumber, 1);
+    expect(storedLineValues.first.lineId, 'round-score');
+    expect(storedLineValues.first.integerValue, 10);
     expect(storedResults.first.cumulativeScore, 23);
 
     await database.close();

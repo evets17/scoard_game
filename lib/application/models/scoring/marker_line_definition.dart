@@ -3,8 +3,8 @@
 ///
 /// It is stored like an entered value, so it is saved with the game and its
 /// results, and it does not change when the player's score is edited.
-class MarkerFieldDefinition {
-  const MarkerFieldDefinition({
+class MarkerLineDefinition {
+  const MarkerLineDefinition({
     required this.id,
     required this.label,
     required this.badge,

@@ -22,13 +22,15 @@ Map<String, Object?> validTemplate() => {
           'effect': 'lowScoreWins',
         },
       ],
-      'scoreField': {
-        'id': 'round-score',
-        'label': 'Round Score',
-        'initialValue': 0,
-        'minimumDisplayDigits': 2,
-        'entry': <String, Object?>{'tapToEdit': true, 'quickAdjust': true},
-      },
+      'lines': [
+        <String, Object?>{
+          'id': 'round-score',
+          'label': 'Round Score',
+          'initialValue': 0,
+          'minimumDisplayDigits': 2,
+          'entry': <String, Object?>{'tapToEdit': true, 'quickAdjust': true},
+        },
+      ],
     };
 
 void main() {
@@ -48,6 +50,10 @@ void main() {
   Map<String, Object?> child(Map<String, Object?> map, String key) =>
       map[key]! as Map<String, Object?>;
 
+  /// The template's one entered line.
+  Map<String, Object?> scoreLine(Map<String, Object?> template) =>
+      (template['lines']! as List<Object?>).first! as Map<String, Object?>;
+
   test('a complete template has no problems', () {
     expect(problemsFor((_) {}), isEmpty);
   });
@@ -55,7 +61,7 @@ void main() {
   test('missing required keys are reported with their paths', () {
     final problems = problemsFor((template) {
       template.remove('name');
-      child(template, 'scoreField').remove('label');
+      scoreLine(template).remove('label');
       child(template, 'players').remove('minimum');
     });
 
@@ -63,7 +69,7 @@ void main() {
       problems,
       containsAll([
         'name: is required',
-        'scoreField.label: is required',
+        'lines[0].label: is required',
         'players.minimum: is required',
       ]),
     );
@@ -72,7 +78,7 @@ void main() {
   test('unknown keys are rejected at every level', () {
     final problems = problemsFor((template) {
       template['colour'] = 'blue';
-      child(child(template, 'scoreField'), 'entry')['tapTo'] = true;
+      child(scoreLine(template), 'entry')['tapTo'] = true;
       ((template['prompts']! as List).first as Map<String, Object?>)['hint'] =
           'x';
     });
@@ -81,7 +87,7 @@ void main() {
       problems,
       containsAll([
         'colour: unknown key',
-        'scoreField.entry.tapTo: unknown key',
+        'lines[0].entry.tapTo: unknown key',
         'prompts[0].hint: unknown key',
       ]),
     );
@@ -94,18 +100,18 @@ void main() {
       template['subtitle'] = '  ';
       template['scoringModel'] = 'categories';
       child(template, 'players')['minimum'] = 1.5;
-      child(child(template, 'scoreField'), 'entry')['adjust'] = 'yes';
+      child(scoreLine(template), 'entry')['adjust'] = 'yes';
     });
 
     expect(
       problems,
       containsAll([
-        'schemaVersion: unsupported version 3; expected one of: 1, 2',
+        'schemaVersion: unsupported version 3; expected one of: 1',
         'version: "one" must look like 1.0.0',
         'subtitle: must not be empty',
         'scoringModel: unsupported value "categories"; expected one of: finalScore, rounds',
         'players.minimum: must be a whole number',
-        'scoreField.entry.adjust: must be true or false',
+        'lines[0].entry.adjust: must be true or false',
       ]),
     );
   });
@@ -173,7 +179,7 @@ void main() {
 
   test('value picker entry modes are checked', () {
     final problems = problemsFor((template) {
-      child(template, 'scoreField')['entryModes'] = [
+      scoreLine(template)['entryModes'] = [
         {
           'type': 'valuePicker',
           'id': 'cards',
@@ -199,22 +205,22 @@ void main() {
     expect(
       problems,
       containsAll([
-        'scoreField.entryModes[0].values[0].color: "red" must look like #3A7BD5',
-        'scoreField.entryModes[0].values[1].value: duplicate tile "1"',
-        'scoreField.entryModes[0].values[2].size: unknown key',
-        'scoreField.entryModes[1].type: unsupported value "slider"; expected one of: valuePicker',
-        'scoreField.entryModes[1].id: duplicate entry mode id "cards"',
-        'scoreField.entryModes[1].values: needs at least one value',
-        'scoreField.entryModes[2].values: has 25 tiles; the most is 24',
+        'lines[0].entryModes[0].values[0].color: "red" must look like #3A7BD5',
+        'lines[0].entryModes[0].values[1].value: duplicate tile "1"',
+        'lines[0].entryModes[0].values[2].size: unknown key',
+        'lines[0].entryModes[1].type: unsupported value "slider"; expected one of: valuePicker',
+        'lines[0].entryModes[1].id: duplicate entry mode id "cards"',
+        'lines[0].entryModes[1].values: needs at least one value',
+        'lines[0].entryModes[2].values: has 25 tiles; the most is 24',
       ]),
     );
   });
 
   test('entry modes need tap to edit', () {
     final problems = problemsFor((template) {
-      final scoreField = child(template, 'scoreField');
-      child(scoreField, 'entry')['tapToEdit'] = false;
-      scoreField['entryModes'] = [
+      final line = scoreLine(template);
+      child(line, 'entry')['tapToEdit'] = false;
+      line['entryModes'] = [
         {
           'type': 'valuePicker',
           'id': 'cards',
@@ -229,7 +235,7 @@ void main() {
     expect(
       problems,
       contains(
-        'scoreField.entryModes: need entry.tapToEdit to be true, or the entry sheet never opens',
+        'lines[0].entryModes: need entry.tapToEdit to be true, or the entry sheet never opens',
       ),
     );
   });
@@ -243,7 +249,7 @@ void main() {
         };
 
     final problems = problemsFor((template) {
-      child(template, 'scoreField')['entryModes'] = [
+      scoreLine(template)['entryModes'] = [
         picker({
           'groups': [
             {
@@ -282,12 +288,12 @@ void main() {
     expect(
       problems,
       containsAll([
-        'scoreField.entryModes[0].groups[1].values[2].text: duplicate tile "+4"',
-        'scoreField.entryModes[0].groups[1].values[3].text: must be at most 6 characters',
-        'scoreField.entryModes[0].total: unknown name "bonus"; expected one of: numbers, modifiers at position 17',
-        'scoreField.entryModes[0].total: countIn needs a group name without braces, for example countIn(numbers) at position 35',
-        'scoreField.entryModes[1].total: needs "groups"; without groups the tiles are added up',
-        'scoreField.entryModes[2].groups: use either "values" or "groups", not both',
+        'lines[0].entryModes[0].groups[1].values[2].text: duplicate tile "+4"',
+        'lines[0].entryModes[0].groups[1].values[3].text: must be at most 6 characters',
+        'lines[0].entryModes[0].total: unknown name "bonus"; expected one of: numbers, modifiers at position 17',
+        'lines[0].entryModes[0].total: countIn needs a group name without braces, for example countIn(numbers) at position 35',
+        'lines[0].entryModes[1].total: needs "groups"; without groups the tiles are added up',
+        'lines[0].entryModes[2].groups: use either "values" or "groups", not both',
       ]),
     );
     // The number 2 and the "+2" modifier show differently, so both are fine.
@@ -296,7 +302,7 @@ void main() {
 
   test('card text is checked, and picker row labels are gone', () {
     final problems = problemsFor((template) {
-      child(template, 'scoreField')['entryModes'] = [
+      scoreLine(template)['entryModes'] = [
         {
           'type': 'valuePicker',
           'id': 'cards',
@@ -338,7 +344,7 @@ void main() {
     });
 
     expect(problems, [
-      'scoreField.entryModes[0].rowLabels: unknown key',
+      'lines[0].entryModes[0].rowLabels: unknown key',
       'scoreLabels[1].text: must be at most 8 characters',
       'scoreLabels[1].color: "red" must look like #3A7BD5',
       startsWith('scoreLabels[1].when: unknown name "busted"'),

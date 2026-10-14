@@ -1,6 +1,6 @@
-/// A field whose value comes from a formula rather than being entered.
-class CalculatedFieldDefinition {
-  const CalculatedFieldDefinition({
+/// A line whose value comes from a formula rather than being entered.
+class CalculatedLineDefinition {
+  const CalculatedLineDefinition({
     required this.id,
     required this.label,
     required this.formula,

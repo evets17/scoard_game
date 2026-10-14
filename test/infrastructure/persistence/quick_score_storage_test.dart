@@ -6,7 +6,7 @@ import 'package:scoard_game/application/models/sessions/quick_score_participant_
 import 'package:scoard_game/infrastructure/persistence/db/app_database.dart';
 
 void main() {
-  test('app database persists quick score field values separately from resolved results', () async {
+  test('app database persists quick score line values separately from resolved results', () async {
     final database = AppDatabase.forTesting(NativeDatabase.memory());
 
     await database.saveQuickScoreResult(
@@ -46,16 +46,16 @@ void main() {
       ],
     );
 
-    final storedFieldValues = await database.loadQuickScoreFieldValues(
+    final storedLineValues = await database.loadQuickScoreLineValues(
       sessionId: 'quick-score-test',
     );
     final storedResults = await database.loadQuickScorePlayerResults(
       sessionId: 'quick-score-test',
     );
 
-    expect(storedFieldValues.length, 2);
-    expect(storedFieldValues.first.fieldId, 'final-score');
-    expect(storedFieldValues.first.integerValue, 18);
+    expect(storedLineValues.length, 2);
+    expect(storedLineValues.first.lineId, 'final-score');
+    expect(storedLineValues.first.integerValue, 18);
     expect(storedResults.first.finalScore, 26);
 
     await database.close();

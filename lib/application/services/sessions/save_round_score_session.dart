@@ -23,7 +23,7 @@ class SaveRoundScoreSession {
     }
 
     final minimumPlayers = preset.minimumPlayers;
-    final scoreFieldId = preset.scoreFields.first.id;
+    final scoreLineId = preset.enteredLines.first.id;
 
     for (final round in rounds) {
       if (round.participantValues.length < minimumPlayers) {
@@ -33,7 +33,7 @@ class SaveRoundScoreSession {
       }
 
       final hasMissingValues = round.participantValues.any(
-        (participant) => !participant.enteredValues.containsKey(scoreFieldId),
+        (participant) => !participant.enteredValues.containsKey(scoreLineId),
       );
       if (hasMissingValues) {
         throw const RoundScoreValidationException(

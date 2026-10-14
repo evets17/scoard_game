@@ -1,10 +1,10 @@
 import 'package:scoard_game/application/models/scoring/card_text.dart';
 import 'package:scoard_game/application/models/scoring/card_text_definition.dart';
-import 'package:scoard_game/application/models/scoring/calculated_field_definition.dart';
-import 'package:scoard_game/application/models/scoring/marker_field_definition.dart';
+import 'package:scoard_game/application/models/scoring/calculated_line_definition.dart';
+import 'package:scoard_game/application/models/scoring/marker_line_definition.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_behavior.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
-import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
+import 'package:scoard_game/application/models/scoring/entered_line_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_input_kind.dart';
 import 'package:scoard_game/application/models/scoring/scoring_model.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
@@ -15,27 +15,25 @@ import 'package:scoard_game/application/models/scoring/winner_rule.dart';
 /// Builds a [ScoringPreset] from a template that has already passed
 /// `validateTemplateJson`.
 ///
-/// Version 1's `scoreField` and version 2's `fields` and `score` produce the
-/// same model: entered fields, calculated fields, and which one is the score.
+/// The score sheet's `lines` become entered, calculated, and marker lines,
+/// and `score` says which line is the score.
 ScoringPreset parseTemplateJson(
   Map<String, Object?> json, {
   TemplateOrigin origin = TemplateOrigin.bundled,
 }) {
   final players = json['players']! as Map<String, Object?>;
   final prompts = (json['prompts'] as List<Object?>?) ?? const [];
-  final fields = [
-    if (json['fields'] case final List<Object?> fields)
-      for (final field in fields) field! as Map<String, Object?>
-    else
-      json['scoreField']! as Map<String, Object?>,
+  final lines = [
+    for (final line in json['lines']! as List<Object?>)
+      line! as Map<String, Object?>,
   ];
-  final markerFields =
-      fields.where((field) => field.containsKey('marker')).toList();
-  final calculatedFields =
-      fields.where((field) => field.containsKey('formula')).toList();
-  final enteredFields = fields
+  final markerLines =
+      lines.where((line) => line.containsKey('marker')).toList();
+  final calculatedLines =
+      lines.where((line) => line.containsKey('formula')).toList();
+  final enteredLines = lines
       .where(
-        (field) => !field.containsKey('formula') && !field.containsKey('marker'),
+        (line) => !line.containsKey('formula') && !line.containsKey('marker'),
       )
       .toList();
 
@@ -60,27 +58,27 @@ ScoringPreset parseTemplateJson(
     promptDefinitions: prompts
         .map((prompt) => _parsePrompt(prompt! as Map<String, Object?>))
         .toList(growable: false),
-    scoreFields: enteredFields.map(_parseEnteredField).toList(growable: false),
-    calculatedFields: [
-      for (final field in calculatedFields)
-        CalculatedFieldDefinition(
-          id: field['id']! as String,
-          label: field['label']! as String,
-          formula: field['formula']! as String,
+    enteredLines: enteredLines.map(_parseEnteredLine).toList(growable: false),
+    calculatedLines: [
+      for (final line in calculatedLines)
+        CalculatedLineDefinition(
+          id: line['id']! as String,
+          label: line['label']! as String,
+          formula: line['formula']! as String,
         ),
     ],
-    markerFields: [
-      for (final field in markerFields)
-        if (field['marker'] case final Map<String, Object?> marker)
-          MarkerFieldDefinition(
-            id: field['id']! as String,
-            label: field['label']! as String,
+    markerLines: [
+      for (final line in markerLines)
+        if (line['marker'] case final Map<String, Object?> marker)
+          MarkerLineDefinition(
+            id: line['id']! as String,
+            label: line['label']! as String,
             badge: marker['badge']! as String,
             color: marker['color'] as String?,
             onePerRound: (marker['onePerRound'] as bool?) ?? false,
           ),
     ],
-    scoreFieldId: json['score'] as String?,
+    scoreLineId: json['score'] as String?,
     scoreLabels: _parseCardTexts(json['scoreLabels']),
     scoreSubLabels: _parseCardTexts(json['scoreSubLabels']),
     playerBadges: _parseCardTexts(json['playerBadges']),
@@ -88,22 +86,22 @@ ScoringPreset parseTemplateJson(
   );
 }
 
-ScoreFieldDefinition _parseEnteredField(Map<String, Object?> field) {
-  final entry = (field['entry'] as Map<String, Object?>?) ?? const {};
+EnteredLineDefinition _parseEnteredLine(Map<String, Object?> line) {
+  final entry = (line['entry'] as Map<String, Object?>?) ?? const {};
 
-  return ScoreFieldDefinition(
-    id: field['id']! as String,
-    label: field['label']! as String,
+  return EnteredLineDefinition(
+    id: line['id']! as String,
+    label: line['label']! as String,
     inputKind: ScoreInputKind.integer,
     isEntered: true,
     contributesToFinalResult: true,
-    initialIntegerValue: field['initialValue'] as int?,
-    minimumDisplayDigits: (field['minimumDisplayDigits'] as int?) ?? 1,
+    initialIntegerValue: line['initialValue'] as int?,
+    minimumDisplayDigits: (line['minimumDisplayDigits'] as int?) ?? 1,
     enableTapToEdit: (entry['tapToEdit'] as bool?) ?? false,
     enableQuickAdjust: (entry['quickAdjust'] as bool?) ?? false,
     allowReplace: (entry['replace'] as bool?) ?? true,
     allowAdjust: (entry['adjust'] as bool?) ?? false,
-    valuePickers: ((field['entryModes'] as List<Object?>?) ?? const [])
+    valuePickers: ((line['entryModes'] as List<Object?>?) ?? const [])
         .map((mode) => _parseValuePicker(mode! as Map<String, Object?>))
         .toList(growable: false),
   );

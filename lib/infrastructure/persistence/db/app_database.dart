@@ -92,17 +92,17 @@ class QuickScorePlayerResultsTable extends Table {
   BoolColumn get isTied => boolean()();
 }
 
-class QuickScoreFieldValuesTable extends Table {
+class QuickScoreLineValuesTable extends Table {
   TextColumn get sessionId => text()();
 
   TextColumn get playerId => text()();
 
-  TextColumn get fieldId => text()();
+  TextColumn get lineId => text()();
 
   IntColumn get integerValue => integer()();
 
   @override
-  Set<Column<Object>> get primaryKey => {sessionId, playerId, fieldId};
+  Set<Column<Object>> get primaryKey => {sessionId, playerId, lineId};
 }
 
 class RoundScoreSessionsTable extends Table {
@@ -138,7 +138,7 @@ class RoundScorePlayerResultsTable extends Table {
   BoolColumn get isTied => boolean()();
 }
 
-class RoundScoreFieldValuesTable extends Table {
+class RoundScoreLineValuesTable extends Table {
   TextColumn get sessionId => text()();
 
   IntColumn get roundNumber => integer()();
@@ -147,12 +147,12 @@ class RoundScoreFieldValuesTable extends Table {
 
   TextColumn get displayName => text()();
 
-  TextColumn get fieldId => text()();
+  TextColumn get lineId => text()();
 
   IntColumn get integerValue => integer()();
 
   @override
-  Set<Column<Object>> get primaryKey => {sessionId, roundNumber, playerId, fieldId};
+  Set<Column<Object>> get primaryKey => {sessionId, roundNumber, playerId, lineId};
 }
 
 class ActiveSessionsTable extends Table {
@@ -180,10 +180,10 @@ class ActiveSessionsTable extends Table {
   PlayersTable,
   QuickScoreSessionsTable,
   QuickScorePlayerResultsTable,
-  QuickScoreFieldValuesTable,
+  QuickScoreLineValuesTable,
   RoundScoreSessionsTable,
   RoundScorePlayerResultsTable,
-  RoundScoreFieldValuesTable,
+  RoundScoreLineValuesTable,
   ActiveSessionsTable,
   PlayerGroupsTable,
   PlayerGroupMembersTable,
@@ -194,7 +194,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -205,12 +205,12 @@ class AppDatabase extends _$AppDatabase {
             await migrator.createTable(quickScorePlayerResultsTable);
           }
           if (from < 3) {
-            await migrator.createTable(quickScoreFieldValuesTable);
+            await migrator.createTable(quickScoreLineValuesTable);
           }
           if (from < 4) {
             await migrator.createTable(roundScoreSessionsTable);
             await migrator.createTable(roundScorePlayerResultsTable);
-            await migrator.createTable(roundScoreFieldValuesTable);
+            await migrator.createTable(roundScoreLineValuesTable);
           }
           if (from < 5) {
             await migrator.createTable(activeSessionsTable);
@@ -229,8 +229,34 @@ class AppDatabase extends _$AppDatabase {
             await migrator.createTable(playerGroupsTable);
             await migrator.createTable(playerGroupMembersTable);
           }
+          if (from < 8) {
+            // Template "fields" became "lines"; keep the saved values.
+            for (final game in ['quick_score', 'round_score']) {
+              await _renameLineValuesTable(game);
+            }
+          }
         },
       );
+
+  /// Renames `<game>_field_values_table` and its `field_id` column to the
+  /// line names, if the table is still under its old name.
+  Future<void> _renameLineValuesTable(String game) async {
+    final oldTable = await customSelect(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+      variables: [Variable.withString('${game}_field_values_table')],
+    ).get();
+    if (oldTable.isEmpty) {
+      return;
+    }
+    await customStatement(
+      'ALTER TABLE ${game}_field_values_table '
+      'RENAME TO ${game}_line_values_table',
+    );
+    await customStatement(
+      'ALTER TABLE ${game}_line_values_table '
+      'RENAME COLUMN field_id TO line_id',
+    );
+  }
 
   Future<List<PlayerRecord>> loadPlayers() async {
     final rows = await select(playersTable).get();
@@ -406,14 +432,14 @@ class AppDatabase extends _$AppDatabase {
         .get();
   }
 
-  Future<List<QuickScoreFieldValuesTableData>> loadQuickScoreFieldValues({
+  Future<List<QuickScoreLineValuesTableData>> loadQuickScoreLineValues({
     required String sessionId,
   }) {
-    return (select(quickScoreFieldValuesTable)
+    return (select(quickScoreLineValuesTable)
           ..where((table) => table.sessionId.equals(sessionId))
           ..orderBy([
             (table) => OrderingTerm.asc(table.playerId),
-            (table) => OrderingTerm.asc(table.fieldId),
+            (table) => OrderingTerm.asc(table.lineId),
           ]))
         .get();
   }
@@ -441,10 +467,10 @@ class AppDatabase extends _$AppDatabase {
         .get();
   }
 
-  Future<List<RoundScoreFieldValuesTableData>> loadRoundScoreFieldValues({
+  Future<List<RoundScoreLineValuesTableData>> loadRoundScoreLineValues({
     required String sessionId,
   }) {
-    return (select(roundScoreFieldValuesTable)
+    return (select(roundScoreLineValuesTable)
           ..where((table) => table.sessionId.equals(sessionId))
           ..orderBy([
             (table) => OrderingTerm.asc(table.roundNumber),
@@ -483,7 +509,7 @@ class AppDatabase extends _$AppDatabase {
     required List<QuickScorePlayerResult> playerResults,
   }) {
     return transaction(() async {
-      await (delete(quickScoreFieldValuesTable)
+      await (delete(quickScoreLineValuesTable)
             ..where((table) => table.sessionId.equals(sessionId)))
           .go();
       await (delete(quickScorePlayerResultsTable)
@@ -525,15 +551,15 @@ class AppDatabase extends _$AppDatabase {
         );
 
         batch.insertAll(
-          quickScoreFieldValuesTable,
+          quickScoreLineValuesTable,
           participantValues
               .expand(
                 (participant) => participant.enteredValues.entries.map(
-                  (fieldValue) => QuickScoreFieldValuesTableCompanion.insert(
+                  (lineValue) => QuickScoreLineValuesTableCompanion.insert(
                     sessionId: sessionId,
                     playerId: participant.playerId,
-                    fieldId: fieldValue.key,
-                    integerValue: fieldValue.value,
+                    lineId: lineValue.key,
+                    integerValue: lineValue.value,
                   ),
                 ),
               )
@@ -555,7 +581,7 @@ class AppDatabase extends _$AppDatabase {
     required List<RoundScorePlayerResult> playerResults,
   }) {
     return transaction(() async {
-      await (delete(roundScoreFieldValuesTable)
+      await (delete(roundScoreLineValuesTable)
             ..where((table) => table.sessionId.equals(sessionId)))
           .go();
       await (delete(roundScorePlayerResultsTable)
@@ -598,18 +624,18 @@ class AppDatabase extends _$AppDatabase {
         );
 
         batch.insertAll(
-          roundScoreFieldValuesTable,
+          roundScoreLineValuesTable,
           rounds
               .expand(
                 (round) => round.participantValues.expand(
                   (participant) => participant.enteredValues.entries.map(
-                    (fieldValue) => RoundScoreFieldValuesTableCompanion.insert(
+                    (lineValue) => RoundScoreLineValuesTableCompanion.insert(
                       sessionId: sessionId,
                       roundNumber: round.roundNumber,
                       playerId: participant.playerId,
                       displayName: participant.displayName,
-                      fieldId: fieldValue.key,
-                      integerValue: fieldValue.value,
+                      lineId: lineValue.key,
+                      integerValue: lineValue.value,
                     ),
                   ),
                 ),

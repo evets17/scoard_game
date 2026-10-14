@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
+import 'package:scoard_game/application/models/scoring/entered_line_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_input_kind.dart';
 import 'package:scoard_game/ui/score_input/numeric_score_field.dart';
 
@@ -18,7 +18,7 @@ void main() {
           child: NumericScoreField(
             label: 'Avery',
             controller: controller,
-            fieldDefinition: const ScoreFieldDefinition(
+            lineDefinition: const EnteredLineDefinition(
               id: 'score',
               label: 'Score',
               inputKind: ScoreInputKind.integer,
@@ -58,7 +58,7 @@ void main() {
           child: NumericScoreField(
             label: 'Avery',
             controller: controller,
-            fieldDefinition: const ScoreFieldDefinition(
+            lineDefinition: const EnteredLineDefinition(
               id: 'score',
               label: 'Score',
               inputKind: ScoreInputKind.integer,

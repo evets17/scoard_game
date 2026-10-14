@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "round-score-basic",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "Round Score",
   "subtitle": "Scores add up each round",
   "general": true,
@@ -19,11 +19,13 @@
       "effect": "lowScoreWins"
     }
   ],
-  "scoreField": {
-    "id": "round-score",
-    "label": "Round Score",
-    "initialValue": 0,
-    "minimumDisplayDigits": 2,
-    "entry": { "tapToEdit": true, "quickAdjust": true, "replace": true, "adjust": true }
-  }
+  "lines": [
+    {
+      "id": "round-score",
+      "label": "Round Score",
+      "initialValue": 0,
+      "minimumDisplayDigits": 2,
+      "entry": { "tapToEdit": true, "quickAdjust": true, "replace": true, "adjust": true }
+    }
+  ]
 }

@@ -24,9 +24,9 @@ class SaveQuickScoreSession {
       );
     }
 
-    final scoreFieldId = preset.scoreFields.first.id;
+    final scoreLineId = preset.enteredLines.first.id;
     final hasMissingValues = participantValues.any(
-      (participant) => !participant.enteredValues.containsKey(scoreFieldId),
+      (participant) => !participant.enteredValues.containsKey(scoreLineId),
     );
 
     if (hasMissingValues) {

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "quick-final-score-basic",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "Quick Score",
   "subtitle": "One final score per player",
   "general": true,
@@ -19,11 +19,13 @@
       "effect": "lowScoreWins"
     }
   ],
-  "scoreField": {
-    "id": "final-score",
-    "label": "Score",
-    "initialValue": 0,
-    "minimumDisplayDigits": 3,
-    "entry": { "tapToEdit": true, "quickAdjust": true, "replace": true, "adjust": true }
-  }
+  "lines": [
+    {
+      "id": "final-score",
+      "label": "Score",
+      "initialValue": 0,
+      "minimumDisplayDigits": 3,
+      "entry": { "tapToEdit": true, "quickAdjust": true, "replace": true, "adjust": true }
+    }
+  ]
 }

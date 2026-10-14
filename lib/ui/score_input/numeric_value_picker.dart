@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:scoard_game/application/models/scoring/marker_field_definition.dart';
+import 'package:scoard_game/application/models/scoring/marker_line_definition.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_definition.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_pick.dart';
 import 'package:scoard_game/core/scoring/score_expression.dart';
@@ -22,7 +22,7 @@ Future<ScoreValueEditRequest?> showNumericValuePicker(
   ScoreEntryMemory? entryMemory,
   List<ValuePickerDefinition> valuePickers = const [],
   ValuePickerPick? initialPick,
-  List<MarkerFieldDefinition> markers = const [],
+  List<MarkerLineDefinition> markers = const [],
   Set<String> activeMarkers = const {},
   void Function(String markerId, bool isSet)? onMarkerChanged,
 }) {
@@ -89,7 +89,7 @@ class _NumericValuePicker extends StatefulWidget {
 
   /// The template's per-round flags, such as "Went out first", with the
   /// ones set for this player. Toggling one takes effect immediately.
-  final List<MarkerFieldDefinition> markers;
+  final List<MarkerLineDefinition> markers;
   final Set<String> activeMarkers;
   final void Function(String markerId, bool isSet)? onMarkerChanged;
 

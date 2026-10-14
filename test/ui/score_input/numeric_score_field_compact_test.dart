@@ -5,7 +5,7 @@ import 'package:scoard_game/ui/score_input/numeric_score_field.dart';
 import '../../support/test_templates.dart';
 
 void main() {
-  final fieldDefinition = loadTestTemplateCatalog().byId('round-score-basic').scoreFields.first;
+  final lineDefinition = loadTestTemplateCatalog().byId('round-score-basic').enteredLines.first;
 
   Future<BuildContext> pumpRow(
     WidgetTester tester, {
@@ -24,7 +24,7 @@ void main() {
               alignment: Alignment.topCenter,
               child: NumericScoreField(
                 label: 'Avery',
-                fieldDefinition: fieldDefinition,
+                lineDefinition: lineDefinition,
                 controller: controller,
                 compact: compact,
                 valueLabelMinimumDigits: 3,
@@ -54,7 +54,7 @@ void main() {
             context,
             rowCount: 4,
             availableHeight: availableHeight,
-            fieldDefinition: fieldDefinition,
+            lineDefinition: lineDefinition,
             hasValueLabel: true,
           );
 

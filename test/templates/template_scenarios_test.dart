@@ -1,6 +1,6 @@
 // Validates every bundled scoring template and runs its scoring scenarios.
 //
-// Run with `flutter test test/templates`. See _specs/template_schema_v1.md.
+// Run with `flutter test test/templates`. See _specs/template_schema.md.
 
 import 'dart:convert';
 import 'dart:io';
@@ -155,8 +155,8 @@ class _ScenarioFile {
   }
 
   void checkCoverage() {
-    for (final field in template.scoreFields) {
-      for (final picker in field.valuePickers) {
+    for (final line in template.enteredLines) {
+      for (final picker in line.valuePickers) {
         final checked = pickerTotals.any((check) => check.picker == picker);
         if (picker.total != null && !checked) {
           fail(
@@ -209,8 +209,8 @@ class _ScenarioFile {
     }
 
     for (final prompt in template.promptDefinitions) {
-      final readByFormula = template.calculatedFields
-          .any((field) => field.formula.contains('{${prompt.id}}'));
+      final readByFormula = template.calculatedLines
+          .any((line) => line.formula.contains('{${prompt.id}}'));
       if (prompt.behavior == null && !readByFormula) {
         continue;
       }
@@ -242,8 +242,8 @@ class _PickerTotalCheck {
     reader.onlyKeys(const {'name', 'picker', 'taps', 'expected'});
     final name = reader.string('name');
     final pickerId = reader.string('picker');
-    final picker = template.scoreFields
-        .expand((field) => field.valuePickers)
+    final picker = template.enteredLines
+        .expand((line) => line.valuePickers)
         .where((picker) => picker.id == pickerId)
         .firstOrNull;
     if (picker == null) {
@@ -285,7 +285,7 @@ List<int> _tappedIndexesFor(
   }).toList();
 }
 
-/// One player's entry in a scenario: the entered values (score field and
+/// One player's entry in a scenario: the entered values (score line and
 /// markers), and the tiles tapped, if any.
 class _Entry {
   const _Entry(this.values, [this.pick]);
@@ -316,7 +316,7 @@ class _Scenario {
   final List<String> players;
   final Map<String, Object> promptValues;
 
-  /// Entries by player: the score field, any markers, and any tiles.
+  /// Entries by player: the score line, any markers, and any tiles.
   final Map<String, _Entry>? scores;
   final List<Map<String, _Entry>>? rounds;
   final Map<String, int>? expectedTotals;
@@ -392,24 +392,24 @@ class _Scenario {
       }
     }
 
-    // A player's entry is a number for the score field, or an object that
+    // A player's entry is a number for the score line, or an object that
     // also sets markers, for example { "round-score": 10, "first-out": 1 },
     // or taps tiles, for example { "tiles": ["9", "Bust"] }. With tiles and
     // no score, the score is the picker's total.
-    final scoreField = template.scoreFields.single;
-    final scoreFieldId = scoreField.id;
-    final markerIds = {for (final marker in template.markerFields) marker.id};
+    final scoreLine = template.enteredLines.single;
+    final scoreLineId = scoreLine.id;
+    final markerIds = {for (final marker in template.markerLines) marker.id};
     _Entry parseEntryObject(_Reader entryReader) {
-      entryReader.onlyKeys({scoreFieldId, ...markerIds, 'tiles', 'picker'});
+      entryReader.onlyKeys({scoreLineId, ...markerIds, 'tiles', 'picker'});
       ValuePickerPick? pick;
       int? tilesTotal;
       if (entryReader.has('tiles')) {
         final pickerId = entryReader.has('picker')
             ? entryReader.string('picker')
-            : scoreField.valuePickers.length == 1
-                ? scoreField.valuePickers.single.id
+            : scoreLine.valuePickers.length == 1
+                ? scoreLine.valuePickers.single.id
                 : entryReader.fail('picker', 'is required with several pickers');
-        final picker = scoreField.valuePickers
+        final picker = scoreLine.valuePickers
             .where((picker) => picker.id == pickerId)
             .firstOrNull;
         if (picker == null) {
@@ -421,8 +421,8 @@ class _Scenario {
       }
       return _Entry(
         {
-          scoreFieldId: entryReader.has(scoreFieldId) || tilesTotal == null
-              ? entryReader.integer(scoreFieldId)
+          scoreLineId: entryReader.has(scoreLineId) || tilesTotal == null
+              ? entryReader.integer(scoreLineId)
               : tilesTotal,
           for (final markerId in markerIds)
             if (entryReader.has(markerId))
@@ -437,12 +437,12 @@ class _Scenario {
       return {
         for (final player in players)
           player: switch (entriesReader.map[player]) {
-            final int score => _Entry({scoreFieldId: score}),
+            final int score => _Entry({scoreLineId: score}),
             final Map<String, Object?> entry =>
               parseEntryObject(entriesReader.child(player, entry)),
             _ => entriesReader.fail(
                 player,
-                'must be a whole number, or an object with "$scoreFieldId" '
+                'must be a whole number, or an object with "$scoreLineId" '
                 'or "tiles"',
               ),
           },
@@ -611,7 +611,7 @@ class _Scenario {
         displayName: player,
         enteredValues: entry.values,
         entryPicks: {
-          template.scoreFields.single.id: ?entry.pick,
+          template.enteredLines.single.id: ?entry.pick,
         },
       );
     }

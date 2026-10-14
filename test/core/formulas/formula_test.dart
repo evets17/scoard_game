@@ -14,7 +14,7 @@ class _Scope extends FormulaScope {
   int valueOf(String name) => own[name] ?? 0;
 
   @override
-  List<int> otherValuesOf(String fieldId) => others[fieldId] ?? const [];
+  List<int> otherValuesOf(String lineId) => others[lineId] ?? const [];
 
   @override
   int get otherPlayerCount => otherCount;
@@ -92,7 +92,7 @@ void main() {
       expect(eval('if({a} > 10, 1, 2)', own: {'a': 3}), 2);
     });
 
-    test('fields and built-ins are read through braces', () {
+    test('lines and built-ins are read through braces', () {
       expect(
         eval('{inning-points} * {roundNumber}', own: {
           'inning-points': 4,
@@ -149,7 +149,7 @@ void main() {
     List<String> problemsFor(String source, {Set<String>? dependencies}) {
       return checkFormula(
         Formula.parse(source),
-        fieldIds: const {'points', 'bonus'},
+        lineIds: const {'points', 'bonus'},
         dependencies: dependencies,
       ).map((problem) => problem.toString()).toList();
     }
@@ -192,18 +192,18 @@ void main() {
       );
     });
 
-    test('field names and braces are used in the right places', () {
+    test('line names and braces are used in the right places', () {
       expect(problemsFor('points + 1'), ['use {points} to read a value at position 1']);
       expect(
         problemsFor('highestOther({points})'),
         [
-          'highestOther needs a field name without braces, for example '
+          'highestOther needs a line name without braces, for example '
               'highestOther(points) at position 14',
         ],
       );
       expect(
         problemsFor('highestOther(score)'),
-        ['unknown field "score" at position 14'],
+        ['unknown line "score" at position 14'],
       );
     });
   });

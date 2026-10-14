@@ -8,7 +8,7 @@ import 'package:scoard_game/core/formulas/formula_parser.dart';
 import 'package:scoard_game/core/scoring/card_text_values.dart';
 import 'package:scoard_game/core/scoring/value_picker_total.dart';
 
-/// Works out every player's calculated fields and score for one round (or
+/// Works out every player's calculated lines and score for one round (or
 /// the single entry of a final-score game) from what was entered, and the
 /// text the template shows on each player's card.
 ///
@@ -35,10 +35,10 @@ class ScoreEngine {
   static final _cache = Expando<ScoreEngine>('ScoreEngine');
 
   factory ScoreEngine._build(ScoringPreset preset) {
-    final fieldIds = {
-      for (final field in preset.scoreFields) field.id,
-      for (final field in preset.markerFields) field.id,
-      for (final field in preset.calculatedFields) field.id,
+    final lineIds = {
+      for (final line in preset.enteredLines) line.id,
+      for (final line in preset.markerLines) line.id,
+      for (final line in preset.calculatedLines) line.id,
     };
     final promptIds = {
       for (final prompt in preset.promptDefinitions) prompt.id,
@@ -46,27 +46,27 @@ class ScoreEngine {
     final parsed = <String, Formula>{};
     final dependencies = <String, Set<String>>{};
 
-    for (final field in preset.calculatedFields) {
-      final formula = Formula.parse(field.formula);
+    for (final line in preset.calculatedLines) {
+      final formula = Formula.parse(line.formula);
       final reads = <String>{};
       final problems = checkFormula(
         formula,
-        fieldIds: fieldIds,
+        lineIds: lineIds,
         promptIds: promptIds,
         dependencies: reads,
       );
       if (problems.isNotEmpty) {
         throw StateError(
-          '${preset.id}: ${field.id}: ${problems.first}. '
+          '${preset.id}: ${line.id}: ${problems.first}. '
           'Templates are validated when loaded, so this should not happen.',
         );
       }
-      parsed[field.id] = formula;
-      dependencies[field.id] = reads;
+      parsed[line.id] = formula;
+      dependencies[line.id] = reads;
     }
 
     final groupIds = {
-      for (final picker in preset.scoreFields.first.valuePickers)
+      for (final picker in preset.enteredLines.first.valuePickers)
         for (final option in picker.options)
           if (option.groupId case final String groupId) groupId,
     };
@@ -79,7 +79,7 @@ class ScoreEngine {
             final formula = Formula.parse(definition.when);
             final problems = checkFormula(
               formula,
-              fieldIds: fieldIds,
+              lineIds: lineIds,
               promptIds: promptIds,
               groupIds: groupIds,
               context: FormulaContext.card,
@@ -99,7 +99,7 @@ class ScoreEngine {
     return ScoreEngine._(
       preset,
       [
-        for (final id in orderCalculatedFields(dependencies)) (id, parsed[id]!),
+        for (final id in orderCalculatedLines(dependencies)) (id, parsed[id]!),
       ],
       parseCardTexts(preset.scoreLabels),
       parseCardTexts(preset.scoreSubLabels),
@@ -110,7 +110,7 @@ class ScoreEngine {
 
   final ScoringPreset _preset;
 
-  /// Calculated fields in an order where each comes after what it reads.
+  /// Calculated lines in an order where each comes after what it reads.
   final List<(String, Formula)> _calculated;
 
   final List<(CardTextDefinition, Formula)> _scoreLabels;
@@ -125,11 +125,11 @@ class ScoreEngine {
       _scoreSubLabels.isNotEmpty ||
       _playerBadges.isNotEmpty;
 
-  /// Every field's value for each player, keyed by player id.
+  /// Every line's value for each player, keyed by player id.
   ///
   /// [options] are the game's prompt answers by prompt id, as
   /// `ResolvedPresetOptions.formulaValues` gives them.
-  Map<String, Map<String, int>> fieldValues(
+  Map<String, Map<String, int>> lineValues(
     List<QuickScoreParticipantValues> participants, {
     required int roundNumber,
     Map<String, int> options = const {},
@@ -137,17 +137,17 @@ class ScoreEngine {
     final values = {
       for (final participant in participants)
         participant.playerId: <String, int>{
-          for (final field in _preset.scoreFields)
-            field.id: participant.enteredValues[field.id] ?? 0,
-          for (final marker in _preset.markerFields)
+          for (final line in _preset.enteredLines)
+            line.id: participant.enteredValues[line.id] ?? 0,
+          for (final marker in _preset.markerLines)
             marker.id: participant.enteredValues[marker.id] ?? 0,
         },
     };
     final builtIns = _builtIns(participants, roundNumber, options);
 
-    // One field at a time across every player, so a formula that reads the
+    // One line at a time across every player, so a formula that reads the
     // other players always sees finished values.
-    for (final (fieldId, formula) in _calculated) {
+    for (final (lineId, formula) in _calculated) {
       final results = <String, int>{};
       for (final (index, participant) in participants.indexed) {
         results[participant.playerId] = evaluateFormula(
@@ -156,7 +156,7 @@ class ScoreEngine {
         );
       }
       for (final entry in results.entries) {
-        values[entry.key]![fieldId] = entry.value;
+        values[entry.key]![lineId] = entry.value;
       }
     }
 
@@ -171,7 +171,7 @@ class ScoreEngine {
   }) {
     final scoreId = _preset.scoreId;
     return {
-      for (final entry in fieldValues(
+      for (final entry in lineValues(
         participants,
         roundNumber: roundNumber,
         options: options,
@@ -196,7 +196,7 @@ class ScoreEngine {
     }
 
     final values =
-        fieldValues(participants, roundNumber: roundNumber, options: options);
+        lineValues(participants, roundNumber: roundNumber, options: options);
     final builtIns = _builtIns(participants, roundNumber, options);
     final texts = <String, PlayerCardTexts>{};
     for (final (index, participant) in participants.indexed) {
@@ -231,12 +231,12 @@ class ScoreEngine {
   /// The tiles the player picked for the score, if it was entered with a
   /// value picker.
   FormulaScope? _pickedTiles(QuickScoreParticipantValues participant) {
-    final field = _preset.scoreFields.first;
-    final pick = participant.entryPicks[field.id];
+    final line = _preset.enteredLines.first;
+    final pick = participant.entryPicks[line.id];
     if (pick == null) {
       return null;
     }
-    final picker = field.valuePickers
+    final picker = line.valuePickers
         .where((picker) => picker.id == pick.pickerId)
         .firstOrNull;
     return picker == null
@@ -257,7 +257,7 @@ class ScoreEngine {
   }
 }
 
-/// What card text reads: the player's fields, built-in values, and the
+/// What card text reads: the player's lines, built-in values, and the
 /// other players, plus the tile groups picked for the score.
 class _CardScope extends FormulaScope {
   _CardScope(this._player, this._tiles, this._groupIds);
@@ -272,7 +272,7 @@ class _CardScope extends FormulaScope {
       : _player.valueOf(name);
 
   @override
-  List<int> otherValuesOf(String fieldId) => _player.otherValuesOf(fieldId);
+  List<int> otherValuesOf(String lineId) => _player.otherValuesOf(lineId);
 
   @override
   int get otherPlayerCount => _player.otherPlayerCount;
@@ -300,20 +300,20 @@ class _PlayerScope extends FormulaScope {
       : _values[_playerId]![name] ?? _builtIns[name] ?? 0;
 
   @override
-  List<int> otherValuesOf(String fieldId) => [
+  List<int> otherValuesOf(String lineId) => [
         for (final entry in _values.entries)
-          if (entry.key != _playerId) entry.value[fieldId] ?? 0,
+          if (entry.key != _playerId) entry.value[lineId] ?? 0,
       ];
 
   @override
   int get otherPlayerCount => _values.length - 1;
 }
 
-/// Orders calculated fields so each comes after the calculated fields it
-/// reads. [dependencies] maps each calculated field to every field it reads.
+/// Orders calculated lines so each comes after the calculated lines it
+/// reads. [dependencies] maps each calculated line to every line it reads.
 ///
 /// Throws [CircularFormulaError] naming the loop if there is one.
-List<String> orderCalculatedFields(Map<String, Set<String>> dependencies) {
+List<String> orderCalculatedLines(Map<String, Set<String>> dependencies) {
   final ordered = <String>[];
   final done = <String>{};
   final visiting = <String>[];
@@ -346,7 +346,7 @@ List<String> orderCalculatedFields(Map<String, Set<String>> dependencies) {
 class CircularFormulaError extends Error {
   CircularFormulaError(this.loop);
 
-  /// The fields in the loop, ending where it started, for example
+  /// The lines in the loop, ending where it started, for example
   /// `[a, b, a]`.
   final List<String> loop;
 

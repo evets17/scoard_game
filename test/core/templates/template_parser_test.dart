@@ -22,8 +22,8 @@ void main() {
     ScoringPreset preset, {
     required String name,
     required ScoringModel scoringModel,
-    required String fieldId,
-    required String fieldLabel,
+    required String lineId,
+    required String lineLabel,
     required int digits,
   }) {
     expect(preset.displayName, name);
@@ -42,17 +42,17 @@ void main() {
     expect(prompt.behavior, PresetPromptBehavior.winnerRuleLowScoreToggle);
     expect(prompt.defaultBooleanValue, isFalse);
 
-    final field = preset.scoreFields.single;
-    expect(field.id, fieldId);
-    expect(field.label, fieldLabel);
-    expect(field.isEntered, isTrue);
-    expect(field.contributesToFinalResult, isTrue);
-    expect(field.initialIntegerValue, 0);
-    expect(field.minimumDisplayDigits, digits);
-    expect(field.enableQuickAdjust, isTrue);
-    expect(field.enableTapToEdit, isTrue);
-    expect(field.allowReplace, isTrue);
-    expect(field.allowAdjust, isTrue);
+    final line = preset.enteredLines.single;
+    expect(line.id, lineId);
+    expect(line.label, lineLabel);
+    expect(line.isEntered, isTrue);
+    expect(line.contributesToFinalResult, isTrue);
+    expect(line.initialIntegerValue, 0);
+    expect(line.minimumDisplayDigits, digits);
+    expect(line.enableQuickAdjust, isTrue);
+    expect(line.enableTapToEdit, isTrue);
+    expect(line.allowReplace, isTrue);
+    expect(line.allowAdjust, isTrue);
   }
 
   test('Quick Score parses to the same preset the app always had', () {
@@ -62,8 +62,8 @@ void main() {
       preset,
       name: 'Quick Score',
       scoringModel: ScoringModel.finalScore,
-      fieldId: 'final-score',
-      fieldLabel: 'Score',
+      lineId: 'final-score',
+      lineLabel: 'Score',
       digits: 3,
     );
     expect(
@@ -80,8 +80,8 @@ void main() {
       preset,
       name: 'Round Score',
       scoringModel: ScoringModel.rounds,
-      fieldId: 'round-score',
-      fieldLabel: 'Round Score',
+      lineId: 'round-score',
+      lineLabel: 'Round Score',
       digits: 2,
     );
     expect(
@@ -91,26 +91,26 @@ void main() {
     expect(preset.subtitle, 'Scores add up each round');
   });
 
-  test('optional entry settings default like the original field definition', () {
+  test('optional entry settings default like the original score line', () {
     final result = loadTemplateCatalog({
       'skyjo.json': '{"schemaVersion": 1, "id": "skyjo", "version": "1.0.0", '
           '"name": "Skyjo", "description": "x", "players": {"minimum": 2}, '
           '"scoringModel": "rounds", "winner": "lowestScore", '
-          '"scoreField": {"id": "round-score", "label": "Round Score"}}',
+          '"lines": [{"id": "round-score", "label": "Round Score"}]}',
     });
     final preset = result.catalog.byId('skyjo');
-    final field = preset.scoreFields.single;
+    final line = preset.enteredLines.single;
 
-    expect(field.minimumDisplayDigits, 1);
-    expect(field.enableTapToEdit, isFalse);
-    expect(field.enableQuickAdjust, isFalse);
-    expect(field.allowReplace, isTrue);
-    expect(field.allowAdjust, isFalse);
+    expect(line.minimumDisplayDigits, 1);
+    expect(line.enableTapToEdit, isFalse);
+    expect(line.enableQuickAdjust, isFalse);
+    expect(line.allowReplace, isTrue);
+    expect(line.allowAdjust, isFalse);
     expect(preset.winnerRule, WinnerRule.lowestScoreWins);
   });
 
   test('Skyjo offers a Cards picker from -2 to 12', () {
-    final picker = loadBundled('skyjo').scoreFields.single.valuePickers.single;
+    final picker = loadBundled('skyjo').enteredLines.single.valuePickers.single;
 
     expect(picker.id, 'cards');
     expect(picker.label, 'Cards');

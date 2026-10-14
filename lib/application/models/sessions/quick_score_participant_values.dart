@@ -12,7 +12,7 @@ class QuickScoreParticipantValues {
   final String displayName;
   final Map<String, int> enteredValues;
 
-  /// The value picker tiles an entered value came from, keyed by field id,
+  /// The value picker tiles an entered value came from, keyed by line id,
   /// so the picker can reopen with them. Only kept while a game is in
   /// progress, and dropped when the value is changed another way.
   final Map<String, ValuePickerPick> entryPicks;

@@ -1,14 +1,14 @@
 import 'package:scoard_game/core/formulas/formula_parser.dart';
 
-/// The values a formula can see while it is evaluated. A field formula sees
-/// one player's fields and the other players; a picker total sees its tile
+/// The values a formula can see while it is evaluated. A line formula sees
+/// one player's lines and the other players; a picker total sees its tile
 /// groups.
 abstract class FormulaScope {
-  /// A field's value, a built-in value, or a tile group's total.
+  /// A line's value, a built-in value, or a tile group's total.
   int valueOf(String name);
 
-  /// The other players' values for a field.
-  List<int> otherValuesOf(String fieldId) => const [];
+  /// The other players' values for a line.
+  List<int> otherValuesOf(String lineId) => const [];
 
   /// How many other players there are.
   int get otherPlayerCount => 0;

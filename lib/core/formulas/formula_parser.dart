@@ -1,7 +1,7 @@
 /// Parses template formula strings such as
 /// `max(0, {inning-points} - highestOther(inning-points))`.
 ///
-/// See `_specs/template_schema_v2.md` for the language.
+/// See `_specs/template_schema.md` for the language.
 library;
 
 /// A formula that has been parsed but not yet checked against a template.
@@ -44,7 +44,7 @@ class NumberNode extends FormulaNode {
   final int value;
 }
 
-/// `{name}`: one of this player's fields, or a built-in value.
+/// `{name}`: one of this player's lines, or a built-in value.
 class ReferenceNode extends FormulaNode {
   const ReferenceNode(this.name, super.position);
 

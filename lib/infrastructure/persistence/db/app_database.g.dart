@@ -1280,16 +1280,16 @@ class QuickScorePlayerResultsTableCompanion
   }
 }
 
-class $QuickScoreFieldValuesTableTable extends QuickScoreFieldValuesTable
+class $QuickScoreLineValuesTableTable extends QuickScoreLineValuesTable
     with
         TableInfo<
-          $QuickScoreFieldValuesTableTable,
-          QuickScoreFieldValuesTableData
+          $QuickScoreLineValuesTableTable,
+          QuickScoreLineValuesTableData
         > {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $QuickScoreFieldValuesTableTable(this.attachedDatabase, [this._alias]);
+  $QuickScoreLineValuesTableTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _sessionIdMeta = const VerificationMeta(
     'sessionId',
   );
@@ -1312,12 +1312,10 @@ class $QuickScoreFieldValuesTableTable extends QuickScoreFieldValuesTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _fieldIdMeta = const VerificationMeta(
-    'fieldId',
-  );
+  static const VerificationMeta _lineIdMeta = const VerificationMeta('lineId');
   @override
-  late final GeneratedColumn<String> fieldId = GeneratedColumn<String>(
-    'field_id',
+  late final GeneratedColumn<String> lineId = GeneratedColumn<String>(
+    'line_id',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -1338,17 +1336,17 @@ class $QuickScoreFieldValuesTableTable extends QuickScoreFieldValuesTable
   List<GeneratedColumn> get $columns => [
     sessionId,
     playerId,
-    fieldId,
+    lineId,
     integerValue,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'quick_score_field_values_table';
+  static const String $name = 'quick_score_line_values_table';
   @override
   VerificationContext validateIntegrity(
-    Insertable<QuickScoreFieldValuesTableData> instance, {
+    Insertable<QuickScoreLineValuesTableData> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -1369,13 +1367,13 @@ class $QuickScoreFieldValuesTableTable extends QuickScoreFieldValuesTable
     } else if (isInserting) {
       context.missing(_playerIdMeta);
     }
-    if (data.containsKey('field_id')) {
+    if (data.containsKey('line_id')) {
       context.handle(
-        _fieldIdMeta,
-        fieldId.isAcceptableOrUnknown(data['field_id']!, _fieldIdMeta),
+        _lineIdMeta,
+        lineId.isAcceptableOrUnknown(data['line_id']!, _lineIdMeta),
       );
     } else if (isInserting) {
-      context.missing(_fieldIdMeta);
+      context.missing(_lineIdMeta);
     }
     if (data.containsKey('integer_value')) {
       context.handle(
@@ -1392,14 +1390,14 @@ class $QuickScoreFieldValuesTableTable extends QuickScoreFieldValuesTable
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {sessionId, playerId, fieldId};
+  Set<GeneratedColumn> get $primaryKey => {sessionId, playerId, lineId};
   @override
-  QuickScoreFieldValuesTableData map(
+  QuickScoreLineValuesTableData map(
     Map<String, dynamic> data, {
     String? tablePrefix,
   }) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return QuickScoreFieldValuesTableData(
+    return QuickScoreLineValuesTableData(
       sessionId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}session_id'],
@@ -1408,9 +1406,9 @@ class $QuickScoreFieldValuesTableTable extends QuickScoreFieldValuesTable
         DriftSqlType.string,
         data['${effectivePrefix}player_id'],
       )!,
-      fieldId: attachedDatabase.typeMapping.read(
+      lineId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}field_id'],
+        data['${effectivePrefix}line_id'],
       )!,
       integerValue: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -1420,21 +1418,21 @@ class $QuickScoreFieldValuesTableTable extends QuickScoreFieldValuesTable
   }
 
   @override
-  $QuickScoreFieldValuesTableTable createAlias(String alias) {
-    return $QuickScoreFieldValuesTableTable(attachedDatabase, alias);
+  $QuickScoreLineValuesTableTable createAlias(String alias) {
+    return $QuickScoreLineValuesTableTable(attachedDatabase, alias);
   }
 }
 
-class QuickScoreFieldValuesTableData extends DataClass
-    implements Insertable<QuickScoreFieldValuesTableData> {
+class QuickScoreLineValuesTableData extends DataClass
+    implements Insertable<QuickScoreLineValuesTableData> {
   final String sessionId;
   final String playerId;
-  final String fieldId;
+  final String lineId;
   final int integerValue;
-  const QuickScoreFieldValuesTableData({
+  const QuickScoreLineValuesTableData({
     required this.sessionId,
     required this.playerId,
-    required this.fieldId,
+    required this.lineId,
     required this.integerValue,
   });
   @override
@@ -1442,29 +1440,29 @@ class QuickScoreFieldValuesTableData extends DataClass
     final map = <String, Expression>{};
     map['session_id'] = Variable<String>(sessionId);
     map['player_id'] = Variable<String>(playerId);
-    map['field_id'] = Variable<String>(fieldId);
+    map['line_id'] = Variable<String>(lineId);
     map['integer_value'] = Variable<int>(integerValue);
     return map;
   }
 
-  QuickScoreFieldValuesTableCompanion toCompanion(bool nullToAbsent) {
-    return QuickScoreFieldValuesTableCompanion(
+  QuickScoreLineValuesTableCompanion toCompanion(bool nullToAbsent) {
+    return QuickScoreLineValuesTableCompanion(
       sessionId: Value(sessionId),
       playerId: Value(playerId),
-      fieldId: Value(fieldId),
+      lineId: Value(lineId),
       integerValue: Value(integerValue),
     );
   }
 
-  factory QuickScoreFieldValuesTableData.fromJson(
+  factory QuickScoreLineValuesTableData.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return QuickScoreFieldValuesTableData(
+    return QuickScoreLineValuesTableData(
       sessionId: serializer.fromJson<String>(json['sessionId']),
       playerId: serializer.fromJson<String>(json['playerId']),
-      fieldId: serializer.fromJson<String>(json['fieldId']),
+      lineId: serializer.fromJson<String>(json['lineId']),
       integerValue: serializer.fromJson<int>(json['integerValue']),
     );
   }
@@ -1474,29 +1472,29 @@ class QuickScoreFieldValuesTableData extends DataClass
     return <String, dynamic>{
       'sessionId': serializer.toJson<String>(sessionId),
       'playerId': serializer.toJson<String>(playerId),
-      'fieldId': serializer.toJson<String>(fieldId),
+      'lineId': serializer.toJson<String>(lineId),
       'integerValue': serializer.toJson<int>(integerValue),
     };
   }
 
-  QuickScoreFieldValuesTableData copyWith({
+  QuickScoreLineValuesTableData copyWith({
     String? sessionId,
     String? playerId,
-    String? fieldId,
+    String? lineId,
     int? integerValue,
-  }) => QuickScoreFieldValuesTableData(
+  }) => QuickScoreLineValuesTableData(
     sessionId: sessionId ?? this.sessionId,
     playerId: playerId ?? this.playerId,
-    fieldId: fieldId ?? this.fieldId,
+    lineId: lineId ?? this.lineId,
     integerValue: integerValue ?? this.integerValue,
   );
-  QuickScoreFieldValuesTableData copyWithCompanion(
-    QuickScoreFieldValuesTableCompanion data,
+  QuickScoreLineValuesTableData copyWithCompanion(
+    QuickScoreLineValuesTableCompanion data,
   ) {
-    return QuickScoreFieldValuesTableData(
+    return QuickScoreLineValuesTableData(
       sessionId: data.sessionId.present ? data.sessionId.value : this.sessionId,
       playerId: data.playerId.present ? data.playerId.value : this.playerId,
-      fieldId: data.fieldId.present ? data.fieldId.value : this.fieldId,
+      lineId: data.lineId.present ? data.lineId.value : this.lineId,
       integerValue: data.integerValue.present
           ? data.integerValue.value
           : this.integerValue,
@@ -1505,78 +1503,78 @@ class QuickScoreFieldValuesTableData extends DataClass
 
   @override
   String toString() {
-    return (StringBuffer('QuickScoreFieldValuesTableData(')
+    return (StringBuffer('QuickScoreLineValuesTableData(')
           ..write('sessionId: $sessionId, ')
           ..write('playerId: $playerId, ')
-          ..write('fieldId: $fieldId, ')
+          ..write('lineId: $lineId, ')
           ..write('integerValue: $integerValue')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(sessionId, playerId, fieldId, integerValue);
+  int get hashCode => Object.hash(sessionId, playerId, lineId, integerValue);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is QuickScoreFieldValuesTableData &&
+      (other is QuickScoreLineValuesTableData &&
           other.sessionId == this.sessionId &&
           other.playerId == this.playerId &&
-          other.fieldId == this.fieldId &&
+          other.lineId == this.lineId &&
           other.integerValue == this.integerValue);
 }
 
-class QuickScoreFieldValuesTableCompanion
-    extends UpdateCompanion<QuickScoreFieldValuesTableData> {
+class QuickScoreLineValuesTableCompanion
+    extends UpdateCompanion<QuickScoreLineValuesTableData> {
   final Value<String> sessionId;
   final Value<String> playerId;
-  final Value<String> fieldId;
+  final Value<String> lineId;
   final Value<int> integerValue;
   final Value<int> rowid;
-  const QuickScoreFieldValuesTableCompanion({
+  const QuickScoreLineValuesTableCompanion({
     this.sessionId = const Value.absent(),
     this.playerId = const Value.absent(),
-    this.fieldId = const Value.absent(),
+    this.lineId = const Value.absent(),
     this.integerValue = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  QuickScoreFieldValuesTableCompanion.insert({
+  QuickScoreLineValuesTableCompanion.insert({
     required String sessionId,
     required String playerId,
-    required String fieldId,
+    required String lineId,
     required int integerValue,
     this.rowid = const Value.absent(),
   }) : sessionId = Value(sessionId),
        playerId = Value(playerId),
-       fieldId = Value(fieldId),
+       lineId = Value(lineId),
        integerValue = Value(integerValue);
-  static Insertable<QuickScoreFieldValuesTableData> custom({
+  static Insertable<QuickScoreLineValuesTableData> custom({
     Expression<String>? sessionId,
     Expression<String>? playerId,
-    Expression<String>? fieldId,
+    Expression<String>? lineId,
     Expression<int>? integerValue,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (sessionId != null) 'session_id': sessionId,
       if (playerId != null) 'player_id': playerId,
-      if (fieldId != null) 'field_id': fieldId,
+      if (lineId != null) 'line_id': lineId,
       if (integerValue != null) 'integer_value': integerValue,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
-  QuickScoreFieldValuesTableCompanion copyWith({
+  QuickScoreLineValuesTableCompanion copyWith({
     Value<String>? sessionId,
     Value<String>? playerId,
-    Value<String>? fieldId,
+    Value<String>? lineId,
     Value<int>? integerValue,
     Value<int>? rowid,
   }) {
-    return QuickScoreFieldValuesTableCompanion(
+    return QuickScoreLineValuesTableCompanion(
       sessionId: sessionId ?? this.sessionId,
       playerId: playerId ?? this.playerId,
-      fieldId: fieldId ?? this.fieldId,
+      lineId: lineId ?? this.lineId,
       integerValue: integerValue ?? this.integerValue,
       rowid: rowid ?? this.rowid,
     );
@@ -1591,8 +1589,8 @@ class QuickScoreFieldValuesTableCompanion
     if (playerId.present) {
       map['player_id'] = Variable<String>(playerId.value);
     }
-    if (fieldId.present) {
-      map['field_id'] = Variable<String>(fieldId.value);
+    if (lineId.present) {
+      map['line_id'] = Variable<String>(lineId.value);
     }
     if (integerValue.present) {
       map['integer_value'] = Variable<int>(integerValue.value);
@@ -1605,10 +1603,10 @@ class QuickScoreFieldValuesTableCompanion
 
   @override
   String toString() {
-    return (StringBuffer('QuickScoreFieldValuesTableCompanion(')
+    return (StringBuffer('QuickScoreLineValuesTableCompanion(')
           ..write('sessionId: $sessionId, ')
           ..write('playerId: $playerId, ')
-          ..write('fieldId: $fieldId, ')
+          ..write('lineId: $lineId, ')
           ..write('integerValue: $integerValue, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -2554,16 +2552,16 @@ class RoundScorePlayerResultsTableCompanion
   }
 }
 
-class $RoundScoreFieldValuesTableTable extends RoundScoreFieldValuesTable
+class $RoundScoreLineValuesTableTable extends RoundScoreLineValuesTable
     with
         TableInfo<
-          $RoundScoreFieldValuesTableTable,
-          RoundScoreFieldValuesTableData
+          $RoundScoreLineValuesTableTable,
+          RoundScoreLineValuesTableData
         > {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $RoundScoreFieldValuesTableTable(this.attachedDatabase, [this._alias]);
+  $RoundScoreLineValuesTableTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _sessionIdMeta = const VerificationMeta(
     'sessionId',
   );
@@ -2608,12 +2606,10 @@ class $RoundScoreFieldValuesTableTable extends RoundScoreFieldValuesTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _fieldIdMeta = const VerificationMeta(
-    'fieldId',
-  );
+  static const VerificationMeta _lineIdMeta = const VerificationMeta('lineId');
   @override
-  late final GeneratedColumn<String> fieldId = GeneratedColumn<String>(
-    'field_id',
+  late final GeneratedColumn<String> lineId = GeneratedColumn<String>(
+    'line_id',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -2636,17 +2632,17 @@ class $RoundScoreFieldValuesTableTable extends RoundScoreFieldValuesTable
     roundNumber,
     playerId,
     displayName,
-    fieldId,
+    lineId,
     integerValue,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'round_score_field_values_table';
+  static const String $name = 'round_score_line_values_table';
   @override
   VerificationContext validateIntegrity(
-    Insertable<RoundScoreFieldValuesTableData> instance, {
+    Insertable<RoundScoreLineValuesTableData> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -2689,13 +2685,13 @@ class $RoundScoreFieldValuesTableTable extends RoundScoreFieldValuesTable
     } else if (isInserting) {
       context.missing(_displayNameMeta);
     }
-    if (data.containsKey('field_id')) {
+    if (data.containsKey('line_id')) {
       context.handle(
-        _fieldIdMeta,
-        fieldId.isAcceptableOrUnknown(data['field_id']!, _fieldIdMeta),
+        _lineIdMeta,
+        lineId.isAcceptableOrUnknown(data['line_id']!, _lineIdMeta),
       );
     } else if (isInserting) {
-      context.missing(_fieldIdMeta);
+      context.missing(_lineIdMeta);
     }
     if (data.containsKey('integer_value')) {
       context.handle(
@@ -2716,15 +2712,15 @@ class $RoundScoreFieldValuesTableTable extends RoundScoreFieldValuesTable
     sessionId,
     roundNumber,
     playerId,
-    fieldId,
+    lineId,
   };
   @override
-  RoundScoreFieldValuesTableData map(
+  RoundScoreLineValuesTableData map(
     Map<String, dynamic> data, {
     String? tablePrefix,
   }) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return RoundScoreFieldValuesTableData(
+    return RoundScoreLineValuesTableData(
       sessionId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}session_id'],
@@ -2741,9 +2737,9 @@ class $RoundScoreFieldValuesTableTable extends RoundScoreFieldValuesTable
         DriftSqlType.string,
         data['${effectivePrefix}display_name'],
       )!,
-      fieldId: attachedDatabase.typeMapping.read(
+      lineId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}field_id'],
+        data['${effectivePrefix}line_id'],
       )!,
       integerValue: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -2753,25 +2749,25 @@ class $RoundScoreFieldValuesTableTable extends RoundScoreFieldValuesTable
   }
 
   @override
-  $RoundScoreFieldValuesTableTable createAlias(String alias) {
-    return $RoundScoreFieldValuesTableTable(attachedDatabase, alias);
+  $RoundScoreLineValuesTableTable createAlias(String alias) {
+    return $RoundScoreLineValuesTableTable(attachedDatabase, alias);
   }
 }
 
-class RoundScoreFieldValuesTableData extends DataClass
-    implements Insertable<RoundScoreFieldValuesTableData> {
+class RoundScoreLineValuesTableData extends DataClass
+    implements Insertable<RoundScoreLineValuesTableData> {
   final String sessionId;
   final int roundNumber;
   final String playerId;
   final String displayName;
-  final String fieldId;
+  final String lineId;
   final int integerValue;
-  const RoundScoreFieldValuesTableData({
+  const RoundScoreLineValuesTableData({
     required this.sessionId,
     required this.roundNumber,
     required this.playerId,
     required this.displayName,
-    required this.fieldId,
+    required this.lineId,
     required this.integerValue,
   });
   @override
@@ -2781,33 +2777,33 @@ class RoundScoreFieldValuesTableData extends DataClass
     map['round_number'] = Variable<int>(roundNumber);
     map['player_id'] = Variable<String>(playerId);
     map['display_name'] = Variable<String>(displayName);
-    map['field_id'] = Variable<String>(fieldId);
+    map['line_id'] = Variable<String>(lineId);
     map['integer_value'] = Variable<int>(integerValue);
     return map;
   }
 
-  RoundScoreFieldValuesTableCompanion toCompanion(bool nullToAbsent) {
-    return RoundScoreFieldValuesTableCompanion(
+  RoundScoreLineValuesTableCompanion toCompanion(bool nullToAbsent) {
+    return RoundScoreLineValuesTableCompanion(
       sessionId: Value(sessionId),
       roundNumber: Value(roundNumber),
       playerId: Value(playerId),
       displayName: Value(displayName),
-      fieldId: Value(fieldId),
+      lineId: Value(lineId),
       integerValue: Value(integerValue),
     );
   }
 
-  factory RoundScoreFieldValuesTableData.fromJson(
+  factory RoundScoreLineValuesTableData.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return RoundScoreFieldValuesTableData(
+    return RoundScoreLineValuesTableData(
       sessionId: serializer.fromJson<String>(json['sessionId']),
       roundNumber: serializer.fromJson<int>(json['roundNumber']),
       playerId: serializer.fromJson<String>(json['playerId']),
       displayName: serializer.fromJson<String>(json['displayName']),
-      fieldId: serializer.fromJson<String>(json['fieldId']),
+      lineId: serializer.fromJson<String>(json['lineId']),
       integerValue: serializer.fromJson<int>(json['integerValue']),
     );
   }
@@ -2819,30 +2815,30 @@ class RoundScoreFieldValuesTableData extends DataClass
       'roundNumber': serializer.toJson<int>(roundNumber),
       'playerId': serializer.toJson<String>(playerId),
       'displayName': serializer.toJson<String>(displayName),
-      'fieldId': serializer.toJson<String>(fieldId),
+      'lineId': serializer.toJson<String>(lineId),
       'integerValue': serializer.toJson<int>(integerValue),
     };
   }
 
-  RoundScoreFieldValuesTableData copyWith({
+  RoundScoreLineValuesTableData copyWith({
     String? sessionId,
     int? roundNumber,
     String? playerId,
     String? displayName,
-    String? fieldId,
+    String? lineId,
     int? integerValue,
-  }) => RoundScoreFieldValuesTableData(
+  }) => RoundScoreLineValuesTableData(
     sessionId: sessionId ?? this.sessionId,
     roundNumber: roundNumber ?? this.roundNumber,
     playerId: playerId ?? this.playerId,
     displayName: displayName ?? this.displayName,
-    fieldId: fieldId ?? this.fieldId,
+    lineId: lineId ?? this.lineId,
     integerValue: integerValue ?? this.integerValue,
   );
-  RoundScoreFieldValuesTableData copyWithCompanion(
-    RoundScoreFieldValuesTableCompanion data,
+  RoundScoreLineValuesTableData copyWithCompanion(
+    RoundScoreLineValuesTableCompanion data,
   ) {
-    return RoundScoreFieldValuesTableData(
+    return RoundScoreLineValuesTableData(
       sessionId: data.sessionId.present ? data.sessionId.value : this.sessionId,
       roundNumber: data.roundNumber.present
           ? data.roundNumber.value
@@ -2851,7 +2847,7 @@ class RoundScoreFieldValuesTableData extends DataClass
       displayName: data.displayName.present
           ? data.displayName.value
           : this.displayName,
-      fieldId: data.fieldId.present ? data.fieldId.value : this.fieldId,
+      lineId: data.lineId.present ? data.lineId.value : this.lineId,
       integerValue: data.integerValue.present
           ? data.integerValue.value
           : this.integerValue,
@@ -2860,12 +2856,12 @@ class RoundScoreFieldValuesTableData extends DataClass
 
   @override
   String toString() {
-    return (StringBuffer('RoundScoreFieldValuesTableData(')
+    return (StringBuffer('RoundScoreLineValuesTableData(')
           ..write('sessionId: $sessionId, ')
           ..write('roundNumber: $roundNumber, ')
           ..write('playerId: $playerId, ')
           ..write('displayName: $displayName, ')
-          ..write('fieldId: $fieldId, ')
+          ..write('lineId: $lineId, ')
           ..write('integerValue: $integerValue')
           ..write(')'))
         .toString();
@@ -2877,59 +2873,59 @@ class RoundScoreFieldValuesTableData extends DataClass
     roundNumber,
     playerId,
     displayName,
-    fieldId,
+    lineId,
     integerValue,
   );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is RoundScoreFieldValuesTableData &&
+      (other is RoundScoreLineValuesTableData &&
           other.sessionId == this.sessionId &&
           other.roundNumber == this.roundNumber &&
           other.playerId == this.playerId &&
           other.displayName == this.displayName &&
-          other.fieldId == this.fieldId &&
+          other.lineId == this.lineId &&
           other.integerValue == this.integerValue);
 }
 
-class RoundScoreFieldValuesTableCompanion
-    extends UpdateCompanion<RoundScoreFieldValuesTableData> {
+class RoundScoreLineValuesTableCompanion
+    extends UpdateCompanion<RoundScoreLineValuesTableData> {
   final Value<String> sessionId;
   final Value<int> roundNumber;
   final Value<String> playerId;
   final Value<String> displayName;
-  final Value<String> fieldId;
+  final Value<String> lineId;
   final Value<int> integerValue;
   final Value<int> rowid;
-  const RoundScoreFieldValuesTableCompanion({
+  const RoundScoreLineValuesTableCompanion({
     this.sessionId = const Value.absent(),
     this.roundNumber = const Value.absent(),
     this.playerId = const Value.absent(),
     this.displayName = const Value.absent(),
-    this.fieldId = const Value.absent(),
+    this.lineId = const Value.absent(),
     this.integerValue = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  RoundScoreFieldValuesTableCompanion.insert({
+  RoundScoreLineValuesTableCompanion.insert({
     required String sessionId,
     required int roundNumber,
     required String playerId,
     required String displayName,
-    required String fieldId,
+    required String lineId,
     required int integerValue,
     this.rowid = const Value.absent(),
   }) : sessionId = Value(sessionId),
        roundNumber = Value(roundNumber),
        playerId = Value(playerId),
        displayName = Value(displayName),
-       fieldId = Value(fieldId),
+       lineId = Value(lineId),
        integerValue = Value(integerValue);
-  static Insertable<RoundScoreFieldValuesTableData> custom({
+  static Insertable<RoundScoreLineValuesTableData> custom({
     Expression<String>? sessionId,
     Expression<int>? roundNumber,
     Expression<String>? playerId,
     Expression<String>? displayName,
-    Expression<String>? fieldId,
+    Expression<String>? lineId,
     Expression<int>? integerValue,
     Expression<int>? rowid,
   }) {
@@ -2938,27 +2934,27 @@ class RoundScoreFieldValuesTableCompanion
       if (roundNumber != null) 'round_number': roundNumber,
       if (playerId != null) 'player_id': playerId,
       if (displayName != null) 'display_name': displayName,
-      if (fieldId != null) 'field_id': fieldId,
+      if (lineId != null) 'line_id': lineId,
       if (integerValue != null) 'integer_value': integerValue,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
-  RoundScoreFieldValuesTableCompanion copyWith({
+  RoundScoreLineValuesTableCompanion copyWith({
     Value<String>? sessionId,
     Value<int>? roundNumber,
     Value<String>? playerId,
     Value<String>? displayName,
-    Value<String>? fieldId,
+    Value<String>? lineId,
     Value<int>? integerValue,
     Value<int>? rowid,
   }) {
-    return RoundScoreFieldValuesTableCompanion(
+    return RoundScoreLineValuesTableCompanion(
       sessionId: sessionId ?? this.sessionId,
       roundNumber: roundNumber ?? this.roundNumber,
       playerId: playerId ?? this.playerId,
       displayName: displayName ?? this.displayName,
-      fieldId: fieldId ?? this.fieldId,
+      lineId: lineId ?? this.lineId,
       integerValue: integerValue ?? this.integerValue,
       rowid: rowid ?? this.rowid,
     );
@@ -2979,8 +2975,8 @@ class RoundScoreFieldValuesTableCompanion
     if (displayName.present) {
       map['display_name'] = Variable<String>(displayName.value);
     }
-    if (fieldId.present) {
-      map['field_id'] = Variable<String>(fieldId.value);
+    if (lineId.present) {
+      map['line_id'] = Variable<String>(lineId.value);
     }
     if (integerValue.present) {
       map['integer_value'] = Variable<int>(integerValue.value);
@@ -2993,12 +2989,12 @@ class RoundScoreFieldValuesTableCompanion
 
   @override
   String toString() {
-    return (StringBuffer('RoundScoreFieldValuesTableCompanion(')
+    return (StringBuffer('RoundScoreLineValuesTableCompanion(')
           ..write('sessionId: $sessionId, ')
           ..write('roundNumber: $roundNumber, ')
           ..write('playerId: $playerId, ')
           ..write('displayName: $displayName, ')
-          ..write('fieldId: $fieldId, ')
+          ..write('lineId: $lineId, ')
           ..write('integerValue: $integerValue, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -4110,14 +4106,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $QuickScoreSessionsTableTable(this);
   late final $QuickScorePlayerResultsTableTable quickScorePlayerResultsTable =
       $QuickScorePlayerResultsTableTable(this);
-  late final $QuickScoreFieldValuesTableTable quickScoreFieldValuesTable =
-      $QuickScoreFieldValuesTableTable(this);
+  late final $QuickScoreLineValuesTableTable quickScoreLineValuesTable =
+      $QuickScoreLineValuesTableTable(this);
   late final $RoundScoreSessionsTableTable roundScoreSessionsTable =
       $RoundScoreSessionsTableTable(this);
   late final $RoundScorePlayerResultsTableTable roundScorePlayerResultsTable =
       $RoundScorePlayerResultsTableTable(this);
-  late final $RoundScoreFieldValuesTableTable roundScoreFieldValuesTable =
-      $RoundScoreFieldValuesTableTable(this);
+  late final $RoundScoreLineValuesTableTable roundScoreLineValuesTable =
+      $RoundScoreLineValuesTableTable(this);
   late final $ActiveSessionsTableTable activeSessionsTable =
       $ActiveSessionsTableTable(this);
   late final $PlayerGroupsTableTable playerGroupsTable =
@@ -4132,10 +4128,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     playersTable,
     quickScoreSessionsTable,
     quickScorePlayerResultsTable,
-    quickScoreFieldValuesTable,
+    quickScoreLineValuesTable,
     roundScoreSessionsTable,
     roundScorePlayerResultsTable,
-    roundScoreFieldValuesTable,
+    roundScoreLineValuesTable,
     activeSessionsTable,
     playerGroupsTable,
     playerGroupMembersTable,
@@ -4838,26 +4834,26 @@ typedef $$QuickScorePlayerResultsTableTableProcessedTableManager =
       QuickScorePlayerResultsTableData,
       PrefetchHooks Function()
     >;
-typedef $$QuickScoreFieldValuesTableTableCreateCompanionBuilder =
-    QuickScoreFieldValuesTableCompanion Function({
+typedef $$QuickScoreLineValuesTableTableCreateCompanionBuilder =
+    QuickScoreLineValuesTableCompanion Function({
       required String sessionId,
       required String playerId,
-      required String fieldId,
+      required String lineId,
       required int integerValue,
       Value<int> rowid,
     });
-typedef $$QuickScoreFieldValuesTableTableUpdateCompanionBuilder =
-    QuickScoreFieldValuesTableCompanion Function({
+typedef $$QuickScoreLineValuesTableTableUpdateCompanionBuilder =
+    QuickScoreLineValuesTableCompanion Function({
       Value<String> sessionId,
       Value<String> playerId,
-      Value<String> fieldId,
+      Value<String> lineId,
       Value<int> integerValue,
       Value<int> rowid,
     });
 
-class $$QuickScoreFieldValuesTableTableFilterComposer
-    extends Composer<_$AppDatabase, $QuickScoreFieldValuesTableTable> {
-  $$QuickScoreFieldValuesTableTableFilterComposer({
+class $$QuickScoreLineValuesTableTableFilterComposer
+    extends Composer<_$AppDatabase, $QuickScoreLineValuesTableTable> {
+  $$QuickScoreLineValuesTableTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -4874,8 +4870,8 @@ class $$QuickScoreFieldValuesTableTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get fieldId => $composableBuilder(
-    column: $table.fieldId,
+  ColumnFilters<String> get lineId => $composableBuilder(
+    column: $table.lineId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4885,9 +4881,9 @@ class $$QuickScoreFieldValuesTableTableFilterComposer
   );
 }
 
-class $$QuickScoreFieldValuesTableTableOrderingComposer
-    extends Composer<_$AppDatabase, $QuickScoreFieldValuesTableTable> {
-  $$QuickScoreFieldValuesTableTableOrderingComposer({
+class $$QuickScoreLineValuesTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $QuickScoreLineValuesTableTable> {
+  $$QuickScoreLineValuesTableTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -4904,8 +4900,8 @@ class $$QuickScoreFieldValuesTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get fieldId => $composableBuilder(
-    column: $table.fieldId,
+  ColumnOrderings<String> get lineId => $composableBuilder(
+    column: $table.lineId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -4915,9 +4911,9 @@ class $$QuickScoreFieldValuesTableTableOrderingComposer
   );
 }
 
-class $$QuickScoreFieldValuesTableTableAnnotationComposer
-    extends Composer<_$AppDatabase, $QuickScoreFieldValuesTableTable> {
-  $$QuickScoreFieldValuesTableTableAnnotationComposer({
+class $$QuickScoreLineValuesTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $QuickScoreLineValuesTableTable> {
+  $$QuickScoreLineValuesTableTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -4930,8 +4926,8 @@ class $$QuickScoreFieldValuesTableTableAnnotationComposer
   GeneratedColumn<String> get playerId =>
       $composableBuilder(column: $table.playerId, builder: (column) => column);
 
-  GeneratedColumn<String> get fieldId =>
-      $composableBuilder(column: $table.fieldId, builder: (column) => column);
+  GeneratedColumn<String> get lineId =>
+      $composableBuilder(column: $table.lineId, builder: (column) => column);
 
   GeneratedColumn<int> get integerValue => $composableBuilder(
     column: $table.integerValue,
@@ -4939,47 +4935,47 @@ class $$QuickScoreFieldValuesTableTableAnnotationComposer
   );
 }
 
-class $$QuickScoreFieldValuesTableTableTableManager
+class $$QuickScoreLineValuesTableTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $QuickScoreFieldValuesTableTable,
-          QuickScoreFieldValuesTableData,
-          $$QuickScoreFieldValuesTableTableFilterComposer,
-          $$QuickScoreFieldValuesTableTableOrderingComposer,
-          $$QuickScoreFieldValuesTableTableAnnotationComposer,
-          $$QuickScoreFieldValuesTableTableCreateCompanionBuilder,
-          $$QuickScoreFieldValuesTableTableUpdateCompanionBuilder,
+          $QuickScoreLineValuesTableTable,
+          QuickScoreLineValuesTableData,
+          $$QuickScoreLineValuesTableTableFilterComposer,
+          $$QuickScoreLineValuesTableTableOrderingComposer,
+          $$QuickScoreLineValuesTableTableAnnotationComposer,
+          $$QuickScoreLineValuesTableTableCreateCompanionBuilder,
+          $$QuickScoreLineValuesTableTableUpdateCompanionBuilder,
           (
-            QuickScoreFieldValuesTableData,
+            QuickScoreLineValuesTableData,
             BaseReferences<
               _$AppDatabase,
-              $QuickScoreFieldValuesTableTable,
-              QuickScoreFieldValuesTableData
+              $QuickScoreLineValuesTableTable,
+              QuickScoreLineValuesTableData
             >,
           ),
-          QuickScoreFieldValuesTableData,
+          QuickScoreLineValuesTableData,
           PrefetchHooks Function()
         > {
-  $$QuickScoreFieldValuesTableTableTableManager(
+  $$QuickScoreLineValuesTableTableTableManager(
     _$AppDatabase db,
-    $QuickScoreFieldValuesTableTable table,
+    $QuickScoreLineValuesTableTable table,
   ) : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$QuickScoreFieldValuesTableTableFilterComposer(
+              $$QuickScoreLineValuesTableTableFilterComposer(
                 $db: db,
                 $table: table,
               ),
           createOrderingComposer: () =>
-              $$QuickScoreFieldValuesTableTableOrderingComposer(
+              $$QuickScoreLineValuesTableTableOrderingComposer(
                 $db: db,
                 $table: table,
               ),
           createComputedFieldComposer: () =>
-              $$QuickScoreFieldValuesTableTableAnnotationComposer(
+              $$QuickScoreLineValuesTableTableAnnotationComposer(
                 $db: db,
                 $table: table,
               ),
@@ -4987,13 +4983,13 @@ class $$QuickScoreFieldValuesTableTableTableManager
               ({
                 Value<String> sessionId = const Value.absent(),
                 Value<String> playerId = const Value.absent(),
-                Value<String> fieldId = const Value.absent(),
+                Value<String> lineId = const Value.absent(),
                 Value<int> integerValue = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => QuickScoreFieldValuesTableCompanion(
+              }) => QuickScoreLineValuesTableCompanion(
                 sessionId: sessionId,
                 playerId: playerId,
-                fieldId: fieldId,
+                lineId: lineId,
                 integerValue: integerValue,
                 rowid: rowid,
               ),
@@ -5001,13 +4997,13 @@ class $$QuickScoreFieldValuesTableTableTableManager
               ({
                 required String sessionId,
                 required String playerId,
-                required String fieldId,
+                required String lineId,
                 required int integerValue,
                 Value<int> rowid = const Value.absent(),
-              }) => QuickScoreFieldValuesTableCompanion.insert(
+              }) => QuickScoreLineValuesTableCompanion.insert(
                 sessionId: sessionId,
                 playerId: playerId,
-                fieldId: fieldId,
+                lineId: lineId,
                 integerValue: integerValue,
                 rowid: rowid,
               ),
@@ -5019,25 +5015,25 @@ class $$QuickScoreFieldValuesTableTableTableManager
       );
 }
 
-typedef $$QuickScoreFieldValuesTableTableProcessedTableManager =
+typedef $$QuickScoreLineValuesTableTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $QuickScoreFieldValuesTableTable,
-      QuickScoreFieldValuesTableData,
-      $$QuickScoreFieldValuesTableTableFilterComposer,
-      $$QuickScoreFieldValuesTableTableOrderingComposer,
-      $$QuickScoreFieldValuesTableTableAnnotationComposer,
-      $$QuickScoreFieldValuesTableTableCreateCompanionBuilder,
-      $$QuickScoreFieldValuesTableTableUpdateCompanionBuilder,
+      $QuickScoreLineValuesTableTable,
+      QuickScoreLineValuesTableData,
+      $$QuickScoreLineValuesTableTableFilterComposer,
+      $$QuickScoreLineValuesTableTableOrderingComposer,
+      $$QuickScoreLineValuesTableTableAnnotationComposer,
+      $$QuickScoreLineValuesTableTableCreateCompanionBuilder,
+      $$QuickScoreLineValuesTableTableUpdateCompanionBuilder,
       (
-        QuickScoreFieldValuesTableData,
+        QuickScoreLineValuesTableData,
         BaseReferences<
           _$AppDatabase,
-          $QuickScoreFieldValuesTableTable,
-          QuickScoreFieldValuesTableData
+          $QuickScoreLineValuesTableTable,
+          QuickScoreLineValuesTableData
         >,
       ),
-      QuickScoreFieldValuesTableData,
+      QuickScoreLineValuesTableData,
       PrefetchHooks Function()
     >;
 typedef $$RoundScoreSessionsTableTableCreateCompanionBuilder =
@@ -5551,30 +5547,30 @@ typedef $$RoundScorePlayerResultsTableTableProcessedTableManager =
       RoundScorePlayerResultsTableData,
       PrefetchHooks Function()
     >;
-typedef $$RoundScoreFieldValuesTableTableCreateCompanionBuilder =
-    RoundScoreFieldValuesTableCompanion Function({
+typedef $$RoundScoreLineValuesTableTableCreateCompanionBuilder =
+    RoundScoreLineValuesTableCompanion Function({
       required String sessionId,
       required int roundNumber,
       required String playerId,
       required String displayName,
-      required String fieldId,
+      required String lineId,
       required int integerValue,
       Value<int> rowid,
     });
-typedef $$RoundScoreFieldValuesTableTableUpdateCompanionBuilder =
-    RoundScoreFieldValuesTableCompanion Function({
+typedef $$RoundScoreLineValuesTableTableUpdateCompanionBuilder =
+    RoundScoreLineValuesTableCompanion Function({
       Value<String> sessionId,
       Value<int> roundNumber,
       Value<String> playerId,
       Value<String> displayName,
-      Value<String> fieldId,
+      Value<String> lineId,
       Value<int> integerValue,
       Value<int> rowid,
     });
 
-class $$RoundScoreFieldValuesTableTableFilterComposer
-    extends Composer<_$AppDatabase, $RoundScoreFieldValuesTableTable> {
-  $$RoundScoreFieldValuesTableTableFilterComposer({
+class $$RoundScoreLineValuesTableTableFilterComposer
+    extends Composer<_$AppDatabase, $RoundScoreLineValuesTableTable> {
+  $$RoundScoreLineValuesTableTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -5601,8 +5597,8 @@ class $$RoundScoreFieldValuesTableTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get fieldId => $composableBuilder(
-    column: $table.fieldId,
+  ColumnFilters<String> get lineId => $composableBuilder(
+    column: $table.lineId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5612,9 +5608,9 @@ class $$RoundScoreFieldValuesTableTableFilterComposer
   );
 }
 
-class $$RoundScoreFieldValuesTableTableOrderingComposer
-    extends Composer<_$AppDatabase, $RoundScoreFieldValuesTableTable> {
-  $$RoundScoreFieldValuesTableTableOrderingComposer({
+class $$RoundScoreLineValuesTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $RoundScoreLineValuesTableTable> {
+  $$RoundScoreLineValuesTableTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -5641,8 +5637,8 @@ class $$RoundScoreFieldValuesTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get fieldId => $composableBuilder(
-    column: $table.fieldId,
+  ColumnOrderings<String> get lineId => $composableBuilder(
+    column: $table.lineId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -5652,9 +5648,9 @@ class $$RoundScoreFieldValuesTableTableOrderingComposer
   );
 }
 
-class $$RoundScoreFieldValuesTableTableAnnotationComposer
-    extends Composer<_$AppDatabase, $RoundScoreFieldValuesTableTable> {
-  $$RoundScoreFieldValuesTableTableAnnotationComposer({
+class $$RoundScoreLineValuesTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $RoundScoreLineValuesTableTable> {
+  $$RoundScoreLineValuesTableTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -5677,8 +5673,8 @@ class $$RoundScoreFieldValuesTableTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get fieldId =>
-      $composableBuilder(column: $table.fieldId, builder: (column) => column);
+  GeneratedColumn<String> get lineId =>
+      $composableBuilder(column: $table.lineId, builder: (column) => column);
 
   GeneratedColumn<int> get integerValue => $composableBuilder(
     column: $table.integerValue,
@@ -5686,47 +5682,47 @@ class $$RoundScoreFieldValuesTableTableAnnotationComposer
   );
 }
 
-class $$RoundScoreFieldValuesTableTableTableManager
+class $$RoundScoreLineValuesTableTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $RoundScoreFieldValuesTableTable,
-          RoundScoreFieldValuesTableData,
-          $$RoundScoreFieldValuesTableTableFilterComposer,
-          $$RoundScoreFieldValuesTableTableOrderingComposer,
-          $$RoundScoreFieldValuesTableTableAnnotationComposer,
-          $$RoundScoreFieldValuesTableTableCreateCompanionBuilder,
-          $$RoundScoreFieldValuesTableTableUpdateCompanionBuilder,
+          $RoundScoreLineValuesTableTable,
+          RoundScoreLineValuesTableData,
+          $$RoundScoreLineValuesTableTableFilterComposer,
+          $$RoundScoreLineValuesTableTableOrderingComposer,
+          $$RoundScoreLineValuesTableTableAnnotationComposer,
+          $$RoundScoreLineValuesTableTableCreateCompanionBuilder,
+          $$RoundScoreLineValuesTableTableUpdateCompanionBuilder,
           (
-            RoundScoreFieldValuesTableData,
+            RoundScoreLineValuesTableData,
             BaseReferences<
               _$AppDatabase,
-              $RoundScoreFieldValuesTableTable,
-              RoundScoreFieldValuesTableData
+              $RoundScoreLineValuesTableTable,
+              RoundScoreLineValuesTableData
             >,
           ),
-          RoundScoreFieldValuesTableData,
+          RoundScoreLineValuesTableData,
           PrefetchHooks Function()
         > {
-  $$RoundScoreFieldValuesTableTableTableManager(
+  $$RoundScoreLineValuesTableTableTableManager(
     _$AppDatabase db,
-    $RoundScoreFieldValuesTableTable table,
+    $RoundScoreLineValuesTableTable table,
   ) : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$RoundScoreFieldValuesTableTableFilterComposer(
+              $$RoundScoreLineValuesTableTableFilterComposer(
                 $db: db,
                 $table: table,
               ),
           createOrderingComposer: () =>
-              $$RoundScoreFieldValuesTableTableOrderingComposer(
+              $$RoundScoreLineValuesTableTableOrderingComposer(
                 $db: db,
                 $table: table,
               ),
           createComputedFieldComposer: () =>
-              $$RoundScoreFieldValuesTableTableAnnotationComposer(
+              $$RoundScoreLineValuesTableTableAnnotationComposer(
                 $db: db,
                 $table: table,
               ),
@@ -5736,15 +5732,15 @@ class $$RoundScoreFieldValuesTableTableTableManager
                 Value<int> roundNumber = const Value.absent(),
                 Value<String> playerId = const Value.absent(),
                 Value<String> displayName = const Value.absent(),
-                Value<String> fieldId = const Value.absent(),
+                Value<String> lineId = const Value.absent(),
                 Value<int> integerValue = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => RoundScoreFieldValuesTableCompanion(
+              }) => RoundScoreLineValuesTableCompanion(
                 sessionId: sessionId,
                 roundNumber: roundNumber,
                 playerId: playerId,
                 displayName: displayName,
-                fieldId: fieldId,
+                lineId: lineId,
                 integerValue: integerValue,
                 rowid: rowid,
               ),
@@ -5754,15 +5750,15 @@ class $$RoundScoreFieldValuesTableTableTableManager
                 required int roundNumber,
                 required String playerId,
                 required String displayName,
-                required String fieldId,
+                required String lineId,
                 required int integerValue,
                 Value<int> rowid = const Value.absent(),
-              }) => RoundScoreFieldValuesTableCompanion.insert(
+              }) => RoundScoreLineValuesTableCompanion.insert(
                 sessionId: sessionId,
                 roundNumber: roundNumber,
                 playerId: playerId,
                 displayName: displayName,
-                fieldId: fieldId,
+                lineId: lineId,
                 integerValue: integerValue,
                 rowid: rowid,
               ),
@@ -5774,25 +5770,25 @@ class $$RoundScoreFieldValuesTableTableTableManager
       );
 }
 
-typedef $$RoundScoreFieldValuesTableTableProcessedTableManager =
+typedef $$RoundScoreLineValuesTableTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $RoundScoreFieldValuesTableTable,
-      RoundScoreFieldValuesTableData,
-      $$RoundScoreFieldValuesTableTableFilterComposer,
-      $$RoundScoreFieldValuesTableTableOrderingComposer,
-      $$RoundScoreFieldValuesTableTableAnnotationComposer,
-      $$RoundScoreFieldValuesTableTableCreateCompanionBuilder,
-      $$RoundScoreFieldValuesTableTableUpdateCompanionBuilder,
+      $RoundScoreLineValuesTableTable,
+      RoundScoreLineValuesTableData,
+      $$RoundScoreLineValuesTableTableFilterComposer,
+      $$RoundScoreLineValuesTableTableOrderingComposer,
+      $$RoundScoreLineValuesTableTableAnnotationComposer,
+      $$RoundScoreLineValuesTableTableCreateCompanionBuilder,
+      $$RoundScoreLineValuesTableTableUpdateCompanionBuilder,
       (
-        RoundScoreFieldValuesTableData,
+        RoundScoreLineValuesTableData,
         BaseReferences<
           _$AppDatabase,
-          $RoundScoreFieldValuesTableTable,
-          RoundScoreFieldValuesTableData
+          $RoundScoreLineValuesTableTable,
+          RoundScoreLineValuesTableData
         >,
       ),
-      RoundScoreFieldValuesTableData,
+      RoundScoreLineValuesTableData,
       PrefetchHooks Function()
     >;
 typedef $$ActiveSessionsTableTableCreateCompanionBuilder =
@@ -6455,11 +6451,10 @@ class $AppDatabaseManager {
         _db,
         _db.quickScorePlayerResultsTable,
       );
-  $$QuickScoreFieldValuesTableTableTableManager
-  get quickScoreFieldValuesTable =>
-      $$QuickScoreFieldValuesTableTableTableManager(
+  $$QuickScoreLineValuesTableTableTableManager get quickScoreLineValuesTable =>
+      $$QuickScoreLineValuesTableTableTableManager(
         _db,
-        _db.quickScoreFieldValuesTable,
+        _db.quickScoreLineValuesTable,
       );
   $$RoundScoreSessionsTableTableTableManager get roundScoreSessionsTable =>
       $$RoundScoreSessionsTableTableTableManager(
@@ -6472,11 +6467,10 @@ class $AppDatabaseManager {
         _db,
         _db.roundScorePlayerResultsTable,
       );
-  $$RoundScoreFieldValuesTableTableTableManager
-  get roundScoreFieldValuesTable =>
-      $$RoundScoreFieldValuesTableTableTableManager(
+  $$RoundScoreLineValuesTableTableTableManager get roundScoreLineValuesTable =>
+      $$RoundScoreLineValuesTableTableTableManager(
         _db,
-        _db.roundScoreFieldValuesTable,
+        _db.roundScoreLineValuesTable,
       );
   $$ActiveSessionsTableTableTableManager get activeSessionsTable =>
       $$ActiveSessionsTableTableTableManager(_db, _db.activeSessionsTable);

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:scoard_game/application/models/scoring/card_text.dart';
-import 'package:scoard_game/application/models/scoring/marker_field_definition.dart';
-import 'package:scoard_game/application/models/scoring/score_field_definition.dart';
+import 'package:scoard_game/application/models/scoring/marker_line_definition.dart';
+import 'package:scoard_game/application/models/scoring/entered_line_definition.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_pick.dart';
 import 'package:scoard_game/application/models/sessions/player_color.dart';
 import 'package:scoard_game/ui/players/player_color_halo.dart';
@@ -13,7 +13,7 @@ import 'package:scoard_game/ui/score_input/value_picker_pad.dart';
 class NumericScoreField extends StatefulWidget {
   const NumericScoreField({
     required this.label,
-    required this.fieldDefinition,
+    required this.lineDefinition,
     required this.controller,
     this.valueLabelBuilder,
     this.valueLabelMinimumDigits = 0,
@@ -33,7 +33,7 @@ class NumericScoreField extends StatefulWidget {
   });
 
   final String label;
-  final ScoreFieldDefinition fieldDefinition;
+  final EnteredLineDefinition lineDefinition;
   final TextEditingController controller;
   final String? Function(int currentValue)? valueLabelBuilder;
   final int valueLabelMinimumDigits;
@@ -50,7 +50,7 @@ class NumericScoreField extends StatefulWidget {
 
   /// The template's per-round flags and the ones set for this player,
   /// shown as badges and toggled in the entry sheet.
-  final List<MarkerFieldDefinition> markers;
+  final List<MarkerLineDefinition> markers;
   final Set<String> activeMarkers;
   final void Function(String markerId, bool isSet)? onMarkerChanged;
 
@@ -81,12 +81,12 @@ class NumericScoreField extends StatefulWidget {
     BuildContext context, {
     required int rowCount,
     required double availableHeight,
-    required ScoreFieldDefinition fieldDefinition,
+    required EnteredLineDefinition lineDefinition,
     bool hasValueLabel = false,
   }) {
     final rowHeight = _normalRowHeight(
       context,
-      fieldDefinition: fieldDefinition,
+      lineDefinition: lineDefinition,
       hasValueLabel: hasValueLabel,
     );
     return rowCount * rowHeight > availableHeight;
@@ -97,7 +97,7 @@ class NumericScoreField extends StatefulWidget {
   // slightly overflowing list keeps normal spacing.
   static double _normalRowHeight(
     BuildContext context, {
-    required ScoreFieldDefinition fieldDefinition,
+    required EnteredLineDefinition lineDefinition,
     required bool hasValueLabel,
   }) {
     final theme = Theme.of(context);
@@ -106,7 +106,7 @@ class NumericScoreField extends StatefulWidget {
     final contentHeights = [
       lineHeight(_labelTextStyle(theme)),
       lineHeight(_scoreTextStyle(theme)) + _scoreVerticalPadding * 2,
-      if (fieldDefinition.enableQuickAdjust) _compactIconButtonSize,
+      if (lineDefinition.enableQuickAdjust) _compactIconButtonSize,
       if (hasValueLabel)
         lineHeight(_valueLabelTextStyle(theme)) +
             _valueLabelVerticalPadding * 2,
@@ -216,7 +216,7 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
     ];
     final currentValue =
         int.tryParse(widget.controller.text.trim()) ??
-        (widget.fieldDefinition.initialIntegerValue ?? 0);
+        (widget.lineDefinition.initialIntegerValue ?? 0);
     final valueLabel = widget.valueLabelBuilder?.call(currentValue);
     final scoreTextStyle = _scoreTextStyle(theme);
     final valueLabelTextStyle = _valueLabelTextStyle(theme);
@@ -252,7 +252,7 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (widget.fieldDefinition.enableQuickAdjust)
+                if (widget.lineDefinition.enableQuickAdjust)
                   IconButton(
                     onPressed: () => _setValue(currentValue - 1),
                     icon: const Icon(Icons.remove_circle_outline_rounded),
@@ -260,7 +260,7 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
                     visualDensity: VisualDensity.compact,
                   ),
                 InkWell(
-                  onTap: widget.fieldDefinition.enableTapToEdit
+                  onTap: widget.lineDefinition.enableTapToEdit
                       ? () => _openEditor(context, currentValue)
                       : null,
                   borderRadius: BorderRadius.circular(12),
@@ -269,7 +269,7 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
                       minWidth: _minimumWidthForDigits(
                         context,
                         scoreTextStyle,
-                        widget.fieldDefinition.minimumDisplayDigits,
+                        widget.lineDefinition.minimumDisplayDigits,
                         horizontalPadding: 16,
                       ),
                     ),
@@ -326,7 +326,7 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
                     ),
                   ),
                 ),
-                if (widget.fieldDefinition.enableQuickAdjust)
+                if (widget.lineDefinition.enableQuickAdjust)
                   IconButton(
                     onPressed: () => _setValue(currentValue + 1),
                     icon: const Icon(Icons.add_circle_outline_rounded),
@@ -375,10 +375,10 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
       hasCurrentValue: widget.controller.text.trim().isNotEmpty,
       currentRoundScore: widget.roundScore,
       currentScoreSubLabel: widget.cardTexts.scoreSubLabel?.text,
-      allowReplace: widget.fieldDefinition.allowReplace,
-      allowAdjust: widget.fieldDefinition.allowAdjust,
+      allowReplace: widget.lineDefinition.allowReplace,
+      allowAdjust: widget.lineDefinition.allowAdjust,
       entryMemory: widget.entryMemory,
-      valuePickers: widget.fieldDefinition.valuePickers,
+      valuePickers: widget.lineDefinition.valuePickers,
       initialPick: widget.entryPick,
       markers: widget.markers,
       activeMarkers: widget.activeMarkers,
