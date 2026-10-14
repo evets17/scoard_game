@@ -174,6 +174,12 @@ void main() {
 
     expect(inRow('Avery', '7!'), findsOneWidget);
     expect(inRow('Avery', '43'), findsWidgets);
+
+    // Badges sit under the start of the name, so they take no width from it.
+    final name = tester.getRect(inRow('Avery', 'Avery'));
+    final badge = tester.getRect(inRow('Avery', '7!'));
+    expect(badge.top, greaterThan(name.center.dy));
+    expect((badge.left - name.left).abs(), lessThan(12));
   });
 
   testWidgets('the 1st badge shows before scoring and moves a seat a round', (

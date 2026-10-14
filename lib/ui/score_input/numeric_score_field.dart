@@ -134,6 +134,11 @@ typedef _RowSpacing = ({double verticalPadding, double bottomMargin});
 
 const _RowSpacing _normalSpacing = (verticalPadding: 10, bottomMargin: 12);
 const _RowSpacing _compactSpacing = (verticalPadding: 2, bottomMargin: 4);
+
+/// How far player badges sit below the bottom of the name: low in the card,
+/// just off its edge. Compact rows have less room under the name.
+const double _normalBadgeDrop = 18;
+const double _compactBadgeDrop = 13;
 const double _scoreVerticalPadding = 6;
 const double _valueLabelVerticalPadding = 8;
 const double _compactIconButtonSize = 40;
@@ -230,21 +235,13 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
                 onTap: widget.onLabelTap,
                 child: badges.isEmpty
                     ? Text(widget.label, style: _labelTextStyle(theme))
-                    : Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              widget.label,
-                              style: _labelTextStyle(theme),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          for (final badge in badges) ...[
-                            const SizedBox(width: 6),
-                            _ScoreBadge(badge: badge),
-                          ],
-                        ],
+                    : _NameWithBadges(
+                        name: widget.label,
+                        style: _labelTextStyle(theme),
+                        badges: badges,
+                        drop: widget.compact
+                            ? _compactBadgeDrop
+                            : _normalBadgeDrop,
                       ),
               ),
             ),
@@ -421,7 +418,53 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
     return textPainter.width + horizontalPadding;
   }
 }
-/// A small marker beside a player's name, such as "7!".
+/// The player's name with their badges low in the card under its start, so
+/// the badges never take width from the name and line up down the list.
+class _NameWithBadges extends StatelessWidget {
+  const _NameWithBadges({
+    required this.name,
+    required this.style,
+    required this.badges,
+    required this.drop,
+  });
+
+  final String name;
+  final TextStyle? style;
+  final List<CardText> badges;
+
+  /// How far below the name's bottom the badges sit.
+  final double drop;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Text(
+          name,
+          style: style,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        Positioned(
+          left: 0,
+          bottom: -drop,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final (index, badge) in badges.indexed) ...[
+                if (index > 0) const SizedBox(width: 3),
+                _ScoreBadge(badge: badge),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A small chip under a player's name, such as "7!" or "1st".
 class _ScoreBadge extends StatelessWidget {
   const _ScoreBadge({required this.badge});
 
@@ -438,16 +481,20 @@ class _ScoreBadge extends StatelessWidget {
     return Semantics(
       label: badge.text,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
         decoration: BoxDecoration(
           color: background,
           borderRadius: BorderRadius.circular(999),
+          // A rim in the card's colour keeps chips apart where they meet.
+          border: Border.all(color: theme.cardColor, width: 1.5),
         ),
         child: Text(
           badge.text,
-          style: theme.textTheme.labelMedium?.copyWith(
+          style: theme.textTheme.labelSmall?.copyWith(
             color: foreground,
             fontWeight: FontWeight.w700,
+            fontSize: 10.5,
+            height: 1.1,
           ),
         ),
       ),
