@@ -1,0 +1,104 @@
+{
+  "templateId": "cascadia-bonuses",
+  "scenarios": [
+    {
+      "name": "3–4 players: largest scores 3, second largest 1",
+      "players": ["avery", "jules", "mina"],
+      "scores": {
+        "avery": { "mountain": 8 },
+        "jules": { "mountain": 6 },
+        "mina": { "mountain": 4 }
+      },
+      "expected": { "totals": { "avery": 11, "jules": 7, "mina": 4 } }
+    },
+    {
+      "name": "3–4 players: two tied for largest score 2 each, and nobody scores second",
+      "players": ["avery", "jules", "mina", "sam"],
+      "scores": {
+        "avery": { "forest": 8 },
+        "jules": { "forest": 8 },
+        "mina": { "forest": 6 },
+        "sam": { "forest": 3 }
+      },
+      "expected": {
+        "totals": { "avery": 10, "jules": 10, "mina": 6, "sam": 3 },
+        "winners": ["avery", "jules"]
+      }
+    },
+    {
+      "name": "3–4 players: three tied for largest score 1 each",
+      "players": ["avery", "jules", "mina", "sam"],
+      "scores": {
+        "avery": { "prairie": 7 },
+        "jules": { "prairie": 7 },
+        "mina": { "prairie": 7 },
+        "sam": { "prairie": 5 }
+      },
+      "expected": { "totals": { "avery": 8, "jules": 8, "mina": 8, "sam": 5 } }
+    },
+    {
+      "name": "3–4 players: players tied for second score nothing",
+      "players": ["avery", "jules", "mina", "sam"],
+      "scores": {
+        "avery": { "wetland": 9 },
+        "jules": { "wetland": 5 },
+        "mina": { "wetland": 5 },
+        "sam": { "wetland": 2 }
+      },
+      "expected": { "totals": { "avery": 12, "jules": 5, "mina": 5, "sam": 2 } }
+    },
+    {
+      "name": "2 players: largest scores 2, and a tie scores 1 each",
+      "players": ["avery", "jules"],
+      "scores": {
+        "avery": { "river": 6, "mountain": 5 },
+        "jules": { "river": 4, "mountain": 5 }
+      },
+      "expected": { "totals": { "avery": 14, "jules": 10 } }
+    },
+    {
+      "name": "Solo: a corridor of 7 or more scores 2",
+      "players": ["avery"],
+      "scores": {
+        "avery": { "mountain": 7, "forest": 6 }
+      },
+      "expected": { "totals": { "avery": 15 } }
+    },
+    {
+      "name": "No corridor, no bonus, even when everyone has none",
+      "players": ["avery", "jules", "mina"],
+      "scores": {
+        "avery": { "bear": 3, "forest": 4 },
+        "jules": { "bear": 3 },
+        "mina": { "bear": 3 }
+      },
+      "expected": { "totals": { "avery": 10, "jules": 3, "mina": 3 } }
+    },
+    {
+      "name": "A whole game matches the hand-scored Cascadia sheet",
+      "players": ["avery", "jules", "mina"],
+      "scores": {
+        "avery": {
+          "bear": 8, "elk": 6, "salmon": 12, "hawk": 5, "fox": 7,
+          "mountain": 7, "forest": 5, "prairie": 4, "wetland": 6, "river": 3,
+          "nature-tokens": 2
+        },
+        "jules": {
+          "bear": 4, "elk": 9, "salmon": 8, "hawk": 11, "fox": 6,
+          "mountain": 5, "forest": 8, "prairie": 3, "wetland": 4, "river": 6,
+          "nature-tokens": 0
+        },
+        "mina": {
+          "bear": 11, "elk": 4, "salmon": 6, "hawk": 8, "fox": 9,
+          "mountain": 6, "forest": 6, "prairie": 7, "wetland": 2, "river": 5,
+          "nature-tokens": 1
+        }
+      },
+      "expected": {
+        "totals": { "avery": 72, "jules": 71, "mina": 71 },
+        "winners": ["avery"],
+        "placements": { "avery": 1, "jules": 2, "mina": 2 }
+      }
+    }
+  ]
+}

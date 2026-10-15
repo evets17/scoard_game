@@ -24,6 +24,7 @@ class ScoreEngine {
     this._scoreLabels,
     this._scoreSubLabels,
     this._playerBadges,
+    this._lineSubLabels,
     this._groupIds,
   );
 
@@ -105,6 +106,11 @@ class ScoreEngine {
       parseCardTexts(preset.scoreLabels),
       parseCardTexts(preset.scoreSubLabels),
       parseCardTexts(preset.playerBadges),
+      {
+        for (final MapEntry(key: lineId, value: definitions)
+            in preset.lineSubLabels.entries)
+          lineId: parseCardTexts(definitions),
+      },
       groupIds,
     );
   }
@@ -117,6 +123,9 @@ class ScoreEngine {
   final List<(CardTextDefinition, Formula)> _scoreLabels;
   final List<(CardTextDefinition, Formula)> _scoreSubLabels;
   final List<(CardTextDefinition, Formula)> _playerBadges;
+
+  /// Keyed by line id.
+  final Map<String, List<(CardTextDefinition, Formula)>> _lineSubLabels;
 
   /// Tile groups of the score's value pickers, which card text can read.
   final Set<String> _groupIds;
@@ -206,27 +215,48 @@ class ScoreEngine {
         _pickedTiles(participant),
         _groupIds,
       );
-      Iterable<CardText> matching(
-        List<(CardTextDefinition, Formula)> definitions,
-      ) sync* {
-        for (final (definition, formula) in definitions) {
-          if (evaluateFormula(formula, scope) != 0) {
-            yield CardText(
-              text: fillCardText(definition.text, scope.valueOf),
-              color: definition.color,
-              size: definition.size,
-            );
-          }
-        }
-      }
-
       texts[participant.playerId] = PlayerCardTexts(
-        scoreLabel: matching(_scoreLabels).firstOrNull,
-        scoreSubLabel: matching(_scoreSubLabels).firstOrNull,
-        playerBadges: matching(_playerBadges).toList(growable: false),
+        scoreLabel: _matching(_scoreLabels, scope).firstOrNull,
+        scoreSubLabel: _matching(_scoreSubLabels, scope).firstOrNull,
+        playerBadges: _matching(_playerBadges, scope).toList(growable: false),
       );
     }
     return texts;
+  }
+
+  /// What the template shows under each line's value on the score sheet,
+  /// keyed by player id and then line id: the first of the line's sub
+  /// labels that applies, with its `{name}`s filled in.
+  Map<String, Map<String, CardText>> lineSubLabels(
+    List<QuickScoreParticipantValues> participants, {
+    required int roundNumber,
+    Map<String, int> options = const {},
+  }) {
+    if (_lineSubLabels.isEmpty) {
+      return {
+        for (final participant in participants)
+          participant.playerId: const {},
+      };
+    }
+
+    final values =
+        lineValues(participants, roundNumber: roundNumber, options: options);
+    final builtIns = _builtIns(participants, roundNumber, options);
+    return {
+      for (final (index, participant) in participants.indexed)
+        participant.playerId: () {
+          final scope = _CardScope(
+            _PlayerScope(participant.playerId, index + 1, values, builtIns),
+            _pickedTiles(participant),
+            _groupIds,
+          );
+          return {
+            for (final MapEntry(key: lineId, value: definitions)
+                in _lineSubLabels.entries)
+              lineId: ?_matching(definitions, scope).firstOrNull,
+          };
+        }(),
+    };
   }
 
   /// The tiles the player picked on their entered lines, if any were
@@ -258,6 +288,22 @@ class ScoreEngine {
       'playerCount': participants.length,
       'roundNumber': roundNumber,
     };
+  }
+}
+
+/// The card texts in [definitions] that apply, filled in for [scope].
+Iterable<CardText> _matching(
+  List<(CardTextDefinition, Formula)> definitions,
+  FormulaScope scope,
+) sync* {
+  for (final (definition, formula) in definitions) {
+    if (evaluateFormula(formula, scope) != 0) {
+      yield CardText(
+        text: fillCardText(definition.text, scope.valueOf),
+        color: definition.color,
+        size: definition.size,
+      );
+    }
   }
 }
 

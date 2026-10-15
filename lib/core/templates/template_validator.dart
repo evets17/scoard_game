@@ -150,15 +150,18 @@ List<TemplateProblem> validateTemplateJson(
   }
 
   final groupIds = <String>{};
+  final lineSubLabels = <List<_ObjectReader>>[];
   final lineIds = _validateLines(
     template,
     seenPromptIds,
     groupIds,
+    lineSubLabels,
     scoringModel: scoringModel,
   );
 
   _validateCardTexts(
     template,
+    lineSubLabels: lineSubLabels,
     lineIds: lineIds,
     promptIds: seenPromptIds,
     groupIds: groupIds,
@@ -197,6 +200,7 @@ String? _validateEnteredLine(_ObjectReader line, Set<String> groupIds) {
     'minimumDisplayDigits',
     'entry',
     'entryModes',
+    'subLabels',
     'style',
     'image',
   });
@@ -280,7 +284,8 @@ String? _validateMarkerLine(_ObjectReader line) {
 Set<String> _validateLines(
   _ObjectReader template,
   Set<String> promptIds,
-  Set<String> groupIds, {
+  Set<String> groupIds,
+  List<List<_ObjectReader>> lineSubLabels, {
   String? scoringModel,
 }) {
   final lines = template.list('lines', required: true);
@@ -334,13 +339,26 @@ Set<String> _validateLines(
       continue;
     }
 
+    if (line.list('subLabels') case final List<_ObjectReader> subLabels) {
+      lineSubLabels.add(subLabels);
+    }
+
     if (!line.has('formula')) {
       enteredCount += 1;
       addId(line, _validateEnteredLine(line, groupIds));
       continue;
     }
 
-    line.allowOnlyKeys(const {'id', 'label', 'formula', 'style', 'image'});
+    line.allowOnlyKeys(const {
+      'id',
+      'label',
+      'formula',
+      'hidden',
+      'subLabels',
+      'style',
+      'image',
+    });
+    line.boolean('hidden');
     final id = line.identifier('id', required: true);
     line.text('label', required: true);
     final source = line.text('formula', required: true);
@@ -531,8 +549,12 @@ Set<String> _validateEntryMode(_ObjectReader mode, Set<String> seenModeIds) {
 /// score), `scoreSubLabels` (under it), and `playerBadges` (after the name).
 /// Each reads lines, prompts, built-in values, and the tile groups of the
 /// score's value pickers.
+///
+/// A line's `subLabels`, shown under its values on the score sheet, are
+/// checked like `scoreSubLabels`.
 void _validateCardTexts(
   _ObjectReader template, {
+  required List<List<_ObjectReader>> lineSubLabels,
   required Set<String> lineIds,
   required Set<String> promptIds,
   required Set<String> groupIds,
@@ -546,7 +568,13 @@ void _validateCardTexts(
     for (final key in kinds.keys)
       if (template.list(key) case final List<_ObjectReader> list) key: list,
   };
-  if (lists.isEmpty) {
+  final checks = [
+    for (final MapEntry(key: kind, value: entries) in lists.entries)
+      (kinds[kind]!, kind == 'scoreLabels', entries),
+    for (final entries in lineSubLabels)
+      (maximumScoreSubLabelLength, false, entries),
+  ];
+  if (checks.isEmpty) {
     return;
   }
 
@@ -556,7 +584,7 @@ void _validateCardTexts(
         promptIds.contains(groupId) ||
         formulaBuiltIns.contains(groupId)) {
       template.problem(
-        lists.keys.first,
+        lists.keys.firstOrNull ?? 'lines',
         'tile group "$groupId" has the same name as a line, prompt, or '
             'built-in value; rename one so {$groupId} is clear',
       );
@@ -564,13 +592,11 @@ void _validateCardTexts(
   }
   final textNames = {...lineIds, ...promptIds, ...groupIds, ...formulaBuiltIns};
 
-  for (final MapEntry(key: kind, value: entries) in lists.entries) {
-    final maximumLength = kinds[kind]!;
+  for (final (maximumLength, isScoreLabel, entries) in checks) {
     for (final entry in entries) {
       if (!entry.isObject) {
         continue;
       }
-      final isScoreLabel = kind == 'scoreLabels';
       entry.allowOnlyKeys({'when', 'text', 'color', if (isScoreLabel) 'size'});
       if (isScoreLabel) {
         entry.oneOf('size', const {'small', 'medium', 'large'});

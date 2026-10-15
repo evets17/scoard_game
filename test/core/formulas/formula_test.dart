@@ -110,6 +110,10 @@ void main() {
       expect(eval('lowestOther(points)', others: others), 3);
       expect(eval('sumOthers(points)', others: others), 17);
       expect(eval('countOthers()', otherCount: 3), 3);
+      expect(eval('countOthersAbove(points)', own: {'points': 5}, others: others), 1);
+      expect(eval('countOthersTied(points)', own: {'points': 5}, others: others), 1);
+      expect(eval('countOthersAbove(points)', own: {'points': 9}, others: others), 0);
+      expect(eval('countOthersTied(points)', own: {'points': 4}, others: others), 0);
       expect(eval('highestOther(points)'), 0);
     });
 

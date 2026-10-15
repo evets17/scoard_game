@@ -21,7 +21,15 @@ const formulaBuiltIns = {'playerCount', 'roundNumber', 'playerPosition'};
 
 /// Functions that look at the other players. Their one argument is a bare
 /// line name, for example `highestOther(inning-points)`.
-const otherPlayerFunctions = {'highestOther', 'lowestOther', 'sumOthers'};
+/// `countOthersAbove` and `countOthersTied` count the other players whose
+/// value is higher than, or the same as, this player's.
+const otherPlayerFunctions = {
+  'highestOther',
+  'lowestOther',
+  'sumOthers',
+  'countOthersAbove',
+  'countOthersTied',
+};
 
 /// Functions that look at one tile group of a value picker. Their one
 /// argument is a bare group name, for example `distinctIn(numbers)`.
@@ -41,6 +49,8 @@ const _arityByContext = <FormulaContext, Map<String, (int, int?)>>{
     'highestOther': (1, 1),
     'lowestOther': (1, 1),
     'sumOthers': (1, 1),
+    'countOthersAbove': (1, 1),
+    'countOthersTied': (1, 1),
     'countOthers': (0, 0),
   },
   FormulaContext.picker: {
@@ -53,6 +63,8 @@ const _arityByContext = <FormulaContext, Map<String, (int, int?)>>{
     'highestOther': (1, 1),
     'lowestOther': (1, 1),
     'sumOthers': (1, 1),
+    'countOthersAbove': (1, 1),
+    'countOthersTied': (1, 1),
     'countOthers': (0, 0),
     'countIn': (1, 1),
     'distinctIn': (1, 1),

@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "id": "cascadia-bonuses",
+  "version": "1.0.0",
+  "name": "Cascadia",
+  "subtitle": "Bonuses worked out",
+  "description": "At the end of the game, score each wildlife card, each habitat's largest corridor, and every unused nature token. The habitat majority bonuses are worked out from the corridors and shown beside them. Highest total wins; on a tie, the player with the most nature tokens left wins.",
+  "source": "https://meepletron-storage.s3.us-east-2.amazonaws.com/resources/cascadia-rulebook.pdf",
+  "players": { "minimum": 1, "maximum": 4 },
+  "scoringModel": "finalScore",
+  "winner": "highestScore",
+  "lineLabels": "image",
+  "lines": [
+    { "id": "bear", "label": "Bear", "image": "cascadia_bear.png", "entry": { "tapToEdit": true, "adjust": true, "quickPick": { "min": 0, "max": 30 } }, "style": { "shade": "#8A6946" } },
+    { "id": "elk", "label": "Elk", "image": "cascadia_elk.png", "entry": { "tapToEdit": true, "adjust": true, "quickPick": { "min": 0, "max": 30 } }, "style": { "shade": "#D8C5B1" } },
+    { "id": "salmon", "label": "Salmon", "image": "cascadia_salmon.png", "entry": { "tapToEdit": true, "adjust": true, "quickPick": { "min": 0, "max": 30 } }, "style": { "shade": "#EE1178" } },
+    { "id": "hawk", "label": "Hawk", "image": "cascadia_hawk.png", "entry": { "tapToEdit": true, "adjust": true, "quickPick": { "min": 0, "max": 30 } }, "style": { "shade": "#0B5DF4" } },
+    { "id": "fox", "label": "Fox", "image": "cascadia_fox.png", "entry": { "tapToEdit": true, "adjust": true, "quickPick": { "min": 0, "max": 30 } }, "style": { "shade": "#F4870B" } },
+    {
+      "id": "wildlife",
+      "label": "WL",
+      "formula": "{bear} + {elk} + {salmon} + {hawk} + {fox}",
+      "style": { "bold": true, "ruleAbove": true }
+    },
+    {
+      "id": "mountain", "label": "Mountain", "image": "cascadia_mountain.png",
+      "entry": { "tapToEdit": true, "adjust": true, "quickPick": { "min": 0, "max": 21 } },
+      "subLabels": [{ "when": "{mountain-bonus} > 0", "text": "+{mountain-bonus}" }],
+      "style": { "shade": "#90A4AE" }
+    },
+    {
+      "id": "forest", "label": "Forest", "image": "cascadia_forest.png",
+      "entry": { "tapToEdit": true, "adjust": true, "quickPick": { "min": 0, "max": 21 } },
+      "subLabels": [{ "when": "{forest-bonus} > 0", "text": "+{forest-bonus}" }],
+      "style": { "shade": "#2E7D32" }
+    },
+    {
+      "id": "prairie", "label": "Prairie", "image": "cascadia_prairie.png",
+      "entry": { "tapToEdit": true, "adjust": true, "quickPick": { "min": 0, "max": 21 } },
+      "subLabels": [{ "when": "{prairie-bonus} > 0", "text": "+{prairie-bonus}" }],
+      "style": { "shade": "#F9A825" }
+    },
+    {
+      "id": "wetland", "label": "Wetland", "image": "cascadia_wetland.png",
+      "entry": { "tapToEdit": true, "adjust": true, "quickPick": { "min": 0, "max": 21 } },
+      "subLabels": [{ "when": "{wetland-bonus} > 0", "text": "+{wetland-bonus}" }],
+      "style": { "shade": "#00897B" }
+    },
+    {
+      "id": "river", "label": "River", "image": "cascadia_river.png",
+      "entry": { "tapToEdit": true, "adjust": true, "quickPick": { "min": 0, "max": 21 } },
+      "subLabels": [{ "when": "{river-bonus} > 0", "text": "+{river-bonus}" }],
+      "style": { "shade": "#1E88E5" }
+    },
+    {
+      "id": "mountain-bonus", "label": "Mountain bonus", "hidden": true,
+      "formula": "if({mountain} <= 0, 0, if({playerCount} == 1, if({mountain} >= 7, 2, 0), if({playerCount} == 2, if(countOthersAbove(mountain) == 0, 2 - countOthersTied(mountain), 0), if(countOthersAbove(mountain) == 0, if(countOthersTied(mountain) == 0, 3, if(countOthersTied(mountain) == 1, 2, 1)), if(countOthersAbove(mountain) == 1 and countOthersTied(mountain) == 0, 1, 0)))))"
+    },
+    {
+      "id": "forest-bonus", "label": "Forest bonus", "hidden": true,
+      "formula": "if({forest} <= 0, 0, if({playerCount} == 1, if({forest} >= 7, 2, 0), if({playerCount} == 2, if(countOthersAbove(forest) == 0, 2 - countOthersTied(forest), 0), if(countOthersAbove(forest) == 0, if(countOthersTied(forest) == 0, 3, if(countOthersTied(forest) == 1, 2, 1)), if(countOthersAbove(forest) == 1 and countOthersTied(forest) == 0, 1, 0)))))"
+    },
+    {
+      "id": "prairie-bonus", "label": "Prairie bonus", "hidden": true,
+      "formula": "if({prairie} <= 0, 0, if({playerCount} == 1, if({prairie} >= 7, 2, 0), if({playerCount} == 2, if(countOthersAbove(prairie) == 0, 2 - countOthersTied(prairie), 0), if(countOthersAbove(prairie) == 0, if(countOthersTied(prairie) == 0, 3, if(countOthersTied(prairie) == 1, 2, 1)), if(countOthersAbove(prairie) == 1 and countOthersTied(prairie) == 0, 1, 0)))))"
+    },
+    {
+      "id": "wetland-bonus", "label": "Wetland bonus", "hidden": true,
+      "formula": "if({wetland} <= 0, 0, if({playerCount} == 1, if({wetland} >= 7, 2, 0), if({playerCount} == 2, if(countOthersAbove(wetland) == 0, 2 - countOthersTied(wetland), 0), if(countOthersAbove(wetland) == 0, if(countOthersTied(wetland) == 0, 3, if(countOthersTied(wetland) == 1, 2, 1)), if(countOthersAbove(wetland) == 1 and countOthersTied(wetland) == 0, 1, 0)))))"
+    },
+    {
+      "id": "river-bonus", "label": "River bonus", "hidden": true,
+      "formula": "if({river} <= 0, 0, if({playerCount} == 1, if({river} >= 7, 2, 0), if({playerCount} == 2, if(countOthersAbove(river) == 0, 2 - countOthersTied(river), 0), if(countOthersAbove(river) == 0, if(countOthersTied(river) == 0, 3, if(countOthersTied(river) == 1, 2, 1)), if(countOthersAbove(river) == 1 and countOthersTied(river) == 0, 1, 0)))))"
+    },
+    {
+      "id": "habitats",
+      "label": "HA",
+      "formula": "{mountain} + {forest} + {prairie} + {wetland} + {river} + {mountain-bonus} + {forest-bonus} + {prairie-bonus} + {wetland-bonus} + {river-bonus}",
+      "style": { "bold": true, "ruleAbove": true }
+    },
+    { "id": "nature-tokens", "label": "Tokens", "image": "cascadia_token.png", "entry": { "tapToEdit": true, "adjust": true, "quickPick": { "min": 0, "max": 20 } } },
+    {
+      "id": "total",
+      "label": "TOT",
+      "formula": "{wildlife} + {habitats} + {nature-tokens}"
+    }
+  ],
+  "score": "total"
+}

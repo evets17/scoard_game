@@ -244,8 +244,15 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
     List<QuickScoreAvailablePlayer> players,
   ) {
     final preset = _preset!;
-    final values = ScoreEngine.of(preset).lineValues(
-      _currentParticipants(),
+    final engine = ScoreEngine.of(preset);
+    final participants = _currentParticipants();
+    final values = engine.lineValues(
+      participants,
+      roundNumber: 1,
+      options: _formulaOptions,
+    );
+    final subLabels = engine.lineSubLabels(
+      participants,
       roundNumber: 1,
       options: _formulaOptions,
     );
@@ -273,7 +280,7 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
         : [
             for (final line in preset.enteredLines) SheetLayoutItem.line(line.id),
             for (final line in preset.calculatedLines)
-              SheetLayoutItem.line(line.id),
+              if (!line.hidden) SheetLayoutItem.line(line.id),
           ];
 
     return [
@@ -292,7 +299,10 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
                 cells: [
                   for (final player in players)
                     switch (_lineValue(player.id, lineId)) {
-                      final int value => ScoreSheetCell(score: value),
+                      final int value => ScoreSheetCell(
+                          score: value,
+                          scoreSubLabel: subLabels[player.id]?[lineId],
+                        ),
                       null => ScoreSheetCell.empty,
                     },
                 ],
@@ -309,7 +319,10 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
                 style: item.style,
                 cells: [
                   for (final player in players)
-                    ScoreSheetCell(score: values[player.id]?[lineId] ?? 0),
+                    ScoreSheetCell(
+                      score: values[player.id]?[lineId] ?? 0,
+                      scoreSubLabel: subLabels[player.id]?[lineId],
+                    ),
                 ],
               ),
               null,

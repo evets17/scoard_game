@@ -22,7 +22,10 @@ TemplateImages bundledImages() => TemplateImages(
     );
 
 void main() {
-  Future<AppEnvironment> startCascadia(WidgetTester tester) async {
+  Future<AppEnvironment> startCascadia(
+    WidgetTester tester, {
+    String templateId = 'cascadia',
+  }) async {
     tester.view.physicalSize = const Size(1440, 2400);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -34,7 +37,7 @@ void main() {
       MaterialApp(
         home: QuickScoreFlowScreen(
           loadQuickScoreSetupModel: environment.loadQuickScoreSetupModel,
-          preset: environment.templateCatalog.byId('cascadia'),
+          preset: environment.templateCatalog.byId(templateId),
           createPlayer: environment.createPlayer,
           renamePlayer: environment.renamePlayer,
           stayAwakeController: environment.stayAwakeController,
@@ -193,5 +196,44 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Result'), findsOneWidget);
     expect(find.text('14'), findsWidgets);
+  });
+
+  testWidgets('bonuses worked out show under their habitat, with no rows', (
+    tester,
+  ) async {
+    await startCascadia(tester, templateId: 'cascadia-bonuses');
+
+    final labels = grid(tester).rows.map((row) => row.label).toList();
+    expect(labels, contains('Mountain'));
+    expect(labels.where((label) => label.contains('bonus')), isEmpty);
+
+    List<String?> subLabels(String label) => grid(tester)
+        .rows
+        .firstWhere((row) => row.label == label)
+        .cells
+        .map((cell) => cell.scoreSubLabel?.text)
+        .toList();
+    int mountainRow() =>
+        grid(tester).rows.indexWhere((row) => row.label == 'Mountain');
+    Future<void> enterMountain(int column, String digits) async {
+      grid(tester).onCellTap!(mountainRow(), column);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Calculator'));
+      await tester.pumpAndSettle();
+      await press(tester, digits);
+      await tester.tap(find.text('Replace -> $digits'));
+      await tester.pumpAndSettle();
+    }
+
+    // Two players: the larger corridor scores 2.
+    await enterMountain(0, '7');
+    expect(subLabels('Mountain'), ['+2', null]);
+    expect(rowScores(tester, 'HA'), [9, 0]);
+
+    // A tie splits it, 1 each.
+    await enterMountain(1, '7');
+    expect(subLabels('Mountain'), ['+1', '+1']);
+    expect(rowScores(tester, 'HA'), [8, 8]);
+    expect(grid(tester).players.map((player) => player.total), [8, 8]);
   });
 }

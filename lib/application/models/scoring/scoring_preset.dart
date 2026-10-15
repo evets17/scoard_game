@@ -29,6 +29,7 @@ class ScoringPreset {
     this.scoreLabels = const [],
     this.scoreSubLabels = const [],
     this.playerBadges = const [],
+    this.lineSubLabels = const {},
     this.scoreLineId,
     this.sheetLayout = const [],
     this.declaredEntryOrder,
@@ -76,6 +77,10 @@ class ScoringPreset {
   /// Chips shown after the player's name, such as "1st". Every one that
   /// applies is shown.
   final List<CardTextDefinition> playerBadges;
+
+  /// Text shown under a line's value on the score sheet, such as "+3",
+  /// keyed by line id. The first that applies is shown.
+  final Map<String, List<CardTextDefinition>> lineSubLabels;
 
   /// The line that is each player's score. Defaults to the entered line.
   final String? scoreLineId;

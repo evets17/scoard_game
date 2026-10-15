@@ -68,6 +68,7 @@ ScoringPreset parseTemplateJson(
           id: line['id']! as String,
           label: line['label']! as String,
           formula: line['formula']! as String,
+          hidden: (line['hidden'] as bool?) ?? false,
         ),
     ],
     markerLines: [
@@ -86,7 +87,7 @@ ScoringPreset parseTemplateJson(
       for (final item in items)
         if (item['heading'] case final String heading)
           SheetLayoutItem.heading(heading, style: _parseRowStyle(item['style']))
-        else
+        else if (item['hidden'] != true)
           SheetLayoutItem.line(
             item['id']! as String,
             style: _parseRowStyle(item['style']),
@@ -102,6 +103,11 @@ ScoringPreset parseTemplateJson(
     scoreLabels: _parseCardTexts(json['scoreLabels']),
     scoreSubLabels: _parseCardTexts(json['scoreSubLabels']),
     playerBadges: _parseCardTexts(json['playerBadges']),
+    lineSubLabels: {
+      for (final line in lines)
+        if (line['subLabels'] case final List<Object?> subLabels)
+          line['id']! as String: _parseCardTexts(subLabels),
+    },
     origin: origin,
   );
 }

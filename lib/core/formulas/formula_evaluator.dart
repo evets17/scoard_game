@@ -68,8 +68,7 @@ int _evaluate(FormulaNode node, FormulaScope scope) {
 
 int _call(String name, List<FormulaNode> arguments, FormulaScope scope) {
   List<int> values() => [for (final a in arguments) _evaluate(a, scope)];
-  List<int> others() =>
-      scope.otherValuesOf((arguments.single as FieldNameNode).name);
+  List<int> others() => scope.otherValuesOf(_lineName(arguments));
 
   switch (name) {
     case 'min':
@@ -90,6 +89,12 @@ int _call(String name, List<FormulaNode> arguments, FormulaScope scope) {
       return values.isEmpty ? 0 : values.reduce((a, b) => a < b ? a : b);
     case 'sumOthers':
       return others().fold(0, (sum, value) => sum + value);
+    case 'countOthersAbove':
+      final mine = scope.valueOf(_lineName(arguments));
+      return others().where((value) => value > mine).length;
+    case 'countOthersTied':
+      final mine = scope.valueOf(_lineName(arguments));
+      return others().where((value) => value == mine).length;
     case 'countOthers':
       return scope.otherPlayerCount;
     case 'countIn':
@@ -100,6 +105,9 @@ int _call(String name, List<FormulaNode> arguments, FormulaScope scope) {
       throw StateError('Unknown function $name');
   }
 }
+
+String _lineName(List<FormulaNode> arguments) =>
+    (arguments.single as FieldNameNode).name;
 
 int _bool(bool value) => value ? 1 : 0;
 

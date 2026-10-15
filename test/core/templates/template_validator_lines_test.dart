@@ -510,4 +510,60 @@ void main() {
       [startsWith('lines[0].entry.quickPick: needs entry.tapToEdit')],
     );
   });
+
+  test('hidden lines and line sub labels', () {
+    final template = sheet(
+      lines: [
+        {
+          'id': 'points',
+          'label': 'Points',
+          'subLabels': [
+            {'when': '{bonus} > 0', 'text': '+{bonus}', 'color': '#2E7D32'},
+          ],
+        },
+        {
+          'id': 'bonus',
+          'label': 'Bonus',
+          'hidden': true,
+          'formula': 'if(countOthersAbove(points) == 0, 2, 0)',
+        },
+        calculated('scored', '{points} + {bonus}'),
+      ],
+    );
+    expect(problemsFor(template), isEmpty);
+
+    final preset = loadTemplateCatalog({
+      'test-game.json': jsonEncode(template),
+    }).catalog.byId('test-game');
+    expect(preset.calculatedLines.first.hidden, isTrue);
+    expect(
+      preset.sheetLayout.map((item) => item.lineId),
+      ['points', 'scored'],
+    );
+    expect(preset.lineSubLabels['points']!.single.text, '+{bonus}');
+
+    final bad = sheet(
+      lines: [
+        {
+          'id': 'points',
+          'label': 'Points',
+          'subLabels': [
+            {'when': '{bonus} >', 'text': '+{bonsu}'},
+            {'when': '1', 'text': 'a much too long sub label'},
+          ],
+        },
+        {'id': 'bonus', 'label': 'Bonus', 'hidden': 'yes', 'formula': '1'},
+        calculated('scored', '{points} + {bonus}'),
+      ],
+    );
+    expect(
+      problemsFor(bad),
+      containsAll([
+        startsWith('lines[1].hidden: '),
+        startsWith('lines[0].subLabels[0].when: '),
+        startsWith('lines[0].subLabels[0].text: unknown name "{bonsu}"'),
+        startsWith('lines[0].subLabels[1].text: must be at most'),
+      ]),
+    );
+  });
 }

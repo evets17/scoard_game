@@ -265,6 +265,7 @@ A sheet with several entered lines can be finished with some lines left empty; t
 | `minimumDisplayDigits` | no | integer | At least 1. Default 1. Reserves width so scores don't shift as they grow. |
 | `entry` | no | object | See below. |
 | `entryModes` | no | array | Extra ways to enter a value in the entry sheet. See below. |
+| `subLabels` | no | array | Small text under the line's values on the score sheet. See [Line sub labels](#line-sub-labels). |
 
 #### `entry`
 
@@ -376,8 +377,23 @@ When a value is entered with a value picker and **Replace**, the tapped tiles ar
 | `id` | yes | string | Unique across all lines. |
 | `label` | yes | string | Non-empty. |
 | `formula` | yes | string | See the [formula language](#formula-language). |
+| `hidden` | no | boolean | Default false. Worked out, but not a row of the score sheet: for a value other lines and text read. |
+| `subLabels` | no | array | As for an entered line. |
 
-No other keys are allowed.
+Besides these, only `style` and `image`, which every line takes.
+
+### Line sub labels
+
+A line's `subLabels` put small text under its value in each player's column, such as a bonus that is worked out from the line. They take the same entries as `scoreSubLabels` (`when`, `text`, `color`), read the same values, and the first that applies is shown, once a value is there.
+
+Together with a hidden line, a bonus can be part of the score without a row of its own. In Cascadia, each habitat's majority bonus is a hidden line that the habitat subtotal adds, shown as "+3" under the corridor:
+
+```json
+{ "id": "mountain", "label": "Mountain", "entry": { "tapToEdit": true },
+  "subLabels": [{ "when": "{mountain-bonus} > 0", "text": "+{mountain-bonus}" }] },
+{ "id": "mountain-bonus", "label": "Mountain bonus", "hidden": true,
+  "formula": "if(countOthersAbove(mountain) == 0, 3, 0)" }
+```
 
 ### Marker Line
 
@@ -464,7 +480,7 @@ Put the most specific entry first in `scoreLabels` and `scoreSubLabels`. Use a s
 Card text formulas can read:
 
 * every line, including calculated lines and markers
-* the other players, with `highestOther`, `lowestOther`, `sumOthers`, and `countOthers`
+* the other players, with `highestOther`, `lowestOther`, `sumOthers`, `countOthers`, `countOthersAbove`, and `countOthersTied`
 * prompts by `id`, `{playerCount}`, `{roundNumber}`, and `{playerPosition}`
 * the tile groups of the score's value pickers, with `{group}`, `countIn(group)`, and `distinctIn(group)`
 
@@ -522,6 +538,8 @@ A formula never names another player. These functions look at all the other play
 | `lowestOther(line)` | The lowest value of `line` among the other players. |
 | `sumOthers(line)` | The total of `line` across the other players. |
 | `countOthers()` | How many other players there are. |
+| `countOthersAbove(line)` | How many other players have more `line` than this player. 0 means this player has the most, or shares it. |
+| `countOthersTied(line)` | How many other players have the same `line` as this player. |
 
 With no other players, `highestOther`, `lowestOther`, and `sumOthers` give 0.
 
@@ -534,6 +552,8 @@ With no other players, `highestOther`, `lowestOther`, and `sumOthers` give 0.
 | Double the score in round 3 | `if({roundNumber} == 3, {points} * 2, {points})` |
 | The first player moves one seat each round | `({roundNumber} - 1) % {playerCount} + 1 == {playerPosition}` |
 | A bonus of 5 for having the most | `{points} + if({points} > highestOther(points), 5, 0)` |
+| 3 for the most alone, 2 each when two share it, 1 each when more do | `if(countOthersAbove(points) == 0, if(countOthersTied(points) == 0, 3, if(countOthersTied(points) == 1, 2, 1)), 0)` |
+| 1 for second place alone | `if(countOthersAbove(points) == 1 and countOthersTied(points) == 0, 1, 0)` |
 | At most 10 per round | `min({points}, 10)` |
 | A house-rule option doubles the score | `if({double-points} > 0, {points} * 2, {points})` |
 
