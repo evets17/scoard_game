@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:scoard_game/application/models/scoring/card_text.dart';
+import 'package:scoard_game/application/models/scoring/sheet_layout.dart';
 import 'package:scoard_game/application/models/sessions/player_color.dart';
 import 'package:scoard_game/ui/players/player_color_halo.dart';
 import 'package:scoard_game/ui/score_input/value_picker_pad.dart';
@@ -44,20 +45,45 @@ class ScoreSheetCell {
   final CardText? scoreSubLabel;
 }
 
-/// One row of the score sheet: a round, or later a line.
+/// What a row of the score sheet is.
+enum ScoreSheetRowKind {
+  /// Values for each player: a round, or a line.
+  scores,
+
+  /// A section's name, such as "Wildlife", with no values.
+  heading,
+}
+
+/// One row of the score sheet: a round, a line, or a section heading.
 class ScoreSheetRow {
   const ScoreSheetRow({
     required this.label,
-    required this.cells,
+    this.cells = const [],
     this.selected = false,
+    this.kind = ScoreSheetRowKind.scores,
+    this.editable = true,
+    this.style = SheetRowStyle.plain,
   });
 
-  /// Shown in the fixed first column, such as the round number.
+  const ScoreSheetRow.heading(
+    this.label, {
+    this.style = SheetRowStyle.plain,
+  })  : cells = const [],
+        selected = false,
+        kind = ScoreSheetRowKind.heading,
+        editable = false;
+
+  /// Shown in the fixed first column, such as the round number or "Bear".
   final String label;
 
-  /// One per player, in column order.
+  /// One per player, in column order. Empty for a heading.
   final List<ScoreSheetCell> cells;
   final bool selected;
+  final ScoreSheetRowKind kind;
+
+  /// Whether tapping a cell enters a value. False for calculated lines.
+  final bool editable;
+  final SheetRowStyle style;
 }
 
 /// The sheet view: rows down, players across, totals at the bottom.
@@ -72,6 +98,7 @@ class ScoreSheetGrid extends StatefulWidget {
     this.totalLabel = 'Tot',
     this.onRowTap,
     this.onCellTap,
+    this.shadeOpacity,
     super.key,
   });
 
@@ -86,12 +113,26 @@ class ScoreSheetGrid extends StatefulWidget {
   /// Called with the row's and player's index when a cell is tapped.
   final void Function(int row, int player)? onCellTap;
 
+  /// How strongly a row's shade tints it. Null picks it from the theme:
+  /// [darkThemeShadeOpacity] or [lightThemeShadeOpacity].
+  final double? shadeOpacity;
+
   @override
   State<ScoreSheetGrid> createState() => _ScoreSheetGridState();
 }
 
-const double _labelColumnWidth = 34;
+/// The narrowest first column, for round numbers.
+const double _minimumLabelWidth = 34;
+
+/// The widest first column, so line names never crowd out the players.
+const double _maximumLabelWidth = 116;
 const double _rowHeight = 40;
+
+/// How strongly a template's row shade tints the row, so the colour shows
+/// without making text hard to read. Dark backgrounds need a stronger tint
+/// for the colour to read the same.
+const double darkThemeShadeOpacity = 0.30;
+const double lightThemeShadeOpacity = 0.20;
 
 /// Columns at least this wide get horizontal names; narrower ones get
 /// angled names.
@@ -165,11 +206,17 @@ class _ScoreSheetGridState extends State<ScoreSheetGrid> {
     final palette = AppThemePalette.of(context);
     final gridColor = theme.colorScheme.outlineVariant.withValues(alpha: 0.5);
     final selectedColor = palette.primaryAction.withValues(alpha: 0.18);
+    final headingColor = theme.colorScheme.surfaceContainerHigh;
+    final shadeOpacity = widget.shadeOpacity ??
+        (theme.scaffoldBackgroundColor.computeLuminance() < 0.5
+            ? darkThemeShadeOpacity
+            : lightThemeShadeOpacity);
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final players = widget.players;
-        final available = constraints.maxWidth - _labelColumnWidth;
+        final labelWidth = _labelColumnWidth(context, widget);
+        final available = constraints.maxWidth - labelWidth;
         final shared = players.isEmpty ? available : available / players.length;
         final angled = shared < _horizontalHeaderMinWidth;
         final columnWidth = math.max(
@@ -190,31 +237,88 @@ class _ScoreSheetGridState extends State<ScoreSheetGrid> {
 
         void tapRow(int index) => widget.onRowTap?.call(index);
 
-        Widget labelCell(ScoreSheetRow row, int index) => GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => tapRow(index),
-              child: Container(
-                height: _rowHeight,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: row.selected ? selectedColor : null,
-                  border: Border(top: BorderSide(color: gridColor)),
-                ),
-                child: Text(
-                  row.label,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: row.selected
-                        ? palette.primaryAction
-                        : theme.colorScheme.onSurfaceVariant,
+        // Round numbers sit in the middle of a narrow column; line names
+        // read from the left.
+        final labelAlignment = labelWidth > _minimumLabelWidth
+            ? Alignment.centerLeft
+            : Alignment.center;
+        final labelPadding = EdgeInsets.symmetric(
+          horizontal: labelWidth > _minimumLabelWidth ? 8 : 0,
+        );
+
+        // The selected row's highlight wins over a template's shade.
+        Color? rowColor(ScoreSheetRow row) {
+          if (row.selected) {
+            return selectedColor;
+          }
+          final shade = parseTileColor(row.style.shade);
+          return shade?.withValues(alpha: shadeOpacity);
+        }
+
+        Color bandColor(ScoreSheetRow row) {
+          final shade = parseTileColor(row.style.shade);
+          return shade == null
+              ? headingColor
+              : Color.alphaBlend(
+                  shade.withValues(alpha: shadeOpacity),
+                  headingColor,
+                );
+        }
+
+        Widget labelCell(ScoreSheetRow row, int index) {
+          if (row.kind == ScoreSheetRowKind.heading) {
+            return Container(
+              height: _rowHeight,
+              alignment: Alignment.bottomLeft,
+              padding: const EdgeInsets.only(left: 8, bottom: 6),
+              color: bandColor(row),
+              child: Text(
+                row.label.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _headingTextStyle(theme)
+                    .copyWith(color: palette.primaryAction),
+              ),
+            );
+          }
+          final style = row.style;
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => tapRow(index),
+            child: Container(
+              height: _rowHeight,
+              alignment: labelAlignment,
+              padding: labelPadding,
+              decoration: BoxDecoration(
+                color: rowColor(row),
+                border: Border(
+                  top: BorderSide(
+                    color: gridColor,
+                    width: style.ruleAbove ? 2 : 1,
                   ),
                 ),
               ),
-            );
+              child: Text(
+                row.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _labelTextStyle(theme).copyWith(
+                  fontWeight: style.bold ? FontWeight.w900 : FontWeight.w700,
+                  color: row.selected
+                      ? palette.primaryAction
+                      : style.bold
+                          ? theme.colorScheme.onSurface
+                          : theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          );
+        }
 
         Widget totalsLabel() => Container(
               height: _rowHeight,
-              alignment: Alignment.center,
+              alignment: labelAlignment,
+              padding: labelPadding,
               decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: gridColor, width: 2)),
               ),
@@ -258,19 +362,24 @@ class _ScoreSheetGridState extends State<ScoreSheetGrid> {
                   itemExtent: _rowHeight,
                   itemBuilder: (context, index) {
                     final row = widget.rows[index];
+                    if (row.kind == ScoreSheetRowKind.heading) {
+                      return ColoredBox(color: bandColor(row));
+                    }
                     return Row(
                       children: [
                         for (final (column, cell) in row.cells.indexed)
                           GestureDetector(
                             behavior: HitTestBehavior.opaque,
                             onTap: () => widget.onCellTap != null
-                                ? widget.onCellTap!(index, column)
+                                ? row.editable
+                                    ? widget.onCellTap!(index, column)
+                                    : null
                                 : tapRow(index),
                             child: _Cell(
                               cell: cell,
                               width: columnWidth,
-                              selected: row.selected,
-                              selectedColor: selectedColor,
+                              background: rowColor(row),
+                              style: row.style,
                               gridColor: gridColor,
                             ),
                           ),
@@ -311,7 +420,7 @@ class _ScoreSheetGridState extends State<ScoreSheetGrid> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SizedBox(
-              width: _labelColumnWidth,
+              width: labelWidth,
               child: Column(
                 children: [
                   SizedBox(height: header.height),
@@ -372,6 +481,42 @@ class _ScoreSheetGridState extends State<ScoreSheetGrid> {
       },
     );
   }
+}
+
+TextStyle _labelTextStyle(ThemeData theme) =>
+    (theme.textTheme.labelLarge ?? const TextStyle())
+        .copyWith(fontWeight: FontWeight.w700);
+
+TextStyle _headingTextStyle(ThemeData theme) =>
+    (theme.textTheme.labelSmall ?? const TextStyle())
+        .copyWith(fontWeight: FontWeight.w800, letterSpacing: 0.8);
+
+/// Wide enough for the longest row label and the totals label, between a
+/// round number's width and [_maximumLabelWidth]; longer names get an
+/// ellipsis.
+double _labelColumnWidth(BuildContext context, ScoreSheetGrid grid) {
+  final theme = Theme.of(context);
+  double width(String text, TextStyle style) => (TextPainter(
+        text: TextSpan(text: text, style: style),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+      )..layout())
+          .width;
+
+  var widest = width(grid.totalLabel, _labelTextStyle(theme));
+  for (final row in grid.rows) {
+    widest = math.max(
+      widest,
+      row.kind == ScoreSheetRowKind.heading
+          ? width(row.label.toUpperCase(), _headingTextStyle(theme))
+          : width(row.label, _labelTextStyle(theme)),
+    );
+  }
+  // Round numbers stay centred in the narrow column.
+  if (widest + 8 <= _minimumLabelWidth) {
+    return _minimumLabelWidth;
+  }
+  return math.min(widest + 18, _maximumLabelWidth);
 }
 
 TextStyle? _nameStyle(ThemeData theme) =>
@@ -601,16 +746,18 @@ class _Cell extends StatelessWidget {
   const _Cell({
     required this.cell,
     required this.width,
-    required this.selected,
-    required this.selectedColor,
+    required this.background,
     required this.gridColor,
+    this.style = SheetRowStyle.plain,
   });
 
   final ScoreSheetCell cell;
   final double width;
-  final bool selected;
-  final Color selectedColor;
+
+  /// The row's colour: the selected-row highlight or the template's shade.
+  final Color? background;
   final Color gridColor;
+  final SheetRowStyle style;
 
   @override
   Widget build(BuildContext context) {
@@ -644,7 +791,7 @@ class _Cell extends StatelessWidget {
           Text(
             '$score',
             style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
+              fontWeight: style.bold ? FontWeight.w900 : FontWeight.w700,
               height: 1.05,
               fontFeatures: const [FontFeature.tabularFigures()],
             ),
@@ -671,9 +818,9 @@ class _Cell extends StatelessWidget {
       alignment: Alignment.center,
       padding: const EdgeInsets.symmetric(horizontal: 2),
       decoration: BoxDecoration(
-        color: selected ? selectedColor : null,
+        color: background,
         border: Border(
-          top: BorderSide(color: gridColor),
+          top: BorderSide(color: gridColor, width: style.ruleAbove ? 2 : 1),
           left: BorderSide(color: gridColor),
         ),
       ),

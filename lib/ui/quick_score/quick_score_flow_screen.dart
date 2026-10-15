@@ -9,6 +9,7 @@ import 'package:scoard_game/application/models/scoring/card_text.dart';
 import 'package:scoard_game/application/models/scoring/entered_line_definition.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_pick.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
+import 'package:scoard_game/application/models/scoring/sheet_layout.dart';
 import 'package:scoard_game/application/models/sessions/player_color.dart';
 import 'package:scoard_game/application/models/sessions/player_sort_mode.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_active_session.dart';
@@ -37,6 +38,9 @@ import 'package:scoard_game/ui/players/player_reorderable_list.dart';
 import 'package:scoard_game/ui/players/player_sort_menu_button.dart';
 import 'package:scoard_game/ui/settings/stay_awake_controller.dart';
 import 'package:scoard_game/ui/score_input/numeric_score_field.dart';
+import 'package:scoard_game/ui/score_input/numeric_value_picker.dart';
+import 'package:scoard_game/ui/score_input/score_value_edit_action.dart';
+import 'package:scoard_game/ui/score_sheet/score_sheet_grid.dart';
 import 'package:scoard_game/ui/score_input/score_entry_mode.dart';
 
 class QuickScoreFlowScreen extends StatefulWidget {
@@ -103,6 +107,234 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
 
   /// Colours given to players for this game, by player id.
   final Map<String, PlayerColor> _playerColors = {};
+
+  /// Values on entered lines after the first, by player id and then line
+  /// id. The first line's value is in [_scoreControllers], which the
+  /// player cards edit.
+  final Map<String, Map<String, int>> _otherLineValues = {};
+
+  /// Value picker tiles behind values on lines after the first, by player
+  /// id and then line id.
+  final Map<String, Map<String, ValuePickerPick>> _otherLinePicks = {};
+
+  /// [playerId]'s value on [lineId], or null if nothing is entered yet.
+  int? _lineValue(String playerId, String lineId) {
+    if (lineId == _preset!.enteredLines.first.id) {
+      return int.tryParse(_scoreControllers[playerId]?.text.trim() ?? '');
+    }
+    return _otherLineValues[playerId]?[lineId];
+  }
+
+  ValuePickerPick? _linePick(String playerId, String lineId) {
+    if (lineId == _preset!.enteredLines.first.id) {
+      return _entryPicks[playerId];
+    }
+    return _otherLinePicks[playerId]?[lineId];
+  }
+
+  /// Sets [playerId]'s value on [lineId]. Only a value picker's Replace
+  /// keeps the [entryPick] it came from.
+  void _setLineValue(
+    String playerId,
+    String lineId,
+    int value,
+    ValuePickerPick? entryPick,
+  ) {
+    if (lineId == _preset!.enteredLines.first.id) {
+      if (entryPick != _entryPicks[playerId]) {
+        _setEntryPick(playerId, entryPick);
+      }
+      setState(() => _scoreControllers[playerId]?.text = '$value');
+      return;
+    }
+    setState(() {
+      _otherLineValues.putIfAbsent(playerId, () => {})[lineId] = value;
+      final picks = _otherLinePicks.putIfAbsent(playerId, () => {});
+      if (entryPick == null) {
+        picks.remove(lineId);
+      } else {
+        picks[lineId] = entryPick;
+      }
+    });
+    unawaited(_autosaveCurrentSession());
+  }
+
+  /// Every entered line's tiles for [playerId], by line id.
+  Map<String, ValuePickerPick> _linePicksFor(String playerId) => {
+        for (final line in _preset!.enteredLines)
+          if (_linePick(playerId, line.id) case final ValuePickerPick pick)
+            line.id: pick,
+      };
+
+  /// Opens the entry sheet for [playerId]'s value on [lineId]. Next saves it
+  /// and opens the next cell in the template's entry order: the player's
+  /// next entered line, or the next player in play order.
+  Future<void> _editLine(String playerId, String lineId) async {
+    final preset = _preset!;
+    final line =
+        preset.enteredLines.where((line) => line.id == lineId).firstOrNull;
+    final playerIndex =
+        _selectedPlayers.indexWhere((player) => player.id == playerId);
+    if (line == null || playerIndex < 0) {
+      return;
+    }
+    final player = _selectedPlayers[playerIndex];
+
+    final (String, String)? next;
+    final String? nextLabel;
+    switch (preset.entryOrder) {
+      case SheetEntryOrder.byLine:
+        final lines = preset.enteredLines;
+        final lineIndex = lines.indexOf(line);
+        next = lineIndex + 1 < lines.length
+            ? (playerId, lines[lineIndex + 1].id)
+            : null;
+        nextLabel = next == null ? null : lines[lineIndex + 1].label;
+      case SheetEntryOrder.byPlayer:
+        next = playerIndex + 1 < _selectedPlayers.length
+            ? (_selectedPlayers[playerIndex + 1].id, lineId)
+            : null;
+        nextLabel = next == null
+            ? null
+            : _selectedPlayers[playerIndex + 1].displayName;
+    }
+
+    final entered = _lineValue(playerId, lineId);
+    final currentValue = entered ?? line.initialIntegerValue ?? 0;
+    final request = await showNumericValuePicker(
+      context,
+      title: '${player.displayName} · ${line.label}',
+      currentValue: currentValue,
+      hasCurrentValue: entered != null,
+      allowReplace: line.allowReplace,
+      allowAdjust: line.allowAdjust,
+      entryMemory: _scoreEntryMemory,
+      valuePickers: line.valuePickers,
+      initialPick: _linePick(playerId, lineId),
+      nextLabel: nextLabel,
+    );
+    if (request == null || !mounted) {
+      return;
+    }
+
+    switch (request.action) {
+      case ScoreValueEditAction.replace:
+        _setLineValue(playerId, lineId, request.value, request.entryPick);
+      case ScoreValueEditAction.add:
+        _setLineValue(playerId, lineId, currentValue + request.value, null);
+    }
+    _refreshScoreSort();
+
+    if (request.goToNext && next != null) {
+      await _editLine(next.$1, next.$2);
+    }
+  }
+
+  /// The sheet view's rows, top to bottom as the template lays them out,
+  /// each with the entered line it edits (null for headings and calculated
+  /// lines). The score line is the totals row, so it isn't repeated.
+  List<(ScoreSheetRow, String?)> _sheetRows(
+    List<QuickScoreAvailablePlayer> players,
+  ) {
+    final preset = _preset!;
+    final values = ScoreEngine.of(preset).lineValues(
+      _currentParticipants(),
+      roundNumber: 1,
+      options: _formulaOptions,
+    );
+    final entered = {for (final line in preset.enteredLines) line.id: line};
+    final calculated = {
+      for (final line in preset.calculatedLines) line.id: line,
+    };
+    final layout = preset.sheetLayout.isNotEmpty
+        ? preset.sheetLayout
+        : [
+            for (final line in preset.enteredLines) SheetLayoutItem.line(line.id),
+            for (final line in preset.calculatedLines)
+              SheetLayoutItem.line(line.id),
+          ];
+
+    return [
+      for (final item in layout)
+        if (item.heading case final String heading)
+          (ScoreSheetRow.heading(heading, style: item.style), null)
+        else if (item.lineId case final String lineId
+            when lineId != preset.scoreId)
+          if (entered[lineId] case final line?)
+            (
+              ScoreSheetRow(
+                label: line.label,
+                style: item.style,
+                cells: [
+                  for (final player in players)
+                    switch (_lineValue(player.id, lineId)) {
+                      final int value => ScoreSheetCell(score: value),
+                      null => ScoreSheetCell.empty,
+                    },
+                ],
+              ),
+              lineId,
+            )
+          else if (calculated[lineId] case final line?)
+            (
+              ScoreSheetRow(
+                label: line.label,
+                editable: false,
+                style: item.style,
+                cells: [
+                  for (final player in players)
+                    ScoreSheetCell(score: values[player.id]?[lineId] ?? 0),
+                ],
+              ),
+              null,
+            ),
+    ];
+  }
+
+  /// The label of the line that is the score, such as "Total".
+  String get _scoreLineLabel {
+    final preset = _preset!;
+    return [
+          for (final line in preset.enteredLines)
+            if (line.id == preset.scoreId) line.label,
+          for (final line in preset.calculatedLines)
+            if (line.id == preset.scoreId) line.label,
+        ].firstOrNull ??
+        'Total';
+  }
+
+  /// The sheet view: the template's lines down, players across, each
+  /// player's score in the totals row. Tapping an entered cell opens it.
+  Widget _buildSheet(List<QuickScoreAvailablePlayer> players) {
+    final rows = _sheetRows(players);
+    final scores = _currentScores();
+    final cardTexts = _currentCardTexts();
+    return ScoreSheetGrid(
+      // The score line is the totals row, under its own label.
+      totalLabel: _scoreLineLabel,
+      players: [
+        for (final player in players)
+          ScoreSheetPlayer(
+            id: player.id,
+            name: player.displayName,
+            color: _playerColors[player.id],
+            total: scores[player.id] ?? 0,
+            badges: [
+              for (final marker in _preset!.markerLines)
+                if (_markers[player.id]?.contains(marker.id) ?? false)
+                  CardText(text: marker.badge, color: marker.color),
+              ...?cardTexts[player.id]?.playerBadges,
+            ],
+          ),
+      ],
+      rows: [for (final (row, _) in rows) row],
+      onCellTap: (row, column) {
+        if (rows[row].$2 case final String lineId) {
+          unawaited(_editLine(players[column].id, lineId));
+        }
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -221,6 +453,7 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
                   cardTexts: _currentCardTexts(),
                   onBack: () => setState(() => _step = _QuickScoreStep.setup),
                   onSave: _saveQuickScoreSession,
+                  buildSheet: _preset!.hasSeveralEnteredLines ? _buildSheet : null,
                 ),
               _QuickScoreStep.result => _QuickScoreResultStep(
                   result: _result!,
@@ -315,24 +548,21 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
 
   /// What is entered so far, with any tiles picked.
   List<QuickScoreParticipantValues> _currentParticipants() {
-    final lineDefinition = _preset!.enteredLines.first;
+    final lines = _preset!.enteredLines;
     return [
       for (final player in _selectedPlayers)
         QuickScoreParticipantValues(
           playerId: player.id,
           displayName: player.displayName,
+          // A line not entered yet counts as its starting value.
           enteredValues: {
-            lineDefinition.id: _parseEnteredScore(
-                  rawValue: _scoreControllers[player.id]?.text.trim() ?? '',
-                  lineDefinition: lineDefinition,
-                ) ??
-                0,
+            for (final line in lines)
+              line.id: _lineValue(player.id, line.id) ??
+                  line.initialIntegerValue ??
+                  0,
             ..._markerValuesFor(player.id),
           },
-          entryPicks: {
-            if (_entryPicks[player.id] case final ValuePickerPick pick)
-              lineDefinition.id: pick,
-          },
+          entryPicks: _linePicksFor(player.id),
         ),
     ];
   }
@@ -561,6 +791,12 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
       if (entryPick != null) {
         _entryPicks[replacement.id] = entryPick;
       }
+      if (_otherLineValues.remove(player.id) case final values?) {
+        _otherLineValues[replacement.id] = values;
+      }
+      if (_otherLinePicks.remove(player.id) case final picks?) {
+        _otherLinePicks[replacement.id] = picks;
+      }
       // The colour belongs to the place in the game, so it moves too.
       final color = _playerColors.remove(player.id);
       if (color != null) {
@@ -637,6 +873,8 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
         .toList(growable: false);
     for (final playerId in removedPlayerIds) {
       _scoreControllers.remove(playerId)?.dispose();
+      _otherLineValues.remove(playerId);
+      _otherLinePicks.remove(playerId);
     }
 
     setState(() {
@@ -716,6 +954,18 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
         participant.enteredValues[scoreLineId]?.toString() ?? '',
       );
     }
+    for (final line in _preset!.enteredLines.skip(1)) {
+      for (final participant in session.participantValues) {
+        if (participant.enteredValues[line.id] case final int value) {
+          _otherLineValues.putIfAbsent(participant.playerId, () => {})[line.id] =
+              value;
+        }
+        if (participant.entryPicks[line.id] case final ValuePickerPick pick) {
+          _otherLinePicks.putIfAbsent(participant.playerId, () => {})[line.id] =
+              pick;
+        }
+      }
+    }
 
     _entryPicks = {
       for (final participant in session.participantValues)
@@ -762,17 +1012,13 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
 
     // Untouched rows are saved without a value, so they come back empty
     // (shown as "–") when the game is resumed.
-    final scoreLineId = preset.enteredLines.first.id;
     final participantValues = [
       for (final player in _selectedPlayers)
         QuickScoreParticipantValues(
           playerId: player.id,
           displayName: player.displayName,
-          enteredValues: _enteredValuesFor(player.id, scoreLineId),
-          entryPicks: {
-            if (_entryPicks[player.id] case final ValuePickerPick entryPick)
-              scoreLineId: entryPick,
-          },
+          enteredValues: _enteredValuesFor(player.id),
+          entryPicks: _linePicksFor(player.id),
         ),
     ];
 
@@ -794,11 +1040,14 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
     );
   }
 
-  /// What a player has entered so far: empty if their row is untouched.
-  Map<String, int> _enteredValuesFor(String playerId, String scoreLineId) {
-    final rawValue = _scoreControllers[playerId]?.text.trim() ?? '';
-    final value = int.tryParse(rawValue);
-    return {scoreLineId: ?value, ..._markerValuesFor(playerId)};
+  /// What a player has entered so far, by line id: only the lines they
+  /// have filled in, plus their markers.
+  Map<String, int> _enteredValuesFor(String playerId) {
+    return {
+      for (final line in _preset!.enteredLines)
+        line.id: ?_lineValue(playerId, line.id),
+      ..._markerValuesFor(playerId),
+    };
   }
 
   List<QuickScoreParticipantValues>? _buildParticipantValues({
@@ -806,6 +1055,20 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
     required String scoreLineId,
     required bool showErrors,
   }) {
+    // A sheet saves what is entered; empty lines count as their starting
+    // value, and the save refuses a player with nothing entered at all.
+    if (_preset!.hasSeveralEnteredLines) {
+      return [
+        for (final player in _selectedPlayers)
+          QuickScoreParticipantValues(
+            playerId: player.id,
+            displayName: player.displayName,
+            enteredValues: _enteredValuesFor(player.id),
+            entryPicks: _linePicksFor(player.id),
+          ),
+      ];
+    }
+
     final participantValues = <QuickScoreParticipantValues>[];
 
     for (final player in _selectedPlayers) {
@@ -1071,10 +1334,15 @@ class _QuickScoreEntryStep extends StatelessWidget {
     required this.cardTexts,
     required this.onBack,
     required this.onSave,
+    this.buildSheet,
   });
 
   final List<QuickScoreAvailablePlayer> players;
   final EnteredLineDefinition lineDefinition;
+
+  /// Builds the sheet view for these players, shown instead of player cards
+  /// when the sheet has several entered lines.
+  final Widget Function(List<QuickScoreAvailablePlayer> players)? buildSheet;
   final Map<String, TextEditingController> controllers;
   final ScoreEntryMemory entryMemory;
   final bool canReorder;
@@ -1112,7 +1380,9 @@ class _QuickScoreEntryStep extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: LayoutBuilder(
+          child: buildSheet != null
+              ? buildSheet!(players)
+              : LayoutBuilder(
             builder: (context, constraints) {
               final compact = NumericScoreField.shouldUseCompact(
                 context,

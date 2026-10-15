@@ -396,11 +396,20 @@ class _Scenario {
     // also sets markers, for example { "round-score": 10, "first-out": 1 },
     // or taps tiles, for example { "tiles": ["9", "Bust"] }. With tiles and
     // no score, the score is the picker's total.
-    final scoreLine = template.enteredLines.single;
+    // Tiles go on the first entered line; with several entered lines, each
+    // is given by its id, and lines left out count as their starting value.
+    final enteredLines = template.enteredLines;
+    final scoreLine = enteredLines.first;
     final scoreLineId = scoreLine.id;
+    final severalLines = enteredLines.length > 1;
     final markerIds = {for (final marker in template.markerLines) marker.id};
     _Entry parseEntryObject(_Reader entryReader) {
-      entryReader.onlyKeys({scoreLineId, ...markerIds, 'tiles', 'picker'});
+      entryReader.onlyKeys({
+        for (final line in enteredLines) line.id,
+        ...markerIds,
+        'tiles',
+        'picker',
+      });
       ValuePickerPick? pick;
       int? tilesTotal;
       if (entryReader.has('tiles')) {
@@ -421,9 +430,14 @@ class _Scenario {
       }
       return _Entry(
         {
-          scoreLineId: entryReader.has(scoreLineId) || tilesTotal == null
-              ? entryReader.integer(scoreLineId)
-              : tilesTotal,
+          if (entryReader.has(scoreLineId))
+            scoreLineId: entryReader.integer(scoreLineId)
+          else if (tilesTotal != null)
+            scoreLineId: tilesTotal
+          else if (!severalLines)
+            scoreLineId: entryReader.integer(scoreLineId),
+          for (final line in enteredLines.skip(1))
+            if (entryReader.has(line.id)) line.id: entryReader.integer(line.id),
           for (final markerId in markerIds)
             if (entryReader.has(markerId))
               markerId: entryReader.integer(markerId),
@@ -437,13 +451,15 @@ class _Scenario {
       return {
         for (final player in players)
           player: switch (entriesReader.map[player]) {
-            final int score => _Entry({scoreLineId: score}),
+            final int score when !severalLines => _Entry({scoreLineId: score}),
             final Map<String, Object?> entry =>
               parseEntryObject(entriesReader.child(player, entry)),
             _ => entriesReader.fail(
                 player,
-                'must be a whole number, or an object with "$scoreLineId" '
-                'or "tiles"',
+                severalLines
+                    ? 'must be an object with a value for each entered line'
+                    : 'must be a whole number, or an object with '
+                        '"$scoreLineId" or "tiles"',
               ),
           },
       };
@@ -611,7 +627,7 @@ class _Scenario {
         displayName: player,
         enteredValues: entry.values,
         entryPicks: {
-          template.enteredLines.single.id: ?entry.pick,
+          template.enteredLines.first.id: ?entry.pick,
         },
       );
     }

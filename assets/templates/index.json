@@ -1,6 +1,7 @@
 {
   "indexVersion": 1,
   "templates": [
+    "cascadia.json",
     "cornhole.json",
     "flip-7.json",
     "quick-final-score-basic.json",

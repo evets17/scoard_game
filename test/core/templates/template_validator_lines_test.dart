@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:scoard_game/application/models/scoring/sheet_layout.dart';
 import 'package:scoard_game/core/templates/template_catalog.dart';
 import 'package:scoard_game/core/templates/template_validator.dart';
 
@@ -8,6 +9,7 @@ import 'package:scoard_game/core/templates/template_validator.dart';
 Map<String, Object?> sheet({
   required List<Map<String, Object?>> lines,
   String? score = 'scored',
+  String scoringModel = 'rounds',
 }) {
   return {
     'schemaVersion': 1,
@@ -16,7 +18,7 @@ Map<String, Object?> sheet({
     'name': 'Test Game',
     'description': 'x',
     'players': {'minimum': 2},
-    'scoringModel': 'rounds',
+    'scoringModel': scoringModel,
     'winner': 'highestScore',
     'lines': lines,
     'score': ?score,
@@ -116,7 +118,7 @@ void main() {
     );
   });
 
-  test('exactly one entered line, unique ids, and a real score', () {
+  test('at least one entered line, unique ids, and a real score', () {
     final problems = problemsFor(
       sheet(
         lines: [
@@ -131,8 +133,114 @@ void main() {
       problems,
       containsAll([
         'lines[1].id: duplicate line id "points"',
-        'lines: needs exactly one entered line (a line without a formula or marker); found 2',
         'score: "total" is not one of the lines: points',
+      ]),
+    );
+    expect(
+      problemsFor(sheet(lines: [calculated('scored', '1')])),
+      contains(
+        'lines: needs at least one entered line (a line without a formula or marker)',
+      ),
+    );
+  });
+
+  test('several entered lines in sections, with row styles', () {
+    final template = sheet(
+      lines: [
+        {'heading': 'Wildlife'},
+        {'id': 'bear', 'label': 'Bear'},
+        {'id': 'elk', 'label': 'Elk'},
+        {
+          'id': 'wildlife',
+          'label': 'Wildlife',
+          'formula': '{bear} + {elk}',
+          'style': {'bold': true, 'ruleAbove': true},
+        },
+        {
+          'heading': 'Nature tokens',
+          'style': {'shade': '#2E7D32'},
+        },
+        {'id': 'tokens', 'label': 'Tokens'},
+        calculated('total', '{wildlife} + {tokens}'),
+      ],
+      score: 'total',
+      scoringModel: 'finalScore',
+    )..['entryOrder'] = 'byPlayer';
+    expect(problemsFor(template), isEmpty);
+
+    final preset = loadTemplateCatalog({
+      'test-game.json': jsonEncode(template),
+    }).catalog.byId('test-game');
+    expect(preset.enteredLines.map((line) => line.id), ['bear', 'elk', 'tokens']);
+    expect(
+      [
+        for (final item in preset.sheetLayout)
+          item.heading ?? item.lineId,
+      ],
+      ['Wildlife', 'bear', 'elk', 'wildlife', 'Nature tokens', 'tokens', 'total'],
+    );
+    final styles = {
+      for (final item in preset.sheetLayout) item.heading ?? item.lineId: item.style,
+    };
+    expect(styles['wildlife']!.bold, isTrue);
+    expect(styles['wildlife']!.ruleAbove, isTrue);
+    expect(styles['Nature tokens']!.shade, '#2E7D32');
+    expect(styles['bear']!.shade, isNull);
+    expect(preset.entryOrder, SheetEntryOrder.byPlayer);
+  });
+
+  test('several entered lines are for finalScore games only, so far', () {
+    final problems = problemsFor(
+      sheet(
+        lines: [
+          {'id': 'bear', 'label': 'Bear'},
+          {'id': 'elk', 'label': 'Elk'},
+          calculated('scored', '{bear} + {elk}'),
+        ],
+      ),
+    );
+
+    expect(
+      problems,
+      [
+        'lines: several entered lines are only supported for finalScore '
+            'games so far',
+      ],
+    );
+  });
+
+  test('headings need lines, several entered lines need a score', () {
+    final problems = problemsFor(
+      sheet(
+        lines: [
+          {'heading': 'Empty'},
+          {'heading': 'Wildlife', 'note': 'x'},
+          {
+            'id': 'bear',
+            'label': 'Bear',
+            'subtotal': true,
+            'style': {'shade': 'green', 'bold': 'yes', 'size': 2},
+          },
+          {'id': 'elk', 'label': 'Elk'},
+          {'heading': ''},
+        ],
+        score: null,
+        scoringModel: 'finalScore',
+      )..['entryOrder'] = 'sideways',
+    );
+
+    expect(
+      problems,
+      containsAll([
+        'lines[0].heading: needs at least one line after it',
+        'lines[1].note: unknown key',
+        'lines[2].subtotal: unknown key',
+        'lines[2].style.size: unknown key',
+        'lines[2].style.shade: "green" must look like #3A7BD5',
+        'lines[2].style.bold: must be true or false',
+        'lines[4].heading: must not be empty',
+        'score: is required when there are several entered lines',
+        startsWith('entryOrder: unsupported value "sideways"'),
       ]),
     );
   });

@@ -24,9 +24,12 @@ class SaveQuickScoreSession {
       );
     }
 
-    final scoreLineId = preset.enteredLines.first.id;
+    // A sheet with several lines can be saved with some left empty (they
+    // count as their starting value), but not with a player left blank.
+    final enteredLineIds = {for (final line in preset.enteredLines) line.id};
     final hasMissingValues = participantValues.any(
-      (participant) => !participant.enteredValues.containsKey(scoreLineId),
+      (participant) =>
+          !participant.enteredValues.keys.any(enteredLineIds.contains),
     );
 
     if (hasMissingValues) {

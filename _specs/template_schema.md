@@ -2,7 +2,7 @@
 
 This is the reference for writing a Scoard Game scoring template. A template describes how one game is scored. The app reads it, validates it, and scores the game with it, with no code changes.
 
-A template describes the game's **score sheet**: the **lines** recorded for each player, such as the score entered each round, or values worked out from it with formulas. Today a sheet has exactly one entered line, entered either once at the end (`finalScore`) or once per round (`rounds`). Several entered lines per player (for example Cascadia's categories) are planned; see `restart_slice_12_score_sheets_plan.md`.
+A template describes the game's **score sheet**: the **lines** recorded for each player, such as the score entered each round, or values worked out from it with formulas. A sheet has one or more entered lines, filled in once at the end (`finalScore`) or every round (`rounds`). One entered line is shown as player cards, with a scorepad grid one tap away; several entered lines (for example Cascadia's categories) are shown as a grid of lines and players. Several entered lines are supported for `finalScore` games; see `restart_slice_12_score_sheets_plan.md` for rounds.
 
 ---
 
@@ -118,7 +118,8 @@ Players enter each side's inning points (with the Bags picker or the usual score
 | `winner` | yes | string | `highestScore` or `lowestScore`. |
 | `prompts` | no | array | Questions asked when a game starts. See below. |
 | `lines` | yes | array | The score sheet. See [Lines](#lines). |
-| `score` | no | string | The line that is each player's score. See [`score`](#score). |
+| `score` | with several entered lines | string | The line that is each player's score. See [`score`](#score). |
+| `entryOrder` | no | string | Which cell the entry sheet's Next opens. See [Sections and entry order](#sections-and-entry-order). |
 | `scoreLabels` | no | array | Text shown instead of the score. See [Player Card](#player-card). |
 | `scoreSubLabels` | no | array | Text shown under the score. See Player Card. |
 | `playerBadges` | no | array | Chips shown after the player's name. See Player Card. |
@@ -168,11 +169,64 @@ A prompt without an `effect` is asked and saved with the game. Formulas can read
 
 Rules:
 
-* exactly one entered line (several entered lines per player are planned)
+* at least one entered line; several entered lines are for `finalScore` games (rounds with several lines are planned)
 * any number of calculated lines and markers
 * every `id` unique across all lines, in the same format as the template `id`, and not the same as a prompt `id`
 * a calculated line may read entered and other calculated lines, but not itself, directly or through other lines
 * once a template is published, never rename or remove a line, marker, value picker, or prompt `id`; add new ones instead. Games in progress are scored again with the current template when resumed, and their saved entries are found by these ids
+
+### Sections And Entry Order
+
+`lines` is read top to bottom, like the paper sheet. A **heading** entry starts a section; the lines after it, up to the next heading, belong to it. Any line or heading can set its row's look with `style` (see below), for example bold with a rule above for a subtotal. The `score` line is not drawn as a row: it is always the grand total, fixed at the bottom of the sheet under its own `label`. Cascadia:
+
+```json
+"lines": [
+  { "heading": "Wildlife" },
+  { "id": "bear", "label": "Bear", "entry": { "tapToEdit": true } },
+  { "id": "elk", "label": "Elk", "entry": { "tapToEdit": true } },
+  { "id": "wildlife", "label": "Wildlife", "formula": "{bear} + {elk}",
+    "style": { "bold": true, "ruleAbove": true } },
+  { "heading": "Nature tokens" },
+  { "id": "nature-tokens", "label": "Tokens", "entry": { "tapToEdit": true } },
+  { "id": "total", "label": "Total", "formula": "{wildlife} + {nature-tokens}" }
+],
+"score": "total"
+```
+
+| Entry | Rules |
+|---|---|
+| `{ "heading": "…" }` | Non-empty text, and no other keys. Must be followed by at least one line before the next heading or the end. |
+| several entered lines | `finalScore` games only, for now. `score` is required. |
+| `style` | On any line or heading. See below. |
+
+Lines without headings work as before: a sheet doesn't need sections.
+
+#### `style`
+
+How a row looks on the score sheet. All keys are optional.
+
+| Key | Type | Effect |
+|---|---|---|
+| `shade` | `#RRGGBB` | Tints the row, its label and every player's cell. The template picks the colour; the app picks how strong it is (about 30% on dark themes, 20% on light), so text stays readable. The selected round's highlight is drawn instead of the shade. |
+| `bold` | boolean | Bold label and values. |
+| `ruleAbove` | boolean | A heavier line above the row, such as before a subtotal. |
+
+Style only changes how the row looks: values still come from what is entered or from the formula. Colour should never be the only way to tell rows apart, so keep the labels meaningful. Cascadia shades each habitat and its bonus in the habitat's colour:
+
+```json
+{ "id": "river", "label": "River", "entry": { "tapToEdit": true }, "style": { "shade": "#1E88E5" } }
+```
+
+The entry sheet's **Next** saves a value and opens the next cell. `entryOrder` decides which:
+
+| `entryOrder` | Next opens | Default for |
+|---|---|---|
+| `byPlayer` | the next player, same line, in play order | one entered line (a round is scored player by player) |
+| `byLine` | the same player's next entered line | several entered lines (a paper sheet is filled one player at a time) |
+
+Next stops at the last cell rather than wrapping, skips calculated lines, and never starts a new round.
+
+A sheet with several entered lines can be finished with some lines left empty; they count as their `initialValue` (0 if none). It can't be finished while a player has nothing entered at all.
 
 ### Entered Line
 
@@ -320,7 +374,7 @@ Players switch markers on and off in the entry sheet, whatever entry mode they u
 
 ### `score`
 
-The `id` of the line that is each player's score for the round (or the game, for `finalScore`). It can be the entered line or a calculated one. Leave it out when the entered line is the score.
+The `id` of the line that is each player's score for the round (or the game, for `finalScore`). It can be an entered line or a calculated one. Leave it out when there is one entered line and it is the score; with several entered lines it is required.
 
 ---
 
@@ -495,11 +549,11 @@ Each scenario:
 | `rounds` | `rounds` only | One object per round, with an entry per player. |
 | `expected` | yes | At least one of `totals`, `winners`, `placements`, or a `round...` key below. |
 
-A player's entry (in `scores` or a round) is the entered line's value as a whole number, or an object:
+A player's entry (in `scores` or a round) is the entered line's value as a whole number (with one entered line), or an object:
 
 | Key | Meaning |
 |---|---|
-| the entered line's `id` | The value, for example `{ "round-score": 10 }`. |
+| an entered line's `id` | Its value, for example `{ "round-score": 10 }`, or `{ "bear": 8, "elk": 6 }` with several entered lines. Lines left out count as their starting value. |
 | a marker line's `id` | `1` to set the marker, for example `{ "round-score": 10, "first-out": 1 }`. |
 | `tiles` | Tiles tapped in a value picker, by their text or value, for example `{ "tiles": ["9", "Bust"] }`. Without a value, the value is the picker's total. Card text reads these tiles. |
 | `picker` | The value picker's `id`, needed only when the line has more than one. |

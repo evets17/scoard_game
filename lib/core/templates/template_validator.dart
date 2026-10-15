@@ -90,6 +90,7 @@ List<TemplateProblem> validateTemplateJson(
     'playerBadges',
     'lines',
     'score',
+    'entryOrder',
   });
 
   final id = template.identifier('id', required: true);
@@ -107,8 +108,10 @@ List<TemplateProblem> validateTemplateJson(
   template.boolean('general');
   template.text('description', required: true);
   template.text('source');
-  template.oneOf('scoringModel', templateScoringModels, required: true);
+  final scoringModel =
+      template.oneOf('scoringModel', templateScoringModels, required: true);
   template.oneOf('winner', templateWinnerRules, required: true);
+  template.oneOf('entryOrder', const {'byPlayer', 'byLine'});
 
   final players = template.object('players', required: true);
   if (players != null) {
@@ -135,7 +138,12 @@ List<TemplateProblem> validateTemplateJson(
   }
 
   final groupIds = <String>{};
-  final lineIds = _validateLines(template, seenPromptIds, groupIds);
+  final lineIds = _validateLines(
+    template,
+    seenPromptIds,
+    groupIds,
+    scoringModel: scoringModel,
+  );
 
   _validateCardTexts(
     template,
@@ -157,6 +165,7 @@ String? _validateEnteredLine(_ObjectReader line, Set<String> groupIds) {
     'minimumDisplayDigits',
     'entry',
     'entryModes',
+    'style',
   });
   final id = line.identifier('id', required: true);
   line.text('label', required: true);
@@ -200,7 +209,7 @@ String? _validateEnteredLine(_ObjectReader line, Set<String> groupIds) {
 
 /// A flag players set by hand each round. Returns its id if it is valid.
 String? _validateMarkerLine(_ObjectReader line) {
-  line.allowOnlyKeys(const {'id', 'label', 'marker'});
+  line.allowOnlyKeys(const {'id', 'label', 'marker', 'style'});
   final id = line.identifier('id', required: true);
   line.text('label', required: true);
 
@@ -227,8 +236,9 @@ String? _validateMarkerLine(_ObjectReader line) {
 Set<String> _validateLines(
   _ObjectReader template,
   Set<String> promptIds,
-  Set<String> groupIds,
-) {
+  Set<String> groupIds, {
+  String? scoringModel,
+}) {
   final lines = template.list('lines', required: true);
   final scoreId = template.identifier('score');
   if (lines == null) {
@@ -248,10 +258,32 @@ Set<String> _validateLines(
     }
   }
 
+  // Every line and heading can say how its row looks.
+  for (final line in lines) {
+    if (line.isObject) {
+      _validateRowStyle(line);
+    }
+  }
+
+  // A heading starts a section; it needs at least one line after it.
+  _ObjectReader? openHeading;
+  void closeHeading() {
+    openHeading?.problem('heading', 'needs at least one line after it');
+  }
+
   for (final line in lines) {
     if (!line.isObject) {
       continue;
     }
+
+    if (line.has('heading')) {
+      line.allowOnlyKeys(const {'heading', 'style'});
+      line.text('heading', required: true);
+      closeHeading();
+      openHeading = line;
+      continue;
+    }
+    openHeading = null;
 
     if (line.has('marker')) {
       addId(line, _validateMarkerLine(line));
@@ -264,7 +296,7 @@ Set<String> _validateLines(
       continue;
     }
 
-    line.allowOnlyKeys(const {'id', 'label', 'formula'});
+    line.allowOnlyKeys(const {'id', 'label', 'formula', 'style'});
     final id = line.identifier('id', required: true);
     line.text('label', required: true);
     final source = line.text('formula', required: true);
@@ -279,11 +311,24 @@ Set<String> _validateLines(
     }
   }
 
-  if (enteredCount != 1) {
+  closeHeading();
+
+  if (enteredCount == 0) {
     template.problem(
       'lines',
-      'needs exactly one entered line (a line without a formula or marker); '
-          'found $enteredCount',
+      'needs at least one entered line (a line without a formula or marker)',
+    );
+  }
+  if (enteredCount > 1 && scoringModel == 'rounds') {
+    template.problem(
+      'lines',
+      'several entered lines are only supported for finalScore games so far',
+    );
+  }
+  if (enteredCount > 1 && scoreId == null) {
+    template.problem(
+      'score',
+      'is required when there are several entered lines',
     );
   }
 
@@ -675,4 +720,19 @@ class _ObjectReader {
         _ObjectReader(value[index], '${_childPath(key)}[$index]', _problems),
     ];
   }
+}
+
+/// A line's or heading's `style`: how its row looks on the score sheet.
+void _validateRowStyle(_ObjectReader line) {
+  final style = line.object('style');
+  if (style == null) {
+    return;
+  }
+  style.allowOnlyKeys(const {'shade', 'bold', 'ruleAbove'});
+  final shade = style.text('shade');
+  if (shade != null && !_colorPattern.hasMatch(shade)) {
+    style.problem('shade', '"$shade" must look like #3A7BD5');
+  }
+  style.boolean('bold');
+  style.boolean('ruleAbove');
 }

@@ -4,6 +4,7 @@ import 'package:scoard_game/application/models/scoring/marker_line_definition.da
 import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
 import 'package:scoard_game/application/models/scoring/entered_line_definition.dart';
 import 'package:scoard_game/application/models/scoring/scoring_model.dart';
+import 'package:scoard_game/application/models/scoring/sheet_layout.dart';
 import 'package:scoard_game/application/models/scoring/template_origin.dart';
 import 'package:scoard_game/application/models/scoring/winner_rule.dart';
 
@@ -29,6 +30,8 @@ class ScoringPreset {
     this.scoreSubLabels = const [],
     this.playerBadges = const [],
     this.scoreLineId,
+    this.sheetLayout = const [],
+    this.declaredEntryOrder,
     this.origin = TemplateOrigin.bundled,
   });
 
@@ -86,4 +89,22 @@ class ScoringPreset {
 
   /// The id of the line that is each player's score.
   String get scoreId => scoreLineId ?? enteredLines.first.id;
+
+  /// The sheet top to bottom: section headings and lines, in template
+  /// order. Empty means the lines in the order entered, calculated, marker.
+  final List<SheetLayoutItem> sheetLayout;
+
+  /// The template's `entryOrder`, or null to use [entryOrder]'s default.
+  final SheetEntryOrder? declaredEntryOrder;
+
+  /// Which cell Next opens: the next player when there is one entered line,
+  /// the next line when there are several, unless the template says.
+  SheetEntryOrder get entryOrder =>
+      declaredEntryOrder ??
+      (enteredLines.length > 1
+          ? SheetEntryOrder.byLine
+          : SheetEntryOrder.byPlayer);
+
+  /// Whether this sheet has more than one value to enter per player.
+  bool get hasSeveralEnteredLines => enteredLines.length > 1;
 }

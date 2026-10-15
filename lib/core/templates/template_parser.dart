@@ -8,6 +8,7 @@ import 'package:scoard_game/application/models/scoring/entered_line_definition.d
 import 'package:scoard_game/application/models/scoring/score_input_kind.dart';
 import 'package:scoard_game/application/models/scoring/scoring_model.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
+import 'package:scoard_game/application/models/scoring/sheet_layout.dart';
 import 'package:scoard_game/application/models/scoring/template_origin.dart';
 import 'package:scoard_game/application/models/scoring/value_picker_definition.dart';
 import 'package:scoard_game/application/models/scoring/winner_rule.dart';
@@ -23,10 +24,12 @@ ScoringPreset parseTemplateJson(
 }) {
   final players = json['players']! as Map<String, Object?>;
   final prompts = (json['prompts'] as List<Object?>?) ?? const [];
-  final lines = [
-    for (final line in json['lines']! as List<Object?>)
-      line! as Map<String, Object?>,
+  final items = [
+    for (final item in json['lines']! as List<Object?>)
+      item! as Map<String, Object?>,
   ];
+  // Headings only lay out the sheet; the rest are lines.
+  final lines = items.where((item) => !item.containsKey('heading')).toList();
   final markerLines =
       lines.where((line) => line.containsKey('marker')).toList();
   final calculatedLines =
@@ -79,6 +82,21 @@ ScoringPreset parseTemplateJson(
           ),
     ],
     scoreLineId: json['score'] as String?,
+    sheetLayout: [
+      for (final item in items)
+        if (item['heading'] case final String heading)
+          SheetLayoutItem.heading(heading, style: _parseRowStyle(item['style']))
+        else
+          SheetLayoutItem.line(
+            item['id']! as String,
+            style: _parseRowStyle(item['style']),
+          ),
+    ],
+    declaredEntryOrder: switch (json['entryOrder']) {
+      'byPlayer' => SheetEntryOrder.byPlayer,
+      'byLine' => SheetEntryOrder.byLine,
+      _ => null,
+    },
     scoreLabels: _parseCardTexts(json['scoreLabels']),
     scoreSubLabels: _parseCardTexts(json['scoreSubLabels']),
     playerBadges: _parseCardTexts(json['playerBadges']),
@@ -181,4 +199,15 @@ List<CardTextDefinition> _parseCardTexts(Object? rawList) {
               CardTextSize.large,
         ),
   ];
+}
+
+SheetRowStyle _parseRowStyle(Object? raw) {
+  if (raw is! Map<String, Object?>) {
+    return SheetRowStyle.plain;
+  }
+  return SheetRowStyle(
+    shade: raw['shade'] as String?,
+    bold: (raw['bold'] as bool?) ?? false,
+    ruleAbove: (raw['ruleAbove'] as bool?) ?? false,
+  );
 }

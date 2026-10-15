@@ -66,8 +66,9 @@ class ScoreEngine {
     }
 
     final groupIds = {
-      for (final picker in preset.enteredLines.first.valuePickers)
-        for (final option in picker.options)
+      for (final line in preset.enteredLines)
+        for (final picker in line.valuePickers)
+          for (final option in picker.options)
           if (option.groupId case final String groupId) groupId,
     };
     List<(CardTextDefinition, Formula)> parseCardTexts(
@@ -228,20 +229,23 @@ class ScoreEngine {
     return texts;
   }
 
-  /// The tiles the player picked for the score, if it was entered with a
-  /// value picker.
+  /// The tiles the player picked on their entered lines, if any were
+  /// entered with a value picker.
   FormulaScope? _pickedTiles(QuickScoreParticipantValues participant) {
-    final line = _preset.enteredLines.first;
-    final pick = participant.entryPicks[line.id];
-    if (pick == null) {
-      return null;
-    }
-    final picker = line.valuePickers
-        .where((picker) => picker.id == pick.pickerId)
-        .firstOrNull;
-    return picker == null
-        ? null
-        : pickedTileGroupsScope(picker, pickedIndexesFor(picker, pick));
+    final scopes = [
+      for (final line in _preset.enteredLines)
+        if (participant.entryPicks[line.id] case final pick?)
+          if (line.valuePickers
+                  .where((picker) => picker.id == pick.pickerId)
+                  .firstOrNull
+              case final picker?)
+            pickedTileGroupsScope(picker, pickedIndexesFor(picker, pick)),
+    ];
+    return switch (scopes.length) {
+      0 => null,
+      1 => scopes.single,
+      _ => _AllTiles(scopes),
+    };
   }
 
   static Map<String, int> _builtIns(
@@ -352,4 +356,23 @@ class CircularFormulaError extends Error {
 
   @override
   String toString() => 'circular reference: ${loop.join(' -> ')}';
+}
+
+/// Tiles picked on several entered lines, read together.
+class _AllTiles extends FormulaScope {
+  _AllTiles(this._scopes);
+
+  final List<FormulaScope> _scopes;
+
+  @override
+  int valueOf(String name) =>
+      _scopes.fold(0, (sum, scope) => sum + scope.valueOf(name));
+
+  @override
+  int countIn(String groupId) =>
+      _scopes.fold(0, (sum, scope) => sum + scope.countIn(groupId));
+
+  @override
+  int distinctIn(String groupId) =>
+      _scopes.fold(0, (sum, scope) => sum + scope.distinctIn(groupId));
 }
