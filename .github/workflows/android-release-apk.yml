@@ -1,0 +1,85 @@
+name: Android Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to publish (example: v1.2.3)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Prepare release assets
+        id: prepare_assets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION_LINE="$(grep '^version:' pubspec.yaml | head -n1 | awk '{print $2}')"
+          VERSION_NAME="${VERSION_LINE%%+*}"
+          BUILD_NUMBER="${VERSION_LINE#*+}"
+          if [[ "$BUILD_NUMBER" == "$VERSION_LINE" ]]; then
+            BUILD_NUMBER="0"
+          fi
+
+          VERSIONED_APK="scoard-game-v${VERSION_NAME}+${BUILD_NUMBER}.apk"
+          LATEST_APK="scoard-game-latest.apk"
+          SOURCE_APK="build/app/outputs/flutter-apk/app-release.apk"
+
+          cp "$SOURCE_APK" "$VERSIONED_APK"
+          cp "$SOURCE_APK" "$LATEST_APK"
+
+          echo "versioned_apk=$VERSIONED_APK" >> "$GITHUB_OUTPUT"
+          echo "latest_apk=$LATEST_APK" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve release tag
+        id: release_tag
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_tag.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          overwrite_files: true
+          files: |
+            ${{ steps.prepare_assets.outputs.latest_apk }}
+            ${{ steps.prepare_assets.outputs.versioned_apk }}
