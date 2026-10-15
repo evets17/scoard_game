@@ -131,6 +131,81 @@ void main() {
     expect(find.text('Round 1'), findsOneWidget);
   });
 
+  Future<void> tapTiles(WidgetTester tester, List<String> tiles) async {
+    for (final tile in tiles) {
+      await tester.tap(
+        find.ancestor(of: find.text(tile), matching: find.byType(InkWell)).last,
+      );
+      await tester.pump();
+    }
+  }
+
+  /// Enters a Flip 7 round with Next: Avery, then Jules, then Mina.
+  Future<void> enterRoundWithNext(
+    WidgetTester tester,
+    List<String> tiles,
+  ) async {
+    await tester.tap(
+      find.descendant(of: rowFor('Avery'), matching: find.text('–')).first,
+    );
+    await tester.pumpAndSettle();
+    await tapTiles(tester, [tiles[0]]);
+    await tester.tap(find.text('Next: Jules'));
+    await tester.pumpAndSettle();
+    await tapTiles(tester, [tiles[1]]);
+    await tester.tap(find.text('Next: Mina'));
+    await tester.pumpAndSettle();
+    await tapTiles(tester, [tiles[2]]);
+    // Mina is last in play order, so there is no Next.
+    expect(find.textContaining('Next:'), findsNothing);
+    await tester.tap(find.text('Replace -> ${tiles[2]}'));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('Next moves to the next player in play order', (tester) async {
+    await startGame(
+      tester,
+      templateId: 'flip-7',
+      players: const ['Avery', 'Jules', 'Mina'],
+    );
+
+    await enterRoundWithNext(tester, ['9', '5', '3']);
+
+    for (final (name, score) in [('Avery', '9'), ('Jules', '5'), ('Mina', '3')]) {
+      expect(
+        find.descendant(of: rowFor(name), matching: find.text(score)),
+        findsWidgets,
+      );
+    }
+  });
+
+  testWidgets('a past round is corrected by tapping its cell', (tester) async {
+    await startGame(
+      tester,
+      templateId: 'flip-7',
+      players: const ['Avery', 'Jules', 'Mina'],
+    );
+    await enterRoundWithNext(tester, ['9', '5', '3']);
+    await tester.tap(find.text('Next Round >>'));
+    await tester.pumpAndSettle();
+    await enterRoundWithNext(tester, ['1', '2', '4']);
+    await tester.tap(find.byTooltip('Show sheet'));
+    await tester.pumpAndSettle();
+
+    // Jules's round 1 cell opens with the 5 tile still picked; add a 7.
+    await tester.tap(inSheet('5'));
+    await tester.pumpAndSettle();
+    expect(find.text('Replace -> 5'), findsOneWidget);
+    await tapTiles(tester, ['7']);
+    await tester.tap(find.text('Replace -> 12'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Round 1'), findsOneWidget);
+    final grid = tester.widget<ScoreSheetGrid>(find.byType(ScoreSheetGrid));
+    expect(grid.rows.first.cells.map((cell) => cell.score), [9, 12, 3]);
+    expect(grid.players.map((player) => player.total), [10, 14, 7]);
+  });
+
   testWidgets('cells show score labels and headers show badges', (
     tester,
   ) async {

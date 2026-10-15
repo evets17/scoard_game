@@ -19,6 +19,7 @@ class NumericScoreField extends StatefulWidget {
     this.valueLabelMinimumDigits = 0,
     this.onLabelTap,
     this.onEditorClosed,
+    this.onEditRequested,
     this.entryPick,
     this.markers = const [],
     this.activeMarkers = const {},
@@ -39,6 +40,10 @@ class NumericScoreField extends StatefulWidget {
   final int valueLabelMinimumDigits;
   final VoidCallback? onLabelTap;
   final VoidCallback? onEditorClosed;
+
+  /// Opens the entry sheet in place of the card's own, so the screen can
+  /// offer Next across cards. Null: the card opens its own sheet.
+  final VoidCallback? onEditRequested;
 
   /// The value picker tiles the score was entered with, if any. Reopening
   /// the entry sheet starts with them, and card text such as "Bust" reads
@@ -261,7 +266,9 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
                   ),
                 InkWell(
                   onTap: widget.lineDefinition.enableTapToEdit
-                      ? () => _openEditor(context, currentValue)
+                      ? () => widget.onEditRequested != null
+                            ? widget.onEditRequested!()
+                            : _openEditor(context, currentValue)
                       : null,
                   borderRadius: BorderRadius.circular(12),
                   child: ConstrainedBox(

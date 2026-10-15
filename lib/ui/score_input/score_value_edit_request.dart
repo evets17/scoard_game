@@ -6,6 +6,7 @@ class ScoreValueEditRequest {
     required this.action,
     required this.value,
     this.entryPick,
+    this.goToNext = false,
   });
 
   final ScoreValueEditAction action;
@@ -14,4 +15,7 @@ class ScoreValueEditRequest {
   /// The value picker tiles behind [value], when it came from a template's
   /// value picker; null for every other way of entering a score.
   final ValuePickerPick? entryPick;
+
+  /// Whether to open the next cell once this value is saved.
+  final bool goToNext;
 }

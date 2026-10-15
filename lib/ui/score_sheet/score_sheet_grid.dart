@@ -71,6 +71,7 @@ class ScoreSheetGrid extends StatefulWidget {
     required this.rows,
     this.totalLabel = 'Tot',
     this.onRowTap,
+    this.onCellTap,
     super.key,
   });
 
@@ -78,8 +79,12 @@ class ScoreSheetGrid extends StatefulWidget {
   final List<ScoreSheetRow> rows;
   final String totalLabel;
 
-  /// Called with the row's index when a row is tapped.
+  /// Called with the row's index when its label is tapped, or a cell when
+  /// there is no [onCellTap].
   final ValueChanged<int>? onRowTap;
+
+  /// Called with the row's and player's index when a cell is tapped.
+  final void Function(int row, int player)? onCellTap;
 
   @override
   State<ScoreSheetGrid> createState() => _ScoreSheetGridState();
@@ -253,21 +258,23 @@ class _ScoreSheetGridState extends State<ScoreSheetGrid> {
                   itemExtent: _rowHeight,
                   itemBuilder: (context, index) {
                     final row = widget.rows[index];
-                    return GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => tapRow(index),
-                      child: Row(
-                        children: [
-                          for (final cell in row.cells)
-                            _Cell(
+                    return Row(
+                      children: [
+                        for (final (column, cell) in row.cells.indexed)
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => widget.onCellTap != null
+                                ? widget.onCellTap!(index, column)
+                                : tapRow(index),
+                            child: _Cell(
                               cell: cell,
                               width: columnWidth,
                               selected: row.selected,
                               selectedColor: selectedColor,
                               gridColor: gridColor,
                             ),
-                        ],
-                      ),
+                          ),
+                      ],
                     );
                   },
                 ),

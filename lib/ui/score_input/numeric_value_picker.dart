@@ -25,6 +25,7 @@ Future<ScoreValueEditRequest?> showNumericValuePicker(
   List<MarkerLineDefinition> markers = const [],
   Set<String> activeMarkers = const {},
   void Function(String markerId, bool isSet)? onMarkerChanged,
+  String? nextLabel,
 }) {
   return showModalBottomSheet<ScoreValueEditRequest>(
     context: context,
@@ -43,6 +44,7 @@ Future<ScoreValueEditRequest?> showNumericValuePicker(
       markers: markers,
       activeMarkers: activeMarkers,
       onMarkerChanged: onMarkerChanged,
+      nextLabel: nextLabel,
     ),
   );
 }
@@ -62,6 +64,7 @@ class _NumericValuePicker extends StatefulWidget {
     this.markers = const [],
     this.activeMarkers = const {},
     this.onMarkerChanged,
+    this.nextLabel,
   });
 
   final String title;
@@ -77,6 +80,10 @@ class _NumericValuePicker extends StatefulWidget {
 
   /// The template's score sub label, such as "from 10", or null.
   final String? currentScoreSubLabel;
+
+  /// Who is next, such as "Jules". When set, the sheet offers Next, which
+  /// saves like Replace and then opens that cell.
+  final String? nextLabel;
   final bool allowReplace;
   final bool allowAdjust;
   final ScoreEntryMemory entryMemory;
@@ -183,9 +190,11 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
     final theme = Theme.of(context);
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
     final entryValue = _entryValue;
-    final adjustedValue =
-        entryValue == null ? null : widget.currentValue + entryValue;
-    final errorText = _errorText ??
+    final adjustedValue = entryValue == null
+        ? null
+        : widget.currentValue + entryValue;
+    final errorText =
+        _errorText ??
         (_isCalculator && _expression.dividesByZero
             ? _divideByZeroMessage
             : null);
@@ -209,10 +218,7 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 6),
-                    Text(
-                      _currentScoreText,
-                      style: theme.textTheme.bodyMedium,
-                    ),
+                    Text(_currentScoreText, style: theme.textTheme.bodyMedium),
                   ],
                 ),
               ),
@@ -310,7 +316,9 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
           ],
           const SizedBox(height: 18),
           // Adjust sits at the left and Replace, the more common choice, at
-          // the right, spread apart so they are hard to mix up.
+          // the right, spread apart so they are hard to mix up. Next is a
+          // Replace that then opens the next player, so it sits under
+          // Replace, the same width.
           SizedBox(
             width: double.infinity,
             child: Wrap(
@@ -330,18 +338,43 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
                     ),
                   ),
                 if (widget.allowReplace)
-                  FilledButton(
-                    onPressed: () => _submit(ScoreValueEditAction.replace),
-                    child: Text(
-                      entryValue == null ? 'Replace' : 'Replace -> $entryValue',
+                  IntrinsicWidth(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        FilledButton(
+                          onPressed: () =>
+                              _submit(ScoreValueEditAction.replace),
+                          child: Text(
+                            entryValue == null
+                                ? 'Replace'
+                                : 'Replace -> $entryValue',
+                          ),
+                        ),
+                        if (widget.nextLabel case final String next) ...[
+                          const SizedBox(height: 10),
+                          FilledButton.tonalIcon(
+                            onPressed: () => _submit(
+                              ScoreValueEditAction.replace,
+                              goToNext: true,
+                            ),
+                            iconAlignment: IconAlignment.end,
+                            icon: const Icon(Icons.arrow_forward_rounded),
+                            label: Text('Next: $next'),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
               ],
             ),
           ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
           ),
         ],
       ),
@@ -370,7 +403,7 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
     });
   }
 
-  void _submit(ScoreValueEditAction action) {
+  void _submit(ScoreValueEditAction action, {bool goToNext = false}) {
     final entryValue = _entryValue;
 
     if (entryValue == null) {
@@ -399,6 +432,7 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
         entryPick: _activePicker == null
             ? null
             : valuePickerPickOf(_activePicker!, _pickedTiles),
+        goToNext: goToNext,
       ),
     );
   }
@@ -442,9 +476,7 @@ class _CalculatorDisplay extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text(label, style: theme.textTheme.bodyMedium),
-              ),
+              Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
               if (!expression.isEmpty)
                 TextButton(
                   onPressed: onClear,
@@ -526,10 +558,10 @@ class _Numpad extends StatelessWidget {
     _NumpadKey digit(String value) =>
         _NumpadKey(label: value, onPressed: () => onDigitPressed(value));
     _NumpadKey operator(ScoreOperator value) => _NumpadKey(
-          label: value.symbol,
-          isOperator: true,
-          onPressed: () => onOperatorPressed(value),
-        );
+      label: value.symbol,
+      isOperator: true,
+      onPressed: () => onOperatorPressed(value),
+    );
 
     return Column(
       children: [

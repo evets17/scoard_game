@@ -39,6 +39,8 @@ import 'package:scoard_game/ui/players/player_reorderable_list.dart';
 import 'package:scoard_game/ui/players/player_sort_menu_button.dart';
 import 'package:scoard_game/ui/settings/stay_awake_controller.dart';
 import 'package:scoard_game/ui/score_input/numeric_score_field.dart';
+import 'package:scoard_game/ui/score_input/numeric_value_picker.dart';
+import 'package:scoard_game/ui/score_input/score_value_edit_action.dart';
 import 'package:scoard_game/ui/score_sheet/score_sheet_grid.dart';
 import 'package:scoard_game/ui/score_input/score_entry_mode.dart';
 
@@ -239,6 +241,8 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
                   showSheet: _showSheet,
                   sheetCells: _showSheet ? _sheetCells() : const {},
                   onSelectRound: _selectRound,
+                  onEditScore: _editScore,
+                  onEditCell: _editCell,
                 ),
               _RoundScoreStep.result => _RoundScoreResultStep(
                   result: _result!,
@@ -701,16 +705,18 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
 
   /// Makes [roundNumber] the selected round, keeping what was entered in the
   /// one on screen. Used by Previous Round and by tapping a sheet row.
-  Future<void> _selectRound(int roundNumber) async {
-    if (roundNumber == _currentRoundNumber ||
-        roundNumber < 1 ||
-        roundNumber > _lastRoundNumber) {
-      return;
+  /// Returns whether [roundNumber] is now selected.
+  Future<bool> _selectRound(int roundNumber) async {
+    if (roundNumber == _currentRoundNumber) {
+      return true;
+    }
+    if (roundNumber < 1 || roundNumber > _lastRoundNumber) {
+      return false;
     }
 
     final shouldContinue = _persistCurrentRoundIfNeeded();
     if (!shouldContinue) {
-      return;
+      return false;
     }
 
     setState(() {
@@ -720,6 +726,83 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
     });
 
     unawaited(_autosaveCurrentSession());
+    return true;
+  }
+
+  /// Opens the entry sheet for [playerId]'s score in [roundNumber], from a
+  /// sheet cell.
+  Future<void> _editCell(int roundNumber, String playerId) async {
+    if (await _selectRound(roundNumber)) {
+      await _editScore(playerId);
+    }
+  }
+
+  /// Opens the entry sheet for [playerId]'s score in the selected round.
+  /// Next saves the value and moves on to the next player in play order,
+  /// stopping after the last.
+  Future<void> _editScore(String playerId) async {
+    final preset = _preset!;
+    final line = preset.enteredLines.first;
+    final controller = _scoreControllers[playerId];
+    final index =
+        _selectedPlayers.indexWhere((player) => player.id == playerId);
+    if (controller == null || index < 0 || !line.enableTapToEdit) {
+      return;
+    }
+
+    final player = _selectedPlayers[index];
+    final next = index + 1 < _selectedPlayers.length
+        ? _selectedPlayers[index + 1]
+        : null;
+    final currentValue = int.tryParse(controller.text.trim()) ??
+        line.initialIntegerValue ??
+        0;
+
+    final request = await showNumericValuePicker(
+      context,
+      title: player.displayName,
+      currentValue: currentValue,
+      hasCurrentValue: controller.text.trim().isNotEmpty,
+      currentRoundScore: preset.calculatedLines.isEmpty
+          ? null
+          : _currentRoundScores()[playerId],
+      currentScoreSubLabel:
+          _currentRoundCardTexts()[playerId]?.scoreSubLabel?.text,
+      allowReplace: line.allowReplace,
+      allowAdjust: line.allowAdjust,
+      entryMemory: _scoreEntryMemory,
+      valuePickers: line.valuePickers,
+      initialPick: _entryPicks[playerId],
+      markers: preset.markerLines,
+      activeMarkers: _markers[playerId] ?? const {},
+      onMarkerChanged: (markerId, isSet) =>
+          _setMarker(playerId, markerId, isSet),
+      nextLabel: next?.displayName,
+    );
+    if (request == null || !mounted) {
+      return;
+    }
+
+    // Only a value picker's Replace keeps the tiles it came from; adding
+    // to the score drops them. Tiles are set first so they save with it.
+    final ValuePickerPick? entryPick;
+    final int value;
+    switch (request.action) {
+      case ScoreValueEditAction.replace:
+        entryPick = request.entryPick;
+        value = request.value;
+      case ScoreValueEditAction.add:
+        entryPick = null;
+        value = currentValue + request.value;
+    }
+    if (entryPick != _entryPicks[playerId]) {
+      _setEntryPick(playerId, entryPick);
+    }
+    setState(() => controller.text = '$value');
+
+    if (request.goToNext && next != null) {
+      await _editScore(next.id);
+    }
   }
 
   /// The furthest round reached: the last saved one, or the one on screen.
@@ -1344,6 +1427,8 @@ class _RoundScoreEntryStep extends StatelessWidget {
     required this.showSheet,
     required this.sheetCells,
     required this.onSelectRound,
+    required this.onEditScore,
+    required this.onEditCell,
   });
 
   final int currentRoundNumber;
@@ -1393,6 +1478,12 @@ class _RoundScoreEntryStep extends StatelessWidget {
   final Map<int, Map<String, ScoreSheetCell>> sheetCells;
   final ValueChanged<int> onSelectRound;
 
+  /// Opens the entry sheet for a player's score in the selected round.
+  final ValueChanged<String> onEditScore;
+
+  /// Opens the entry sheet for a player's score in a given round.
+  final void Function(int roundNumber, String playerId) onEditCell;
+
   /// The sheet view: a scorepad of every round so far, the selected round
   /// highlighted, with that round's badges by each player's name.
   Widget _buildSheet(List<QuickScoreAvailablePlayer> displayedPlayers) {
@@ -1426,6 +1517,10 @@ class _RoundScoreEntryStep extends StatelessWidget {
           ),
       ],
       onRowTap: (index) => onSelectRound(roundNumbers[index]),
+      onCellTap: (row, column) => onEditCell(
+        roundNumbers[row],
+        displayedPlayers[column].id,
+      ),
     );
   }
 
@@ -1484,6 +1579,7 @@ class _RoundScoreEntryStep extends StatelessWidget {
                     compact: compact,
                     entryMemory: entryMemory,
                     onLabelTap: () => onPlayerTap(player),
+                    onEditRequested: () => onEditScore(player.id),
                     entryPick: entryPicks[player.id],
                     onEntryPickChanged: (entryPick) =>
                         onEntryPickChanged(player.id, entryPick),
