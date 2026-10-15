@@ -6,19 +6,30 @@ class PresetPromptAnswer {
     required bool value,
   })  : kind = PresetPromptKind.boolean,
         booleanValue = value,
-        integerValue = null;
+        integerValue = null,
+        textValue = null;
 
   const PresetPromptAnswer.integer({
     required this.id,
     required int value,
   })  : kind = PresetPromptKind.integer,
         booleanValue = null,
-        integerValue = value;
+        integerValue = value,
+        textValue = null;
+
+  const PresetPromptAnswer.text({
+    required this.id,
+    required String value,
+  })  : kind = PresetPromptKind.text,
+        booleanValue = null,
+        integerValue = null,
+        textValue = value;
 
   final String id;
   final PresetPromptKind kind;
   final bool? booleanValue;
   final int? integerValue;
+  final String? textValue;
 
   Map<String, Object?> toJson() {
     return {
@@ -26,6 +37,7 @@ class PresetPromptAnswer {
       'kind': kind.name,
       'booleanValue': booleanValue,
       'integerValue': integerValue,
+      if (textValue != null) 'textValue': textValue,
     };
   }
 
@@ -42,6 +54,11 @@ class PresetPromptAnswer {
         return PresetPromptAnswer.integer(
           id: json['id']! as String,
           value: json['integerValue']! as int,
+        );
+      case PresetPromptKind.text:
+        return PresetPromptAnswer.text(
+          id: json['id']! as String,
+          value: json['textValue']! as String,
         );
     }
   }

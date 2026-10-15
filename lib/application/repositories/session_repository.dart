@@ -49,4 +49,18 @@ abstract class SessionRepository {
 
   /// When each scoring template was last used, finished or in progress.
   Future<Map<String, DateTime>> loadLastPlayedAtByTemplateId();
+
+  /// The names games of a template were played under, such as "Catan" for
+  /// Quick Score, most recently used first, finished or in progress.
+  Future<List<String>> loadRecentGameNames({
+    required String templateId,
+    int limit = 6,
+  });
+}
+
+/// The names in [lastUsedAt], most recently used first, at most [limit].
+List<String> mostRecentNames(Map<String, DateTime> lastUsedAt, int limit) {
+  final names = lastUsedAt.keys.toList()
+    ..sort((left, right) => lastUsedAt[right]!.compareTo(lastUsedAt[left]!));
+  return names.take(limit).toList(growable: false);
 }

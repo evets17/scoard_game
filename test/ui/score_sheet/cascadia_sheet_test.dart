@@ -203,6 +203,10 @@ void main() {
   ) async {
     await startCascadia(tester, templateId: 'cascadia-bonuses');
 
+    // The game being scored shows under the title.
+    expect(find.text('Enter Scores'), findsOneWidget);
+    expect(find.text('Cascadia'), findsOneWidget);
+
     final labels = grid(tester).rows.map((row) => row.label).toList();
     expect(labels, contains('Mountain'));
     expect(labels.where((label) => label.contains('bonus')), isEmpty);

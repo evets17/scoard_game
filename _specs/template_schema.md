@@ -148,10 +148,10 @@ Each entry is an option shown on the game page before scoring starts.
 | Key | Required | Type | Rules |
 |---|---|---|---|
 | `id` | yes | string | Same format as the template `id`. Unique within the template. |
-| `type` | yes | string | `boolean` or `integer`. |
+| `type` | yes | string | `boolean`, `integer`, or `text`. |
 | `label` | yes | string | Non-empty. |
 | `help` | no | string | Helper text under the label. |
-| `default` | no | boolean or integer | Must match `type`. |
+| `default` | no | boolean, integer, or string | Must match `type`. Text is at most 40 characters. |
 | `effect` | no | string | What the answer changes. See below. |
 
 Supported `effect` values:
@@ -159,8 +159,17 @@ Supported `effect` values:
 | Effect | Prompt type | Meaning |
 |---|---|---|
 | `lowScoreWins` | `boolean` | When answered true, the lowest score wins, whatever `winner` says. |
+| `gameName` | `text` | The name the game is played under, such as "Catan" for Quick Score. It shows under the title while scoring and is the game's name in Active Games and History. Left blank, it is the `default`, then the template `name`. |
 
 A prompt without an `effect` is asked and saved with the game. Formulas can read its answer by its `id` (see [Formula Language](#formula-language)), so a house rule can be an option.
+
+A `text` prompt needs an `effect`, because formulas read only numbers and switches. Each effect can be on one prompt only.
+
+A game name prompt offers the names the game was played under before as quick picks, most recent first. Give it the template's name as its `default`, so picking a name is optional:
+
+```json
+{ "id": "game-name", "type": "text", "label": "Game", "default": "Quick Score", "effect": "gameName" }
+```
 
 ---
 
@@ -653,7 +662,7 @@ Each check taps tiles in a value picker and states the value they should give. W
 The test run fails unless a template's scenarios:
 
 * include at least one tie for first place
-* answer every prompt that has an `effect`, or is read by a formula, with a non-default value at least once
+* answer every prompt that has an `effect` (other than `gameName`, which does not change scores), or is read by a formula, with a non-default value at least once
 * include at least one `pickerTotals` check for every value picker with a `total`
 * expect every score label, score sub label, and player badge at least once, in a scenario's `roundScoreLabels`, `roundScoreSubLabels`, or `roundPlayerBadges`
 

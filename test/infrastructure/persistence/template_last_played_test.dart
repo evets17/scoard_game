@@ -52,4 +52,55 @@ void main() {
 
     await database.close();
   });
+
+  test('recent game names come from a template\'s games, newest first', () async {
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    final repository = PersistentSessionRepository(database);
+
+    Future<void> finish(String sessionId, String templateId, String name, int day) {
+      return database.saveRoundScoreResult(
+        sessionId: sessionId,
+        templateId: templateId,
+        templateDisplayName: name,
+        winnerRule: WinnerRule.highestScoreWins.name,
+        optionsJson: '[]',
+        roundCount: 0,
+        completedAt: DateTime(2026, 10, day),
+        rounds: const [],
+        playerResults: const [],
+      );
+    }
+
+    await finish('a', 'round-score-basic', 'Catan', 1);
+    await finish('b', 'round-score-basic', 'Wingspan', 3);
+    await finish('c', 'round-score-basic', 'Catan', 5);
+    await finish('d', 'skyjo', 'Skyjo', 9);
+    await repository.saveRoundScoreActiveSession(
+      session: RoundScoreActiveSession(
+        sessionId: 'in-progress',
+        presetId: 'round-score-basic',
+        templateDisplayName: 'Azul',
+        promptAnswers: const [],
+        selectedPlayers: const [],
+        savedRounds: const [],
+        currentRoundParticipantValues: const [],
+        currentRoundNumber: 1,
+        updatedAt: DateTime(2026, 10, 4),
+      ),
+    );
+
+    expect(
+      await repository.loadRecentGameNames(templateId: 'round-score-basic'),
+      ['Catan', 'Azul', 'Wingspan'],
+    );
+    expect(
+      await repository.loadRecentGameNames(
+        templateId: 'round-score-basic',
+        limit: 2,
+      ),
+      ['Catan', 'Azul'],
+    );
+
+    await database.close();
+  });
 }

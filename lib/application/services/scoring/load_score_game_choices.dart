@@ -18,4 +18,9 @@ class LoadScoreGameChoices {
       await sessionRepository.loadLastPlayedAtByTemplateId(),
     );
   }
+
+  /// Names [templateId] was played under before, most recent first.
+  Future<List<String>> recentGameNames(String templateId) {
+    return sessionRepository.loadRecentGameNames(templateId: templateId);
+  }
 }

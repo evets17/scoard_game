@@ -11,6 +11,9 @@ RoundScoreResult calculateRoundScoreResult({
   required DateTime completedAt,
   required WinnerRule winnerRule,
   Map<String, int> options = const {},
+
+  /// The name the game was played under; defaults to the template's name.
+  String? gameName,
   required List<RoundScoreRoundValues> rounds,
 }) {
   final engine = ScoreEngine.of(preset);
@@ -71,7 +74,7 @@ RoundScoreResult calculateRoundScoreResult({
   return RoundScoreResult(
     sessionId: sessionId,
     templateId: preset.id,
-    templateDisplayName: preset.displayName,
+    templateDisplayName: gameName ?? preset.displayName,
     completedAt: completedAt,
     winnerRule: winnerRule,
     roundCount: rounds.length,

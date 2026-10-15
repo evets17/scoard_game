@@ -24,10 +24,16 @@ final templateImagePattern =
 
 const templateScoringModels = {'finalScore', 'rounds'};
 const templateWinnerRules = {'highestScore', 'lowestScore'};
-const templatePromptTypes = {'boolean', 'integer'};
+const templatePromptTypes = {'boolean', 'integer', 'text'};
 
 /// Prompt effects and the prompt type each one needs.
-const templatePromptEffects = {'lowScoreWins': 'boolean'};
+const templatePromptEffects = {
+  'lowScoreWins': 'boolean',
+  'gameName': 'text',
+};
+
+/// Keeps a text answer, such as a game name, to one line under a title.
+const maximumPromptTextLength = 40;
 
 /// Template-defined score entry modes.
 const templateEntryModeTypes = {'valuePicker'};
@@ -140,12 +146,18 @@ List<TemplateProblem> validateTemplateJson(
 
   final prompts = template.list('prompts');
   final seenPromptIds = <String>{};
+  // Formulas read number and switch prompts; a text answer is not a number.
+  final formulaPromptIds = <String>{};
+  final seenEffects = <String>{};
   if (prompts != null) {
     for (final prompt in prompts) {
       if (!prompt.isObject) {
         continue;
       }
-      _validatePrompt(prompt, seenPromptIds);
+      final (id, type) = _validatePrompt(prompt, seenPromptIds, seenEffects);
+      if (id != null && type != 'text') {
+        formulaPromptIds.add(id);
+      }
     }
   }
 
@@ -153,7 +165,7 @@ List<TemplateProblem> validateTemplateJson(
   final lineSubLabels = <List<_ObjectReader>>[];
   final lineIds = _validateLines(
     template,
-    seenPromptIds,
+    formulaPromptIds,
     groupIds,
     lineSubLabels,
     scoringModel: scoringModel,
@@ -163,7 +175,7 @@ List<TemplateProblem> validateTemplateJson(
     template,
     lineSubLabels: lineSubLabels,
     lineIds: lineIds,
-    promptIds: seenPromptIds,
+    promptIds: formulaPromptIds,
     groupIds: groupIds,
   );
 
@@ -644,7 +656,12 @@ void _validateCardTexts(
   }
 }
 
-void _validatePrompt(_ObjectReader prompt, Set<String> seenPromptIds) {
+/// Returns the prompt's id and type, where they are valid.
+(String?, String?) _validatePrompt(
+  _ObjectReader prompt,
+  Set<String> seenPromptIds,
+  Set<String> seenEffects,
+) {
   prompt.allowOnlyKeys(const {'id', 'type', 'label', 'help', 'default', 'effect'});
 
   final id = prompt.identifier('id', required: true);
@@ -660,6 +677,11 @@ void _validatePrompt(_ObjectReader prompt, Set<String> seenPromptIds) {
     prompt.boolean('default');
   } else if (type == 'integer') {
     prompt.integer('default');
+  } else if (type == 'text') {
+    final text = prompt.text('default');
+    if (text != null && text.length > maximumPromptTextLength) {
+      prompt.problem('default', 'must be at most $maximumPromptTextLength characters');
+    }
   }
 
   final effect = prompt.oneOf('effect', templatePromptEffects.keys.toSet());
@@ -667,6 +689,17 @@ void _validatePrompt(_ObjectReader prompt, Set<String> seenPromptIds) {
   if (effectType != null && type != null && type != effectType) {
     prompt.problem('effect', '"$effect" needs a $effectType prompt, not $type');
   }
+  if (effect != null && !seenEffects.add(effect)) {
+    prompt.problem('effect', 'only one prompt can have the "$effect" effect');
+  }
+  if (type == 'text' && effect == null) {
+    prompt.problem(
+      'effect',
+      'a text prompt needs an effect; formulas read only numbers and switches',
+    );
+  }
+
+  return (id, type);
 }
 
 /// Reads typed values from a JSON object, recording problems as it goes.

@@ -152,6 +152,15 @@ void main() {
           'effect': 'lowScoreWins',
         },
         {'id': 'x', 'type': 'boolean', 'label': 'X', 'effect': 'doubleScores'},
+        {'id': 'note', 'type': 'text', 'label': 'Note'},
+        {
+          'id': 'game',
+          'type': 'text',
+          'label': 'Game',
+          'default': 'A game name much too long to fit under a title',
+          'effect': 'gameName',
+        },
+        {'id': 'game-two', 'type': 'text', 'label': 'Game', 'effect': 'gameName'},
       ];
     });
 
@@ -161,7 +170,10 @@ void main() {
         'prompts[0].default: must be a whole number',
         'prompts[1].id: duplicate prompt id "target"',
         'prompts[1].effect: "lowScoreWins" needs a boolean prompt, not integer',
-        'prompts[2].effect: unsupported value "doubleScores"; expected one of: lowScoreWins',
+        'prompts[2].effect: unsupported value "doubleScores"; expected one of: lowScoreWins, gameName',
+        startsWith('prompts[3].effect: a text prompt needs an effect'),
+        'prompts[4].default: must be at most 40 characters',
+        'prompts[5].effect: only one prompt can have the "gameName" effect',
       ]),
     );
   });

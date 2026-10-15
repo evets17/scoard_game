@@ -6,6 +6,7 @@ class ResolvedPresetOptions {
     required this.winnerRule,
     required this.promptAnswers,
     this.formulaValues = const {},
+    required this.gameName,
   });
 
   final WinnerRule winnerRule;
@@ -14,4 +15,8 @@ class ResolvedPresetOptions {
   /// Every prompt's answer, or its default, as formulas read it: by prompt
   /// id, with true as 1 and false as 0.
   final Map<String, int> formulaValues;
+
+  /// The name the game is played under: a game name prompt's answer, or
+  /// the template's name.
+  final String gameName;
 }

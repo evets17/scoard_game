@@ -10,6 +10,7 @@ import 'package:scoard_game/application/models/scoring/card_text.dart';
 import 'package:scoard_game/application/models/scoring/card_text_definition.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
+import 'package:scoard_game/application/models/scoring/preset_prompt_behavior.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_kind.dart';
 import 'package:scoard_game/application/models/scoring/scoring_model.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
@@ -211,7 +212,11 @@ class _ScenarioFile {
     for (final prompt in template.promptDefinitions) {
       final readByFormula = template.calculatedLines
           .any((line) => line.formula.contains('{${prompt.id}}'));
-      if (prompt.behavior == null && !readByFormula) {
+      // A game name changes what the game is called, not how it scores.
+      final affectsScores = readByFormula ||
+          (prompt.behavior != null &&
+              prompt.behavior != PresetPromptBehavior.gameName);
+      if (!affectsScores) {
         continue;
       }
       final exercised = scenarios.any(
@@ -351,6 +356,7 @@ class _Scenario {
     return switch (prompt.kind) {
       PresetPromptKind.boolean => value != (prompt.defaultBooleanValue ?? false),
       PresetPromptKind.integer => value != prompt.defaultIntegerValue,
+      PresetPromptKind.text => value != prompt.defaultTextValue,
     };
   }
 
@@ -384,6 +390,7 @@ class _Scenario {
         final valid = switch (definition.kind) {
           PresetPromptKind.boolean => entry.value is bool,
           PresetPromptKind.integer => entry.value is int,
+          PresetPromptKind.text => entry.value is String,
         };
         if (!valid) {
           prompts.fail(entry.key, 'must be a ${definition.kind.name}');

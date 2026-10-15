@@ -155,6 +155,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
       active: _step == _RoundScoreStep.roundEntry,
       child: AppScreenScaffold(
         title: title,
+        subtitle: _step == _RoundScoreStep.setup ? null : _gameName,
         actions: [
           if (_step == _RoundScoreStep.roundEntry && preset != null) ...[
             IconButton(
@@ -286,6 +287,13 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
         preset: _preset!,
         promptAnswers: _promptAnswers,
       ).formulaValues;
+
+  /// The name the game is played under, such as the name typed in for
+  /// Quick Score, or the template's name.
+  String get _gameName => resolvePresetOptions(
+        preset: _preset ?? widget.preset,
+        promptAnswers: _promptAnswers,
+      ).gameName;
 
   /// Each player's total from every saved round except the one on screen.
   Map<String, int> _priorRoundTotals() {
@@ -1190,7 +1198,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
       session: RoundScoreActiveSession(
         sessionId: sessionId,
         presetId: preset.id,
-        templateDisplayName: preset.displayName,
+        templateDisplayName: _gameName,
         promptAnswers: _promptAnswers,
         selectedPlayers: _selectedPlayers,
         savedRounds: List<RoundScoreRoundValues>.from(_savedRounds),

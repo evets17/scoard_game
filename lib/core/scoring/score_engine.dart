@@ -1,5 +1,6 @@
 import 'package:scoard_game/application/models/scoring/card_text.dart';
 import 'package:scoard_game/application/models/scoring/card_text_definition.dart';
+import 'package:scoard_game/application/models/scoring/preset_prompt_kind.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/application/models/sessions/quick_score_participant_values.dart';
 import 'package:scoard_game/core/formulas/formula_checker.dart';
@@ -42,7 +43,8 @@ class ScoreEngine {
       for (final line in preset.calculatedLines) line.id,
     };
     final promptIds = {
-      for (final prompt in preset.promptDefinitions) prompt.id,
+      for (final prompt in preset.promptDefinitions)
+        if (prompt.kind != PresetPromptKind.text) prompt.id,
     };
     final parsed = <String, Formula>{};
     final dependencies = <String, Set<String>>{};

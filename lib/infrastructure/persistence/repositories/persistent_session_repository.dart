@@ -214,6 +214,31 @@ class PersistentSessionRepository implements SessionRepository {
   }
 
   @override
+  Future<List<String>> loadRecentGameNames({
+    required String templateId,
+    int limit = 6,
+  }) async {
+    final lastUsedAt = await _appDatabase.loadLastCompletedAtByGameName(
+      templateId: templateId,
+    );
+
+    // Games in progress count too, as of their last save.
+    final activeSessions = await _appDatabase.loadActiveSessions(limit: 1000);
+    for (final session in activeSessions) {
+      if (session.templateId != templateId) {
+        continue;
+      }
+      final name = session.templateDisplayName;
+      final existing = lastUsedAt[name];
+      if (existing == null || session.updatedAt.isAfter(existing)) {
+        lastUsedAt[name] = session.updatedAt;
+      }
+    }
+
+    return mostRecentNames(lastUsedAt, limit);
+  }
+
+  @override
   Future<Map<String, DateTime>> loadLastPlayedAtByPlayerId() async {
     final lastPlayedAt = await _appDatabase.loadLastCompletedAtByPlayerId();
 

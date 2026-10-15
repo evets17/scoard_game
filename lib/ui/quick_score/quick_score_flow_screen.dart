@@ -416,6 +416,7 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
       active: _step == _QuickScoreStep.entry,
       child: AppScreenScaffold(
         title: title,
+        subtitle: _step == _QuickScoreStep.setup ? null : _gameName,
         actions: [
           if (_step == _QuickScoreStep.entry && preset != null) ...[
             PlayerSortMenuButton(
@@ -567,6 +568,13 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
         preset: _preset!,
         promptAnswers: _promptAnswers,
       ).formulaValues;
+
+  /// The name the game is played under, such as the name typed in for
+  /// Quick Score, or the template's name.
+  String get _gameName => resolvePresetOptions(
+        preset: _preset ?? widget.preset,
+        promptAnswers: _promptAnswers,
+      ).gameName;
 
   Map<String, int> _currentScores() {
     return ScoreEngine.of(_preset!).scores(
@@ -1069,7 +1077,7 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
       session: QuickScoreActiveSession(
         sessionId: sessionId,
         presetId: preset.id,
-        templateDisplayName: preset.displayName,
+        templateDisplayName: _gameName,
         promptAnswers: _promptAnswers,
         participantValues: participantValues,
         updatedAt: DateTime.now(),

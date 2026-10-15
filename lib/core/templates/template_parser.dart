@@ -178,10 +178,18 @@ PresetPromptDefinition _parsePrompt(Map<String, Object?> prompt) {
   final help = prompt['help'] as String?;
   final behavior = switch (prompt['effect']) {
     'lowScoreWins' => PresetPromptBehavior.winnerRuleLowScoreToggle,
+    'gameName' => PresetPromptBehavior.gameName,
     _ => null,
   };
 
   return switch (prompt['type']) {
+    'text' => PresetPromptDefinition.text(
+        id: id,
+        label: label,
+        promptText: help,
+        behavior: behavior,
+        defaultTextValue: prompt['default'] as String?,
+      ),
     'integer' => PresetPromptDefinition.integer(
         id: id,
         label: label,

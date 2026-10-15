@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
+import 'package:scoard_game/application/models/scoring/preset_prompt_behavior.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_kind.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/application/models/scoring/template_origin.dart';
+import 'package:scoard_game/core/templates/template_validator.dart';
 import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -14,11 +18,16 @@ class GamePageScreen extends StatefulWidget {
     required this.preset,
     required this.onStart,
     this.openLink = _openInBrowser,
+    this.loadRecentGameNames,
     super.key,
   });
 
   final ScoringPreset preset;
   final ValueChanged<List<PresetPromptAnswer>> onStart;
+
+  /// Names this game was played under before, most recent first, offered
+  /// as quick picks for a game name prompt.
+  final Future<List<String>> Function()? loadRecentGameNames;
 
   /// Opens a rules link. Returns false if it could not be opened.
   final Future<bool> Function(Uri uri) openLink;
@@ -59,6 +68,8 @@ String playerCountLabel(ScoringPreset preset) {
 class _GamePageScreenState extends State<GamePageScreen> {
   late final Map<String, bool> _booleanAnswers;
   late final Map<String, TextEditingController> _integerControllers;
+  late final Map<String, TextEditingController> _textControllers;
+  List<String> _recentGameNames = const [];
   String? _errorText;
 
   @override
@@ -76,11 +87,30 @@ class _GamePageScreenState extends State<GamePageScreen> {
             text: prompt.defaultIntegerValue?.toString() ?? '',
           ),
     };
+    _textControllers = {
+      for (final prompt in widget.preset.promptDefinitions)
+        if (prompt.kind == PresetPromptKind.text)
+          prompt.id: TextEditingController(text: prompt.defaultTextValue ?? ''),
+    };
+    if (widget.preset.promptDefinitions
+        .any((prompt) => prompt.behavior == PresetPromptBehavior.gameName)) {
+      unawaited(_loadRecentGameNames());
+    }
+  }
+
+  Future<void> _loadRecentGameNames() async {
+    final names = await widget.loadRecentGameNames?.call() ?? const [];
+    if (mounted) {
+      setState(() => _recentGameNames = names);
+    }
   }
 
   @override
   void dispose() {
     for (final controller in _integerControllers.values) {
+      controller.dispose();
+    }
+    for (final controller in _textControllers.values) {
       controller.dispose();
     }
     super.dispose();
@@ -212,8 +242,72 @@ class _GamePageScreenState extends State<GamePageScreen> {
                 ),
               ],
             ),
+          PresetPromptKind.text => _buildTextPrompt(context, prompt),
         },
       ),
+    );
+  }
+
+  /// A text answer, such as a game name. A game name offers the names this
+  /// game was played under before, so a regular game is one tap.
+  Widget _buildTextPrompt(BuildContext context, PresetPromptDefinition prompt) {
+    final theme = Theme.of(context);
+    final controller = _textControllers[prompt.id]!;
+    final defaultName = prompt.defaultTextValue?.trim() ?? '';
+    final suggestions = prompt.behavior == PresetPromptBehavior.gameName
+        ? _recentGameNames.where((name) => name != defaultName).toList()
+        : const <String>[];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(prompt.label, style: theme.textTheme.titleMedium),
+        if (prompt.promptText != null) ...[
+          const SizedBox(height: 6),
+          Text(prompt.promptText!, style: theme.textTheme.bodyMedium),
+        ],
+        const SizedBox(height: 12),
+        ListenableBuilder(
+          listenable: controller,
+          builder: (context, _) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: controller,
+                maxLength: maximumPromptTextLength,
+                textCapitalization: TextCapitalization.words,
+                decoration: InputDecoration(
+                  labelText: prompt.label,
+                  hintText: defaultName.isEmpty ? null : defaultName,
+                  counterText: '',
+                  suffixIcon: controller.text.isEmpty
+                      ? null
+                      : IconButton(
+                          onPressed: controller.clear,
+                          icon: const Icon(Icons.clear_rounded),
+                          tooltip: 'Clear',
+                        ),
+                ),
+              ),
+              if (suggestions.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    for (final name in suggestions)
+                      ChoiceChip(
+                        label: Text(name),
+                        selected: controller.text.trim() == name,
+                        onSelected: (_) => controller.text = name,
+                      ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -240,6 +334,14 @@ class _GamePageScreenState extends State<GamePageScreen> {
             PresetPromptAnswer.integer(
               id: prompt.id,
               value: parsedValue,
+            ),
+          );
+        case PresetPromptKind.text:
+          // Left blank, it falls back to the template's default.
+          answers.add(
+            PresetPromptAnswer.text(
+              id: prompt.id,
+              value: _textControllers[prompt.id]!.text.trim(),
             ),
           );
       }

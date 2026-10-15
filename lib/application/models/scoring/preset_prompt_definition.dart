@@ -9,7 +9,8 @@ class PresetPromptDefinition {
     this.behavior,
     this.defaultBooleanValue = false,
   })  : kind = PresetPromptKind.boolean,
-        defaultIntegerValue = null;
+        defaultIntegerValue = null,
+        defaultTextValue = null;
 
   const PresetPromptDefinition.integer({
     required this.id,
@@ -18,7 +19,18 @@ class PresetPromptDefinition {
     this.behavior,
     this.defaultIntegerValue,
   })  : kind = PresetPromptKind.integer,
-        defaultBooleanValue = null;
+        defaultBooleanValue = null,
+        defaultTextValue = null;
+
+  const PresetPromptDefinition.text({
+    required this.id,
+    required this.label,
+    this.promptText,
+    this.behavior,
+    this.defaultTextValue,
+  })  : kind = PresetPromptKind.text,
+        defaultBooleanValue = null,
+        defaultIntegerValue = null;
 
   final String id;
   final String label;
@@ -27,4 +39,5 @@ class PresetPromptDefinition {
   final PresetPromptBehavior? behavior;
   final bool? defaultBooleanValue;
   final int? defaultIntegerValue;
+  final String? defaultTextValue;
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_answer.dart';
+import 'package:scoard_game/application/models/scoring/preset_prompt_behavior.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
 import 'package:scoard_game/application/models/scoring/entered_line_definition.dart';
 import 'package:scoard_game/application/models/scoring/score_input_kind.dart';
@@ -174,5 +175,51 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('The rules link could not be opened.'), findsOneWidget);
+  });
+
+  testWidgets('a game name starts as the default and offers recent names', (
+    tester,
+  ) async {
+    List<PresetPromptAnswer>? started;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GamePageScreen(
+          preset: preset(
+            prompts: const [
+              PresetPromptDefinition.text(
+                id: 'game-name',
+                label: 'Game',
+                behavior: PresetPromptBehavior.gameName,
+                defaultTextValue: 'Round Score',
+              ),
+            ],
+          ),
+          loadRecentGameNames: () async => ['Catan', 'Round Score', 'Azul'],
+          onStart: (answers) => started = answers,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final field = find.byType(TextField);
+    expect(tester.widget<TextField>(field).controller!.text, 'Round Score');
+    // The default is already in the field, so it is not offered again.
+    expect(find.widgetWithText(ChoiceChip, 'Catan'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Azul'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Round Score'), findsNothing);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Catan'));
+    await tester.pump();
+    expect(tester.widget<TextField>(field).controller!.text, 'Catan');
+
+    await tester.tap(find.text('Start'));
+    await tester.pump();
+    expect(started!.single.textValue, 'Catan');
+
+    // Typed in, it is trimmed.
+    await tester.enterText(field, '  Ticket to Ride ');
+    await tester.tap(find.text('Start'));
+    await tester.pump();
+    expect(started!.single.textValue, 'Ticket to Ride');
   });
 }

@@ -102,6 +102,8 @@ class _ScoreGameScreenState extends State<ScoreGameScreen> {
       MaterialPageRoute<void>(
         builder: (_) => GamePageScreen(
           preset: preset,
+          loadRecentGameNames: () =>
+              widget.loadScoreGameChoices.recentGameNames(preset.id),
           onStart: (answers) {
             Navigator.of(context).pushReplacementNamed(
               routeName,

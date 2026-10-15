@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "quick-final-score-basic",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "name": "Quick Score",
   "subtitle": "One final score per player",
   "general": true,
@@ -10,6 +10,14 @@
   "scoringModel": "finalScore",
   "winner": "highestScore",
   "prompts": [
+    {
+      "id": "game-name",
+      "type": "text",
+      "label": "Game",
+      "help": "What are you playing? It shows while scoring and in your history.",
+      "default": "Quick Score",
+      "effect": "gameName"
+    },
     {
       "id": "low-score-wins",
       "type": "boolean",

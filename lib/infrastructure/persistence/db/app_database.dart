@@ -676,6 +676,50 @@ class AppDatabase extends _$AppDatabase {
         .go();
   }
 
+  /// When each name was last used for [templateId]'s finished games,
+  /// across both scoring styles.
+  Future<Map<String, DateTime>> loadLastCompletedAtByGameName({
+    required String templateId,
+  }) async {
+    final lastCompletedAt = <String, DateTime>{};
+
+    void record(String? name, DateTime? completedAt) {
+      if (name == null || completedAt == null) {
+        return;
+      }
+      final existing = lastCompletedAt[name];
+      if (existing == null || completedAt.isAfter(existing)) {
+        lastCompletedAt[name] = completedAt;
+      }
+    }
+
+    final quickLatest = quickScoreSessionsTable.completedAt.max();
+    final quickQuery = selectOnly(quickScoreSessionsTable)
+      ..addColumns([quickScoreSessionsTable.templateDisplayName, quickLatest])
+      ..where(quickScoreSessionsTable.templateId.equals(templateId))
+      ..groupBy([quickScoreSessionsTable.templateDisplayName]);
+    for (final row in await quickQuery.get()) {
+      record(
+        row.read(quickScoreSessionsTable.templateDisplayName),
+        row.read(quickLatest),
+      );
+    }
+
+    final roundLatest = roundScoreSessionsTable.completedAt.max();
+    final roundQuery = selectOnly(roundScoreSessionsTable)
+      ..addColumns([roundScoreSessionsTable.templateDisplayName, roundLatest])
+      ..where(roundScoreSessionsTable.templateId.equals(templateId))
+      ..groupBy([roundScoreSessionsTable.templateDisplayName]);
+    for (final row in await roundQuery.get()) {
+      record(
+        row.read(roundScoreSessionsTable.templateDisplayName),
+        row.read(roundLatest),
+      );
+    }
+
+    return lastCompletedAt;
+  }
+
   /// The latest finished game for each template, across both scoring styles.
   Future<Map<String, DateTime>> loadLastCompletedAtByTemplateId() async {
     final lastCompletedAt = <String, DateTime>{};

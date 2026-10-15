@@ -74,6 +74,9 @@ class MemorySessionRepository implements SessionRepository {
   final Map<String, DateTime> _lastCompletedAtByPlayerId = {};
   final Map<String, DateTime> _lastCompletedAtByTemplateId = {};
 
+  /// When each game name was last used for a finished game, by template.
+  final Map<String, Map<String, DateTime>> _gameNamesByTemplateId = {};
+
   @override
   Future<int> countCompletedSessions() async => _sessions.length;
 
@@ -133,6 +136,11 @@ class MemorySessionRepository implements SessionRepository {
     _quickActiveSessions.remove(result.sessionId);
     _roundActiveSessions.remove(result.sessionId);
     _recordTemplateUse(result.templateId, result.completedAt);
+    _recordGameName(
+      result.templateId,
+      result.templateDisplayName,
+      result.completedAt,
+    );
     _recordCompleted(
       result.playerResults.map((player) => player.playerId),
       result.completedAt,
@@ -171,6 +179,11 @@ class MemorySessionRepository implements SessionRepository {
     _quickActiveSessions.remove(result.sessionId);
     _roundActiveSessions.remove(result.sessionId);
     _recordTemplateUse(result.templateId, result.completedAt);
+    _recordGameName(
+      result.templateId,
+      result.templateDisplayName,
+      result.completedAt,
+    );
     _recordCompleted(
       result.playerResults.map((player) => player.playerId),
       result.completedAt,
@@ -229,6 +242,40 @@ class MemorySessionRepository implements SessionRepository {
     }
 
     return lastPlayedAt;
+  }
+
+  @override
+  Future<List<String>> loadRecentGameNames({
+    required String templateId,
+    int limit = 6,
+  }) async {
+    final lastUsedAt = {...?_gameNamesByTemplateId[templateId]};
+    void record(String name, DateTime usedAt) {
+      final existing = lastUsedAt[name];
+      if (existing == null || usedAt.isAfter(existing)) {
+        lastUsedAt[name] = usedAt;
+      }
+    }
+
+    for (final session in _quickActiveSessions.values) {
+      if (session.presetId == templateId) {
+        record(session.templateDisplayName, session.updatedAt);
+      }
+    }
+    for (final session in _roundActiveSessions.values) {
+      if (session.presetId == templateId) {
+        record(session.templateDisplayName, session.updatedAt);
+      }
+    }
+    return mostRecentNames(lastUsedAt, limit);
+  }
+
+  void _recordGameName(String templateId, String name, DateTime usedAt) {
+    final names = _gameNamesByTemplateId.putIfAbsent(templateId, () => {});
+    final existing = names[name];
+    if (existing == null || usedAt.isAfter(existing)) {
+      names[name] = usedAt;
+    }
   }
 
   void _recordTemplateUse(String templateId, DateTime completedAt) {

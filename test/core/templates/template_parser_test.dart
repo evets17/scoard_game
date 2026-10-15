@@ -31,7 +31,12 @@ void main() {
     expect(preset.minimumPlayers, 2);
     expect(preset.winnerRule, WinnerRule.highestScoreWins);
 
-    final prompt = preset.promptDefinitions.single;
+    final [gameName, prompt] = preset.promptDefinitions;
+    expect(gameName.id, 'game-name');
+    expect(gameName.kind, PresetPromptKind.text);
+    expect(gameName.behavior, PresetPromptBehavior.gameName);
+    expect(gameName.defaultTextValue, name);
+
     expect(prompt.id, 'low-score-wins');
     expect(prompt.kind, PresetPromptKind.boolean);
     expect(prompt.label, 'Low Score Wins');

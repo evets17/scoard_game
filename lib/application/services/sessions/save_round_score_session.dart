@@ -53,6 +53,7 @@ class SaveRoundScoreSession {
       completedAt: completedAt,
       winnerRule: resolvedOptions.winnerRule,
       options: resolvedOptions.formulaValues,
+      gameName: resolvedOptions.gameName,
       rounds: rounds,
     );
 
