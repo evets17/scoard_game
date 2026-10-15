@@ -39,6 +39,7 @@ import 'package:scoard_game/ui/players/player_reorderable_list.dart';
 import 'package:scoard_game/ui/players/player_sort_menu_button.dart';
 import 'package:scoard_game/ui/settings/stay_awake_controller.dart';
 import 'package:scoard_game/ui/score_input/numeric_score_field.dart';
+import 'package:scoard_game/ui/score_sheet/score_sheet_grid.dart';
 import 'package:scoard_game/ui/score_input/score_entry_mode.dart';
 
 class RoundScoreFlowScreen extends StatefulWidget {
@@ -97,6 +98,9 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
   int _currentRoundNumber = 1;
   AppLifecycleListener? _lifecycleListener;
   PlayerSortMode _sortMode = PlayerSortMode.playOrder;
+
+  /// Whether the sheet view is showing instead of player cards.
+  bool _showSheet = false;
   Map<String, int> _scoreSortSnapshot = const {};
 
   /// Value picker tiles behind each entry on screen, by player id.
@@ -151,6 +155,15 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
         title: title,
         actions: [
           if (_step == _RoundScoreStep.roundEntry && preset != null) ...[
+            IconButton(
+              onPressed: _toggleSheet,
+              icon: Icon(
+                _showSheet
+                    ? Icons.view_agenda_outlined
+                    : Icons.table_chart_outlined,
+              ),
+              tooltip: _showSheet ? 'Show player cards' : 'Show sheet',
+            ),
             PlayerSortMenuButton(
               sortMode: _sortMode,
               onSelected: _setSortMode,
@@ -223,6 +236,9 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
                   onPreviousRound: _goToPreviousRound,
                   onCompleteRound: _completeRound,
                   onGameOver: _completeGame,
+                  showSheet: _showSheet,
+                  sheetCells: _showSheet ? _sheetCells() : const {},
+                  onSelectRound: _selectRound,
                 ),
               _RoundScoreStep.result => _RoundScoreResultStep(
                   result: _result!,
@@ -234,6 +250,11 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
         ),
       ),
     );
+  }
+
+  void _toggleSheet() {
+    setState(() => _showSheet = !_showSheet);
+    unawaited(_autosaveCurrentSession());
   }
 
   void _setSortMode(PlayerSortMode sortMode) {
@@ -673,7 +694,17 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
   }
 
   Future<void> _goToPreviousRound() async {
-    if (_currentRoundNumber <= 1) {
+    if (_currentRoundNumber > 1) {
+      await _selectRound(_currentRoundNumber - 1);
+    }
+  }
+
+  /// Makes [roundNumber] the selected round, keeping what was entered in the
+  /// one on screen. Used by Previous Round and by tapping a sheet row.
+  Future<void> _selectRound(int roundNumber) async {
+    if (roundNumber == _currentRoundNumber ||
+        roundNumber < 1 ||
+        roundNumber > _lastRoundNumber) {
       return;
     }
 
@@ -683,12 +714,54 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
     }
 
     setState(() {
-      _currentRoundNumber -= 1;
+      _currentRoundNumber = roundNumber;
       _loadRoundIntoInputs(_currentRoundNumber);
       _scoreSortSnapshot = _currentTotals();
     });
 
     unawaited(_autosaveCurrentSession());
+  }
+
+  /// The furthest round reached: the last saved one, or the one on screen.
+  int get _lastRoundNumber => [
+        _currentRoundNumber,
+        for (final round in _savedRounds) round.roundNumber,
+      ].reduce((a, b) => a > b ? a : b);
+
+  /// Every round's cells for the sheet view, by round number and then
+  /// player id. The round on screen comes from what is entered so far.
+  Map<int, Map<String, ScoreSheetCell>> _sheetCells() {
+    final engine = ScoreEngine.of(_preset!);
+    final cells = <int, Map<String, ScoreSheetCell>>{};
+    for (var roundNumber = 1; roundNumber <= _lastRoundNumber; roundNumber++) {
+      final isCurrent = roundNumber == _currentRoundNumber;
+      final participants = isCurrent
+          ? _currentRoundParticipants()
+          : _findSavedRound(roundNumber)?.participantValues ?? const [];
+      final scores = engine.scores(
+        participants,
+        roundNumber: roundNumber,
+        options: _formulaOptions,
+      );
+      final texts = engine.cardTexts(
+        participants,
+        roundNumber: roundNumber,
+        options: _formulaOptions,
+      );
+      cells[roundNumber] = {
+        for (final participant in participants)
+          participant.playerId: isCurrent &&
+                  (_scoreControllers[participant.playerId]?.text.trim() ?? '')
+                      .isEmpty
+              ? ScoreSheetCell.empty
+              : ScoreSheetCell(
+                  score: scores[participant.playerId],
+                  scoreLabel: texts[participant.playerId]?.scoreLabel,
+                  scoreSubLabel: texts[participant.playerId]?.scoreSubLabel,
+                ),
+      };
+    }
+    return cells;
   }
 
   Future<void> _completeGame() async {
@@ -975,6 +1048,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
     }
 
     _sortMode = session.sortMode;
+    _showSheet = session.showSheet;
     _playerColors.addAll(session.playerColors);
     _scoreSortSnapshot = _currentTotals();
     _step = _RoundScoreStep.roundEntry;
@@ -1040,6 +1114,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
         currentRoundNumber: _currentRoundNumber,
         sortMode: _sortMode,
         playerColors: Map.of(_playerColors),
+        showSheet: _showSheet,
         updatedAt: DateTime.now(),
       ),
     );
@@ -1266,6 +1341,9 @@ class _RoundScoreEntryStep extends StatelessWidget {
     required this.onPreviousRound,
     required this.onCompleteRound,
     required this.onGameOver,
+    required this.showSheet,
+    required this.sheetCells,
+    required this.onSelectRound,
   });
 
   final int currentRoundNumber;
@@ -1308,6 +1386,49 @@ class _RoundScoreEntryStep extends StatelessWidget {
   final VoidCallback onCompleteRound;
   final VoidCallback onGameOver;
 
+  /// Whether to show the sheet view instead of player cards.
+  final bool showSheet;
+
+  /// Every round's cells for the sheet view, by round number and player id.
+  final Map<int, Map<String, ScoreSheetCell>> sheetCells;
+  final ValueChanged<int> onSelectRound;
+
+  /// The sheet view: a scorepad of every round so far, the selected round
+  /// highlighted, with that round's badges by each player's name.
+  Widget _buildSheet(List<QuickScoreAvailablePlayer> displayedPlayers) {
+    final roundNumbers = sheetCells.keys.toList()..sort();
+    return ScoreSheetGrid(
+      players: [
+        for (final player in displayedPlayers)
+          ScoreSheetPlayer(
+            id: player.id,
+            name: player.displayName,
+            color: playerColors[player.id],
+            total: (priorRoundTotals[player.id] ?? 0) +
+                (currentRoundScores[player.id] ?? 0),
+            badges: [
+              for (final marker in markers)
+                if (activeMarkers[player.id]?.contains(marker.id) ?? false)
+                  CardText(text: marker.badge, color: marker.color),
+              ...?cardTexts[player.id]?.playerBadges,
+            ],
+          ),
+      ],
+      rows: [
+        for (final roundNumber in roundNumbers)
+          ScoreSheetRow(
+            label: '$roundNumber',
+            selected: roundNumber == currentRoundNumber,
+            cells: [
+              for (final player in displayedPlayers)
+                sheetCells[roundNumber]?[player.id] ?? ScoreSheetCell.empty,
+            ],
+          ),
+      ],
+      onRowTap: (index) => onSelectRound(roundNumbers[index]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
 
@@ -1336,7 +1457,9 @@ class _RoundScoreEntryStep extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Expanded(
-          child: LayoutBuilder(
+          child: showSheet
+              ? _buildSheet(displayedPlayers)
+              : LayoutBuilder(
             builder: (context, constraints) {
               final compact = NumericScoreField.shouldUseCompact(
                 context,

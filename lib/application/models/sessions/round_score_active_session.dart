@@ -18,6 +18,7 @@ class RoundScoreActiveSession {
     required this.updatedAt,
     this.sortMode = PlayerSortMode.playOrder,
     this.playerColors = const {},
+    this.showSheet = false,
   });
 
   final String sessionId;
@@ -33,6 +34,9 @@ class RoundScoreActiveSession {
 
   /// Colours given to players for this game, by player id.
   final Map<String, PlayerColor> playerColors;
+
+  /// Whether the game shows the sheet view rather than player cards.
+  final bool showSheet;
 
   String get participantLabel =>
       selectedPlayers.map((player) => player.displayName).join(', ');
@@ -73,6 +77,7 @@ class RoundScoreActiveSession {
       updatedAt: updatedAt ?? this.updatedAt,
       sortMode: sortMode,
       playerColors: playerColors,
+      showSheet: showSheet,
     );
   }
 
@@ -82,6 +87,7 @@ class RoundScoreActiveSession {
       'presetId': presetId,
       'templateDisplayName': templateDisplayName,
       'sortMode': sortMode.name,
+      if (showSheet) 'showSheet': true,
       if (playerColors.isNotEmpty)
         'playerColors': PlayerColor.mapToJson(playerColors),
         'promptAnswers': promptAnswers
@@ -170,6 +176,7 @@ class RoundScoreActiveSession {
       currentRoundNumber: json['currentRoundNumber']! as int,
       updatedAt: DateTime.now(),
       sortMode: PlayerSortMode.fromStorage(json['sortMode']),
+      showSheet: (json['showSheet'] as bool?) ?? false,
       playerColors: PlayerColor.mapFromJson(json['playerColors']),
     );
   }
