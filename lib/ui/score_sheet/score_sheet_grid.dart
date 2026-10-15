@@ -63,6 +63,8 @@ class ScoreSheetRow {
     this.kind = ScoreSheetRowKind.scores,
     this.editable = true,
     this.style = SheetRowStyle.plain,
+    this.image,
+    this.imageOnly = false,
   });
 
   const ScoreSheetRow.heading(
@@ -71,7 +73,9 @@ class ScoreSheetRow {
   })  : cells = const [],
         selected = false,
         kind = ScoreSheetRowKind.heading,
-        editable = false;
+        editable = false,
+        image = null,
+        imageOnly = false;
 
   /// Shown in the fixed first column, such as the round number or "Bear".
   final String label;
@@ -84,6 +88,13 @@ class ScoreSheetRow {
   /// Whether tapping a cell enters a value. False for calculated lines.
   final bool editable;
   final SheetRowStyle style;
+
+  /// A picture for the line, shown in the label column, such as a bear.
+  final ImageProvider? image;
+
+  /// Show only [image], not the label text, to keep the column narrow. The
+  /// label is still read out by screen readers.
+  final bool imageOnly;
 }
 
 /// The sheet view: rows down, players across, totals at the bottom.
@@ -298,10 +309,8 @@ class _ScoreSheetGridState extends State<ScoreSheetGrid> {
                   ),
                 ),
               ),
-              child: Text(
-                row.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              child: _LineLabel(
+                row: row,
                 style: _labelTextStyle(theme).copyWith(
                   fontWeight: style.bold ? FontWeight.w900 : FontWeight.w700,
                   color: row.selected
@@ -507,9 +516,15 @@ double _labelColumnWidth(BuildContext context, ScoreSheetGrid grid) {
   for (final row in grid.rows) {
     widest = math.max(
       widest,
-      row.kind == ScoreSheetRowKind.heading
-          ? width(row.label.toUpperCase(), _headingTextStyle(theme))
-          : width(row.label, _labelTextStyle(theme)),
+      switch (row) {
+        ScoreSheetRow(kind: ScoreSheetRowKind.heading) =>
+          width(row.label.toUpperCase(), _headingTextStyle(theme)),
+        ScoreSheetRow(image: _?, imageOnly: true) => _labelImageSize,
+        ScoreSheetRow(image: _?) => _labelImageSize +
+            _labelImageGap +
+            width(row.label, _labelTextStyle(theme)),
+        _ => width(row.label, _labelTextStyle(theme)),
+      },
     );
   }
   // Round numbers stay centred in the narrow column.
@@ -825,6 +840,49 @@ class _Cell extends StatelessWidget {
         ),
       ),
       child: content,
+    );
+  }
+}
+
+/// How big a line's picture is in the label column.
+const double _labelImageSize = 28;
+const double _labelImageGap = 6;
+
+/// A row's label: its text, its picture and text, or just its picture.
+class _LineLabel extends StatelessWidget {
+  const _LineLabel({required this.row, required this.style});
+
+  final ScoreSheetRow row;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Text(
+      row.label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: style,
+    );
+    final image = row.image;
+    if (image == null) {
+      return text;
+    }
+    final picture = Image(
+      image: image,
+      width: _labelImageSize,
+      height: _labelImageSize,
+      fit: BoxFit.contain,
+      semanticLabel: row.label,
+    );
+    if (row.imageOnly) {
+      return Tooltip(message: row.label, child: picture);
+    }
+    return Row(
+      children: [
+        ExcludeSemantics(child: picture),
+        const SizedBox(width: _labelImageGap),
+        Flexible(child: text),
+      ],
     );
   }
 }

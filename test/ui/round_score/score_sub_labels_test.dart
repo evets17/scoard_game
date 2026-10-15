@@ -82,15 +82,18 @@ void main() {
       tester.getSize(rowFor('Jules')).height,
     );
 
-    // Changing the score another way drops the tiles, and the sub label.
+    // Changing the score another way (adding to it) drops the tiles, and
+    // the sub label. The sheet reopens with the Rack-O tile picked; adding
+    // a 5 makes 80 to add.
+    await tester.tap(inRow('Avery', '75').first);
+    await tester.pumpAndSettle();
     await tester.tap(
-      find.descendant(
-        of: rowFor('Avery'),
-        matching: find.byTooltip('Increase score'),
-      ),
+      find.ancestor(of: find.text('5'), matching: find.byType(InkWell)).last,
     );
     await tester.pump();
+    await tester.tap(find.text('Adjust -> 155'));
+    await tester.pumpAndSettle();
     expect(inRow('Avery', 'Rack-o'), findsNothing);
-    expect(inRow('Avery', '76'), findsWidgets);
+    expect(inRow('Avery', '155'), findsWidgets);
   });
 }

@@ -23,6 +23,7 @@ import 'package:scoard_game/application/services/sessions/save_round_score_activ
 import 'package:scoard_game/application/services/sessions/save_round_score_session.dart';
 import 'package:scoard_game/application/services/sessions/save_quick_score_session.dart';
 import 'package:scoard_game/application/services/templates/online_templates.dart';
+import 'package:scoard_game/application/services/templates/template_images.dart';
 import 'package:scoard_game/core/templates/template_catalog.dart';
 import 'package:scoard_game/ui/settings/stay_awake_controller.dart';
 import 'package:scoard_game/ui/theme/app_theme_controller.dart';
@@ -37,6 +38,7 @@ class AppEnvironment {
     required this.stayAwakeController,
     required this.templateCatalog,
     required this.onlineTemplates,
+    required this.templateImages,
     required this.loadScoreGameChoices,
     required this.loadPlayersScreenModel,
     required this.createPlayer,
@@ -67,6 +69,7 @@ class AppEnvironment {
   final StayAwakeController stayAwakeController;
   final TemplateCatalog templateCatalog;
   final OnlineTemplates onlineTemplates;
+  final TemplateImages templateImages;
   final LoadScoreGameChoices loadScoreGameChoices;
   final LoadPlayersScreenModel loadPlayersScreenModel;
   final CreatePlayer createPlayer;

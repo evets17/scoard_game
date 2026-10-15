@@ -90,8 +90,10 @@ ScoringPreset parseTemplateJson(
           SheetLayoutItem.line(
             item['id']! as String,
             style: _parseRowStyle(item['style']),
+            image: item['image'] as String?,
           ),
     ],
+    lineLabels: _parseLabelDisplay(json['lineLabels']) ?? LineLabelDisplay.text,
     declaredEntryOrder: switch (json['entryOrder']) {
       'byPlayer' => SheetEntryOrder.byPlayer,
       'byLine' => SheetEntryOrder.byLine,
@@ -209,5 +211,9 @@ SheetRowStyle _parseRowStyle(Object? raw) {
     shade: raw['shade'] as String?,
     bold: (raw['bold'] as bool?) ?? false,
     ruleAbove: (raw['ruleAbove'] as bool?) ?? false,
+    label: _parseLabelDisplay(raw['label']),
   );
 }
+
+LineLabelDisplay? _parseLabelDisplay(Object? raw) =>
+    raw is String ? LineLabelDisplay.values.asNameMap()[raw] : null;

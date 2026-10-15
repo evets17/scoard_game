@@ -14,6 +14,7 @@ import 'package:scoard_game/application/services/sessions/save_quick_score_activ
 import 'package:scoard_game/application/services/sessions/save_quick_score_session.dart';
 import 'package:scoard_game/application/services/sessions/save_round_score_active_session.dart';
 import 'package:scoard_game/application/services/sessions/save_round_score_session.dart';
+import 'package:scoard_game/application/services/templates/template_images.dart';
 import 'package:scoard_game/core/templates/template_catalog.dart';
 import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
 import 'package:scoard_game/ui/quick_score/quick_score_flow_screen.dart';
@@ -37,6 +38,7 @@ class ActiveGamesScreen extends StatefulWidget {
     required this.stayAwakeController,
     required this.rememberSetupPlayerGroup,
     required this.templateCatalog,
+    this.templateImages,
     super.key,
   });
 
@@ -55,6 +57,9 @@ class ActiveGamesScreen extends StatefulWidget {
   final StayAwakeController stayAwakeController;
   final RememberSetupPlayerGroup rememberSetupPlayerGroup;
   final TemplateCatalog templateCatalog;
+
+  /// Pictures for score sheet line labels.
+  final TemplateImages? templateImages;
 
   @override
   State<ActiveGamesScreen> createState() => _ActiveGamesScreenState();
@@ -200,6 +205,7 @@ class _ActiveGamesScreenState extends State<ActiveGamesScreen> {
           saveQuickScoreActiveSession: widget.saveQuickScoreActiveSession,
           deleteActiveSession: widget.deleteActiveSession,
           initialActiveSession: activeSession,
+          templateImages: widget.templateImages,
         );
       case ActiveSessionKind.roundScore:
         final activeSession = await widget.loadRoundScoreActiveSession(

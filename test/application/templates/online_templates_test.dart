@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scoard_game/application/models/scoring/template_origin.dart';
 import 'package:scoard_game/application/services/templates/online_templates.dart';
+import 'package:scoard_game/application/services/templates/template_images.dart';
 import 'package:scoard_game/core/templates/template_catalog.dart';
 import 'package:scoard_game/infrastructure/memory/memory_online_template_cache.dart';
 import 'package:scoard_game/infrastructure/memory/memory_template_source_preferences.dart';
@@ -30,6 +32,7 @@ void main() {
   late FakeTemplateDownloader downloader;
   late MemoryOnlineTemplateCache cache;
   late MemoryTemplateSourcePreferences preferences;
+  late TemplateImages images;
   var clock = DateTime(2026, 10, 13, 9);
 
   OnlineTemplates create({bool enabled = true}) {
@@ -39,6 +42,7 @@ void main() {
       cache: cache,
       preferences: preferences,
       enabledByDefault: enabled,
+      images: images,
       now: () => clock,
     );
   }
@@ -48,6 +52,7 @@ void main() {
     downloader = FakeTemplateDownloader();
     cache = MemoryOnlineTemplateCache();
     preferences = MemoryTemplateSourcePreferences();
+    images = TemplateImages();
     clock = DateTime(2026, 10, 13, 9);
   });
 
@@ -222,5 +227,35 @@ void main() {
       normalizeTemplateUrl(' https://example.com/a?x=1#y '),
       'https://example.com/a/',
     );
+  });
+
+  test('pictures come with online templates and are kept offline', () async {
+    String withPicture(String picture) => skyjo((json) {
+          ((json['lines']! as List<Object?>).first! as Map<String, Object?>)
+              ['image'] = picture;
+        });
+    final bear = Uint8List.fromList([0x89, 0x50, 0x4E, 0x47, 1]);
+    downloader
+      ..files = {'skyjo.json': withPicture('bear.png')}
+      ..images = {'bear.png': bear};
+    final online = create();
+    await online.loadSaved();
+    await online.checkNow();
+
+    expect(downloader.imageRequests.single, {'bear.png'});
+    expect(images.online('bear.png'), bear);
+    expect(await cache.loadImages(), {'bear.png': bear});
+
+    // A picture that fails keeps its last good copy and is reported.
+    downloader.images = {};
+    await online.checkNow();
+    expect(images.online('bear.png'), bear);
+    expect(online.status!.problems['images/bear.png'], isNotEmpty);
+
+    // A picture no template uses any more is dropped.
+    downloader.files = {'skyjo.json': skyjo()};
+    await online.checkNow();
+    expect(images.online('bear.png'), isNull);
+    expect(await cache.loadImages(), isEmpty);
   });
 }

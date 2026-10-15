@@ -29,6 +29,7 @@ import 'package:scoard_game/application/services/sessions/save_round_score_activ
 import 'package:scoard_game/application/services/sessions/save_round_score_session.dart';
 import 'package:scoard_game/application/services/sessions/save_quick_score_session.dart';
 import 'package:scoard_game/application/services/templates/online_templates.dart';
+import 'package:scoard_game/application/services/templates/template_images.dart';
 import 'package:scoard_game/bootstrap/app_environment.dart';
 import 'package:scoard_game/core/templates/template_catalog.dart';
 import 'package:scoard_game/infrastructure/memory/memory_game_repository.dart';
@@ -62,6 +63,13 @@ class AppBootstrap {
     await Future<void>.microtask(() {});
 
     final catalog = templateCatalog ?? await _loadTemplateCatalog();
+    // Tests give their own catalog and skip loading assets, so their sheets
+    // show line labels as text.
+    final templateImages = TemplateImages(
+      bundled: templateCatalog == null
+          ? await loadBundledTemplateImageNames(rootBundle)
+          : const {},
+    );
     final OnlineTemplateCache onlineTemplateCache;
     final TemplateSourcePreferences sourcePreferences;
     final gameRepository = MemoryGameRepository.seeded();
@@ -113,6 +121,7 @@ class AppBootstrap {
       cache: onlineTemplateCache,
       preferences: sourcePreferences,
       enabledByDefault: usePersistentStorage && !kDebugMode,
+      images: templateImages,
     );
     await onlineTemplates.loadSaved();
 
@@ -128,6 +137,7 @@ class AppBootstrap {
       stayAwakeController: stayAwakeController,
       templateCatalog: catalog,
       onlineTemplates: onlineTemplates,
+      templateImages: templateImages,
       loadScoreGameChoices: LoadScoreGameChoices(
         templateCatalog: catalog,
         sessionRepository: sessionRepository,

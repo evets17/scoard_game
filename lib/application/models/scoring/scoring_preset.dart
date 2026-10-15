@@ -32,6 +32,7 @@ class ScoringPreset {
     this.scoreLineId,
     this.sheetLayout = const [],
     this.declaredEntryOrder,
+    this.lineLabels = LineLabelDisplay.text,
     this.origin = TemplateOrigin.bundled,
   });
 
@@ -104,6 +105,15 @@ class ScoringPreset {
       (enteredLines.length > 1
           ? SheetEntryOrder.byLine
           : SheetEntryOrder.byPlayer);
+
+  /// What line labels show on the sheet, unless a line's style says.
+  final LineLabelDisplay lineLabels;
+
+  /// Every picture the sheet's lines use.
+  Set<String> get lineImages => {
+        for (final item in sheetLayout)
+          if (item.image case final String image) image,
+      };
 
   /// Whether this sheet has more than one value to enter per player.
   bool get hasSeveralEnteredLines => enteredLines.length > 1;

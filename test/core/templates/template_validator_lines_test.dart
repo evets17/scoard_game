@@ -405,4 +405,55 @@ void main() {
       ['lines[1].id: "double" is already the name of a prompt or built-in value'],
     );
   });
+
+  test('line pictures and what labels show', () {
+    final template = sheet(
+      lines: [
+        {'id': 'bear', 'label': 'Bear', 'image': 'cascadia_bear.png'},
+        {
+          'id': 'bear-bonus',
+          'label': '+',
+          'image': 'cascadia_bear.png',
+          'style': {'label': 'imageAndText'},
+        },
+        calculated('scored', '{bear} + {bear-bonus}'),
+      ],
+      scoringModel: 'finalScore',
+    )..['lineLabels'] = 'image';
+    expect(problemsFor(template), isEmpty);
+
+    final preset = loadTemplateCatalog({
+      'test-game.json': jsonEncode(template),
+    }).catalog.byId('test-game');
+    expect(preset.lineLabels, LineLabelDisplay.image);
+    expect(preset.lineImages, {'cascadia_bear.png'});
+    final bonus =
+        preset.sheetLayout.firstWhere((item) => item.lineId == 'bear-bonus');
+    expect(bonus.style.label, LineLabelDisplay.imageAndText);
+
+    final bad = sheet(
+      lines: [
+        {'heading': 'Wildlife', 'image': 'cascadia_bear.png'},
+        {'id': 'bear', 'label': 'Bear', 'image': '../secret.png'},
+        {
+          'id': 'elk',
+          'label': 'Elk',
+          'image': 'Elk.GIF',
+          'style': {'label': 'picture'},
+        },
+        calculated('scored', '{bear} + {elk}'),
+      ],
+      scoringModel: 'finalScore',
+    )..['lineLabels'] = 'icons';
+    expect(
+      problemsFor(bad),
+      containsAll([
+        startsWith('lineLabels: unsupported value "icons"'),
+        'lines[0].image: unknown key',
+        startsWith('lines[1].image: "../secret.png" must be a file name'),
+        startsWith('lines[2].image: "Elk.GIF" must be a file name'),
+        startsWith('lines[2].style.label: unsupported value "picture"'),
+      ]),
+    );
+  });
 }

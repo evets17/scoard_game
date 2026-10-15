@@ -120,6 +120,7 @@ Players enter each side's inning points (with the Bags picker or the usual score
 | `lines` | yes | array | The score sheet. See [Lines](#lines). |
 | `score` | with several entered lines | string | The line that is each player's score. See [`score`](#score). |
 | `entryOrder` | no | string | Which cell the entry sheet's Next opens. See [Sections and entry order](#sections-and-entry-order). |
+| `lineLabels` | no | string | What line labels show: `text` (default), `image`, or `imageAndText`. See [Line pictures](#line-pictures). |
 | `scoreLabels` | no | array | Text shown instead of the score. See [Player Card](#player-card). |
 | `scoreSubLabels` | no | array | Text shown under the score. See Player Card. |
 | `playerBadges` | no | array | Chips shown after the player's name. See Player Card. |
@@ -201,6 +202,31 @@ Rules:
 
 Lines without headings work as before: a sheet doesn't need sections.
 
+#### Line pictures
+
+A line can have a picture, shown in the sheet's first column:
+
+```json
+"lineLabels": "image",
+"lines": [
+  { "id": "bear", "label": "Bear", "image": "cascadia_bear.png", "entry": { "tapToEdit": true } },
+  { "id": "bear-bonus", "label": "+", "image": "cascadia_bear.png",
+    "entry": { "tapToEdit": true }, "style": { "label": "imageAndText" } }
+]
+```
+
+| Key | Where | Rules |
+|---|---|---|
+| `image` | any line | A file name in `assets/templates/images/`: lowercase letters, digits, `_` and `-`, ending `.png`, `.jpg`, `.jpeg`, or `.webp`. Prefix it with the game, such as `cascadia_bear.png`, since every template shares the folder. |
+| `lineLabels` | top level | What labels show: `text` (default), `image` (just the picture, keeping the column narrow), or `imageAndText` (the picture, then the label). |
+| `style.label` | any line | The same choice for one line, overriding `lineLabels`. Cascadia's bonus rows use `imageAndText` with the label `"+"`. |
+
+* A line without a picture, or whose picture can't be found, shows its label text, so a sheet never shows a blank.
+* With `image`, the label is still read out by screen readers and shown on a long press, so keep it meaningful.
+* Pictures are small icons, shown at 28 points; about 60 to 120 pixels square is plenty. A downloaded picture over 1 MB is refused.
+* The test run fails if a template names a picture that isn't in `assets/templates/images/`.
+* Online templates download their pictures from `images/` next to the templates, and keep them for offline use. A picture that fails to download keeps its last good copy and is listed under problems in Settings.
+
 #### `style`
 
 How a row looks on the score sheet. All keys are optional.
@@ -210,6 +236,7 @@ How a row looks on the score sheet. All keys are optional.
 | `shade` | `#RRGGBB` | Tints the row, its label and every player's cell. The template picks the colour; the app picks how strong it is (about 30% on dark themes, 20% on light), so text stays readable. The selected round's highlight is drawn instead of the shade. |
 | `bold` | boolean | Bold label and values. |
 | `ruleAbove` | boolean | A heavier line above the row, such as before a subtotal. |
+| `label` | string | What this line's label shows, overriding the sheet's `lineLabels`: `text`, `image`, or `imageAndText`. |
 
 Style only changes how the row looks: values still come from what is entered or from the formula. Colour should never be the only way to tell rows apart, so keep the labels meaningful. Cascadia shades each habitat and its bonus in the habitat's colour:
 
@@ -633,7 +660,7 @@ The app can load templates from a URL instead of only those built in (Settings >
 
 To publish a change:
 
-1. Edit the template and its scenario file. A new template also goes in `index.json`.
+1. Edit the template and its scenario file. A new template also goes in `index.json`; new line pictures go in `assets/templates/images/`.
 2. Bump `version`: patch for wording, minor for scoring changes. An online copy with the same version as the built-in one is used, so a local edit without a bump is hidden by the older online copy; the version shows on the game page ("Template v2.1.0 · online"), which confirms which copy a phone has.
 3. Run `flutter test`. The validator, scenarios, and a check that `index.json` matches the folder must pass.
 4. Commit and push to `main`.

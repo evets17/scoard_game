@@ -19,6 +19,9 @@ HttpTemplateDownloader downloaderServing(
     client: MockClient((request) async {
       final name = request.url.pathSegments.last;
       final body = files[name];
+      if (body is List<int>) {
+        return http.Response.bytes(body, 200);
+      }
       if (body is Future<String>) {
         return http.Response.bytes(utf8.encode(await body), 200);
       }
@@ -91,5 +94,20 @@ void main() {
     ).download(baseUrl);
 
     expect(download.failures, {'slow.json': 'timed out'});
+  });
+
+  test('pictures download from images/, and non-pictures are refused', () async {
+    final png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3];
+    final download = await downloaderServing({
+      'bear.png': png,
+      'fake.png': utf8.encode('<html>not a picture</html>'),
+    }).downloadImages(baseUrl, {'bear.png', 'fake.png', 'gone.png'});
+
+    expect(download.images.keys, ['bear.png']);
+    expect(download.images['bear.png'], png);
+    expect(download.failures, {
+      'fake.png': 'not a PNG, JPEG, or WebP picture',
+      'gone.png': 'HTTP 404',
+    });
   });
 }

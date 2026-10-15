@@ -12,6 +12,13 @@ import 'package:scoard_game/core/scoring/card_text_values.dart';
 
 const supportedTemplateSchemaVersions = {1};
 
+/// What a line's label can show: `lineLabels`, and a line's `style.label`.
+const templateLineLabelDisplays = {'text', 'image', 'imageAndText'};
+
+/// A line picture's file name, in the templates' `images` folder.
+final templateImagePattern =
+    RegExp(r'^[a-z0-9]+([_-][a-z0-9]+)*\.(png|jpg|jpeg|webp)$');
+
 const templateScoringModels = {'finalScore', 'rounds'};
 const templateWinnerRules = {'highestScore', 'lowestScore'};
 const templatePromptTypes = {'boolean', 'integer'};
@@ -91,6 +98,7 @@ List<TemplateProblem> validateTemplateJson(
     'lines',
     'score',
     'entryOrder',
+    'lineLabels',
   });
 
   final id = template.identifier('id', required: true);
@@ -112,6 +120,7 @@ List<TemplateProblem> validateTemplateJson(
       template.oneOf('scoringModel', templateScoringModels, required: true);
   template.oneOf('winner', templateWinnerRules, required: true);
   template.oneOf('entryOrder', const {'byPlayer', 'byLine'});
+  template.oneOf('lineLabels', templateLineLabelDisplays);
 
   final players = template.object('players', required: true);
   if (players != null) {
@@ -166,6 +175,7 @@ String? _validateEnteredLine(_ObjectReader line, Set<String> groupIds) {
     'entry',
     'entryModes',
     'style',
+    'image',
   });
   final id = line.identifier('id', required: true);
   line.text('label', required: true);
@@ -209,7 +219,7 @@ String? _validateEnteredLine(_ObjectReader line, Set<String> groupIds) {
 
 /// A flag players set by hand each round. Returns its id if it is valid.
 String? _validateMarkerLine(_ObjectReader line) {
-  line.allowOnlyKeys(const {'id', 'label', 'marker', 'style'});
+  line.allowOnlyKeys(const {'id', 'label', 'marker', 'style', 'image'});
   final id = line.identifier('id', required: true);
   line.text('label', required: true);
 
@@ -296,7 +306,7 @@ Set<String> _validateLines(
       continue;
     }
 
-    line.allowOnlyKeys(const {'id', 'label', 'formula', 'style'});
+    line.allowOnlyKeys(const {'id', 'label', 'formula', 'style', 'image'});
     final id = line.identifier('id', required: true);
     line.text('label', required: true);
     final source = line.text('formula', required: true);
@@ -724,11 +734,20 @@ class _ObjectReader {
 
 /// A line's or heading's `style`: how its row looks on the score sheet.
 void _validateRowStyle(_ObjectReader line) {
+  final image = line.text('image');
+  if (image != null && !templateImagePattern.hasMatch(image)) {
+    line.problem(
+      'image',
+      '"$image" must be a file name like cascadia_bear.png, from the '
+          "templates' images folder",
+    );
+  }
   final style = line.object('style');
   if (style == null) {
     return;
   }
-  style.allowOnlyKeys(const {'shade', 'bold', 'ruleAbove'});
+  style.allowOnlyKeys(const {'shade', 'bold', 'ruleAbove', 'label'});
+  style.oneOf('label', templateLineLabelDisplays);
   final shade = style.text('shade');
   if (shade != null && !_colorPattern.hasMatch(shade)) {
     style.problem('shade', '"$shade" must look like #3A7BD5');

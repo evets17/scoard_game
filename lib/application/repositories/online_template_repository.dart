@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:scoard_game/application/models/templates/online_template_status.dart';
 
 /// Downloads the template files listed at a template URL.
@@ -5,6 +7,10 @@ abstract class TemplateDownloader {
   /// Throws [TemplateDownloadException] if the index can't be read, in
   /// which case nothing should change.
   Future<TemplateDownload> download(Uri baseUrl);
+
+  /// Downloads the pictures [names] from the `images` folder next to the
+  /// templates. Pictures that fail are reported, not thrown.
+  Future<ImageDownload> downloadImages(Uri baseUrl, Set<String> names);
 }
 
 class TemplateDownload {
@@ -24,6 +30,16 @@ class TemplateDownload {
   final Map<String, String> failures;
 }
 
+/// Pictures for template lines, by file name.
+class ImageDownload {
+  const ImageDownload({this.images = const {}, this.failures = const {}});
+
+  final Map<String, Uint8List> images;
+
+  /// Why each other picture did not download.
+  final Map<String, String> failures;
+}
+
 class TemplateDownloadException implements Exception {
   const TemplateDownloadException(this.message);
 
@@ -39,8 +55,14 @@ abstract class OnlineTemplateCache {
   /// Saved template files by file name.
   Future<Map<String, String>> loadFiles();
 
-  /// Replaces every saved file at once.
-  Future<void> replaceFiles(Map<String, String> files);
+  /// Saved pictures for template lines, by file name.
+  Future<Map<String, Uint8List>> loadImages();
+
+  /// Replaces every saved file and picture at once.
+  Future<void> replaceFiles(
+    Map<String, String> files, {
+    Map<String, Uint8List> images = const {},
+  });
 
   Future<OnlineTemplateStatus?> loadStatus();
 

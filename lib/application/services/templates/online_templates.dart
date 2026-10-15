@@ -3,6 +3,7 @@ import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
 import 'package:scoard_game/application/models/scoring/template_origin.dart';
 import 'package:scoard_game/application/models/templates/online_template_status.dart';
 import 'package:scoard_game/application/repositories/online_template_repository.dart';
+import 'package:scoard_game/application/services/templates/template_images.dart';
 import 'package:scoard_game/core/templates/template_catalog.dart';
 import 'package:scoard_game/core/templates/template_sources.dart';
 
@@ -22,8 +23,10 @@ class OnlineTemplates extends ChangeNotifier {
     required OnlineTemplateCache cache,
     required TemplateSourcePreferences preferences,
     required bool enabledByDefault,
+    TemplateImages? images,
     DateTime Function()? now,
   })  : _catalog = catalog,
+        _images = images,
         _bundled = catalog.templates,
         _downloader = downloader,
         _cache = cache,
@@ -33,6 +36,9 @@ class OnlineTemplates extends ChangeNotifier {
         _now = now ?? DateTime.now;
 
   final TemplateCatalog _catalog;
+
+  /// Where downloaded line pictures go, for the sheet to show.
+  final TemplateImages? _images;
   final List<ScoringPreset> _bundled;
   final TemplateDownloader _downloader;
   final OnlineTemplateCache _cache;
@@ -61,7 +67,7 @@ class OnlineTemplates extends ChangeNotifier {
       _status = null;
     }
     if (_enabled) {
-      _apply(await _cache.loadFiles());
+      _apply(await _cache.loadFiles(), await _cache.loadImages());
     }
     notifyListeners();
   }
@@ -97,11 +103,12 @@ class OnlineTemplates extends ChangeNotifier {
     _enabled = enabled;
     await _preferences.saveEnabled(enabled);
     if (enabled) {
-      _apply(await _cache.loadFiles());
+      _apply(await _cache.loadFiles(), await _cache.loadImages());
       notifyListeners();
       await checkNow();
     } else {
       _catalog.replaceTemplates(_bundled);
+      _images?.setOnline(const {});
       notifyListeners();
     }
   }
@@ -123,6 +130,7 @@ class OnlineTemplates extends ChangeNotifier {
     _status = null;
     if (_enabled) {
       _catalog.replaceTemplates(_bundled);
+      _images?.setOnline(const {});
     }
     notifyListeners();
     if (_enabled) {
@@ -166,12 +174,35 @@ class OnlineTemplates extends ChangeNotifier {
             file: previousFiles[file]!,
       };
 
+      // The pictures the kept templates name: new ones, or the last good
+      // copy of one that failed. Pictures no template uses are dropped.
+      final previousImages = await _cache.loadImages();
+      final wanted = {
+        for (final template in loadTemplateCatalog(kept).catalog.templates)
+          ...template.lineImages,
+      };
+      final imageDownload = wanted.isEmpty
+          ? const ImageDownload()
+          : await _downloader.downloadImages(Uri.parse(url), wanted);
+      for (final failure in imageDownload.failures.entries) {
+        problems['images/${failure.key}'] = [
+          "Couldn't download: ${failure.value}",
+        ];
+      }
+      final keptImages = <String, Uint8List>{
+        for (final name in wanted)
+          if (imageDownload.images[name] ?? previousImages[name]
+              case final Uint8List bytes)
+            name: bytes,
+      };
+
       if (url != _url) {
         return;
       }
-      final changed = !mapEquals(kept, previousFiles);
+      final changed = !mapEquals(kept, previousFiles) ||
+          !_sameImages(keptImages, previousImages);
       if (changed) {
-        await _cache.replaceFiles(kept);
+        await _cache.replaceFiles(kept, images: keptImages);
       }
       _status = OnlineTemplateStatus(
         sourceUrl: url,
@@ -182,7 +213,7 @@ class OnlineTemplates extends ChangeNotifier {
       );
       await _cache.saveStatus(_status!);
       if (changed && _enabled) {
-        _apply(kept);
+        _apply(kept, keptImages);
       }
     } on TemplateDownloadException catch (error) {
       if (url != _url) {
@@ -200,7 +231,8 @@ class OnlineTemplates extends ChangeNotifier {
     }
   }
 
-  void _apply(Map<String, String> files) {
+  void _apply(Map<String, String> files, Map<String, Uint8List> images) {
+    _images?.setOnline(images);
     final online = loadTemplateCatalog(files, origin: TemplateOrigin.online);
     _catalog.replaceTemplates(
       mergeTemplateSources(
@@ -225,4 +257,17 @@ String? normalizeTemplateUrl(String rawUrl) {
     port: uri.hasPort ? uri.port : null,
     path: path,
   ).toString();
+}
+
+bool _sameImages(Map<String, Uint8List> left, Map<String, Uint8List> right) {
+  if (left.length != right.length) {
+    return false;
+  }
+  for (final entry in left.entries) {
+    final other = right[entry.key];
+    if (other == null || !listEquals(entry.value, other)) {
+      return false;
+    }
+  }
+  return true;
 }

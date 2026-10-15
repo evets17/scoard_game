@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:scoard_game/application/repositories/online_template_repository.dart';
 import 'package:scoard_game/application/services/templates/online_templates.dart';
 import 'package:scoard_game/core/templates/template_catalog.dart';
@@ -17,7 +19,27 @@ class FakeTemplateDownloader implements TemplateDownloader {
   /// When set, the index can't be read and this is the error.
   String? indexError;
 
+  /// Pictures by name; any other picture asked for fails.
+  Map<String, Uint8List> images = {};
+
+  final List<Set<String>> imageRequests = [];
+
   final List<Uri> requests = [];
+
+  @override
+  Future<ImageDownload> downloadImages(Uri baseUrl, Set<String> names) async {
+    imageRequests.add(names);
+    return ImageDownload(
+      images: {
+        for (final name in names)
+          if (images[name] case final Uint8List bytes) name: bytes,
+      },
+      failures: {
+        for (final name in names)
+          if (!images.containsKey(name)) name: 'HTTP 404',
+      },
+    );
+  }
 
   @override
   Future<TemplateDownload> download(Uri baseUrl) async {

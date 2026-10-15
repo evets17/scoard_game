@@ -1,9 +1,23 @@
+/// What a line's label shows in the sheet's first column.
+enum LineLabelDisplay {
+  /// The label's text.
+  text,
+
+  /// The line's picture, keeping the column narrow. Falls back to the text
+  /// when there is no picture.
+  image,
+
+  /// The picture, then the text.
+  imageAndText,
+}
+
 /// How a template asks for a sheet row to look.
 class SheetRowStyle {
   const SheetRowStyle({
     this.shade,
     this.bold = false,
     this.ruleAbove = false,
+    this.label,
   });
 
   static const plain = SheetRowStyle();
@@ -17,6 +31,9 @@ class SheetRowStyle {
 
   /// A heavier line above the row, such as before a subtotal.
   final bool ruleAbove;
+
+  /// What this row's label shows, or null for the sheet's `lineLabels`.
+  final LineLabelDisplay? label;
 }
 
 /// One row of the score sheet as the template lays it out: a section
@@ -25,11 +42,13 @@ class SheetLayoutItem {
   const SheetLayoutItem.heading(
     String this.heading, {
     this.style = SheetRowStyle.plain,
-  }) : lineId = null;
+  })  : lineId = null,
+        image = null;
 
   const SheetLayoutItem.line(
     String this.lineId, {
     this.style = SheetRowStyle.plain,
+    this.image,
   }) : heading = null;
 
   /// The section's name, such as "Wildlife", for a heading.
@@ -40,6 +59,10 @@ class SheetLayoutItem {
 
   /// How the template asks for the row to look.
   final SheetRowStyle style;
+
+  /// The line's picture: a file name in the templates' `images` folder,
+  /// such as `cascadia_bear.png`.
+  final String? image;
 
   bool get isHeading => heading != null;
 }

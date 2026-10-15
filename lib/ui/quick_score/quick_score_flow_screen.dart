@@ -24,6 +24,7 @@ import 'package:scoard_game/application/services/scoring/load_quick_score_setup_
 import 'package:scoard_game/application/services/sessions/delete_active_session.dart';
 import 'package:scoard_game/application/services/sessions/save_quick_score_active_session.dart';
 import 'package:scoard_game/application/services/sessions/save_quick_score_session.dart';
+import 'package:scoard_game/application/services/templates/template_images.dart';
 import 'package:scoard_game/core/players/order_players.dart';
 import 'package:scoard_game/core/scoring/resolve_preset_options.dart';
 import 'package:scoard_game/core/scoring/score_engine.dart';
@@ -41,6 +42,7 @@ import 'package:scoard_game/ui/score_input/numeric_score_field.dart';
 import 'package:scoard_game/ui/score_input/numeric_value_picker.dart';
 import 'package:scoard_game/ui/score_input/score_value_edit_action.dart';
 import 'package:scoard_game/ui/score_sheet/score_sheet_grid.dart';
+import 'package:scoard_game/ui/score_sheet/template_image_provider.dart';
 import 'package:scoard_game/ui/score_input/score_entry_mode.dart';
 
 class QuickScoreFlowScreen extends StatefulWidget {
@@ -56,6 +58,7 @@ class QuickScoreFlowScreen extends StatefulWidget {
     required this.preset,
     this.initialPromptAnswers = const [],
     this.initialActiveSession,
+    this.templateImages,
     super.key,
   });
 
@@ -71,6 +74,9 @@ class QuickScoreFlowScreen extends StatefulWidget {
   final ScoringPreset preset;
   final List<PresetPromptAnswer> initialPromptAnswers;
   final QuickScoreActiveSession? initialActiveSession;
+
+  /// Pictures for the sheet's line labels. Without them, labels show text.
+  final TemplateImages? templateImages;
 
   @override
   State<QuickScoreFlowScreen> createState() => _QuickScoreFlowScreenState();
@@ -246,6 +252,21 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
     final calculated = {
       for (final line in preset.calculatedLines) line.id: line,
     };
+    // A line's picture, when its label shows one and the picture exists;
+    // otherwise the label shows its text.
+    LineLabelDisplay displayOf(SheetLayoutItem item) =>
+        item.style.label ?? preset.lineLabels;
+    ImageProvider? imageFor(SheetLayoutItem item) {
+      if (displayOf(item) == LineLabelDisplay.text) {
+        return null;
+      }
+      final images = widget.templateImages;
+      return images == null ? null : templateImageProvider(images, item.image);
+    }
+
+    bool imageOnly(SheetLayoutItem item) =>
+        displayOf(item) == LineLabelDisplay.image;
+
     final layout = preset.sheetLayout.isNotEmpty
         ? preset.sheetLayout
         : [
@@ -265,6 +286,8 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
               ScoreSheetRow(
                 label: line.label,
                 style: item.style,
+                image: imageFor(item),
+                imageOnly: imageOnly(item),
                 cells: [
                   for (final player in players)
                     switch (_lineValue(player.id, lineId)) {
@@ -280,6 +303,8 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
               ScoreSheetRow(
                 label: line.label,
                 editable: false,
+                image: imageFor(item),
+                imageOnly: imageOnly(item),
                 style: item.style,
                 cells: [
                   for (final player in players)

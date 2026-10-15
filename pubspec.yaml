@@ -28,6 +28,8 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # Scoring templates. See _specs/template_schema_v1.md.
+  # Scoring templates and the pictures their lines use. See
+  # _specs/template_schema.md.
   assets:
     - assets/templates/
+    - assets/templates/images/

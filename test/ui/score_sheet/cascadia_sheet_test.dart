@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:scoard_game/application/services/templates/template_images.dart';
 import 'package:scoard_game/bootstrap/app_bootstrap.dart';
 import 'package:scoard_game/bootstrap/app_environment.dart';
 import 'package:scoard_game/ui/quick_score/quick_score_flow_screen.dart';
@@ -7,6 +10,16 @@ import 'package:scoard_game/ui/score_input/numeric_score_field.dart';
 import 'package:scoard_game/ui/score_sheet/score_sheet_grid.dart';
 
 import '../../support/test_templates.dart';
+
+/// The pictures bundled for template lines.
+TemplateImages bundledImages() => TemplateImages(
+      bundled: {
+        for (final file in Directory(TemplateImages.bundledFolder)
+            .listSync()
+            .whereType<File>())
+          file.uri.pathSegments.last,
+      },
+    );
 
 void main() {
   Future<AppEnvironment> startCascadia(WidgetTester tester) async {
@@ -29,6 +42,7 @@ void main() {
           saveQuickScoreSession: environment.saveQuickScoreSession,
           saveQuickScoreActiveSession: environment.saveQuickScoreActiveSession,
           deleteActiveSession: environment.deleteActiveSession,
+          templateImages: bundledImages(),
         ),
       ),
     );
@@ -84,6 +98,15 @@ void main() {
       ['Bear', 'Elk', 'Salmon', 'Hawk', 'Fox'],
     );
     expect(rows[5].style.bold, isTrue);
+
+    // Lines show their pictures only; the bonus rows show picture and "+";
+    // subtotals have no picture, so show their text.
+    expect(rows.first.image, isNotNull);
+    expect(rows.first.imageOnly, isTrue);
+    final bonus = rows.firstWhere((row) => row.label == '+');
+    expect(bonus.image, isNotNull);
+    expect(bonus.imageOnly, isFalse);
+    expect(rows[5].image, isNull);
     expect(rows[5].editable, isFalse);
     // The score line is the totals row, under its own label.
     final preset = environment.templateCatalog.byId('cascadia');

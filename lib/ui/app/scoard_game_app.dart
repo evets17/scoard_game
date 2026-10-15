@@ -59,6 +59,7 @@ class ScoardGameApp extends StatelessWidget {
                 stayAwakeController: environment.stayAwakeController,
                 rememberSetupPlayerGroup: environment.rememberSetupPlayerGroup,
                 templateCatalog: environment.templateCatalog,
+                templateImages: environment.templateImages,
               ),
             AppRoutes.players: (_) => PlayersScreen(
                   loadPlayersScreenModel: environment.loadPlayersScreenModel,
@@ -100,6 +101,7 @@ class ScoardGameApp extends StatelessWidget {
                   settings: settings,
                   builder: (_) => QuickScoreFlowScreen(
                     loadQuickScoreSetupModel: environment.loadQuickScoreSetupModel,
+                    templateImages: environment.templateImages,
                     createPlayer: environment.createPlayer,
                     renamePlayer: environment.renamePlayer,
                     stayAwakeController: environment.stayAwakeController,

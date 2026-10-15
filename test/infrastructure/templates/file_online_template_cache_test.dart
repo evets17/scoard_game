@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scoard_game/application/models/templates/online_template_status.dart';
@@ -62,5 +63,15 @@ void main() {
     await cache.clear();
     expect(await cache.loadFiles(), isEmpty);
     expect(await cache.loadStatus(), isNull);
+  });
+
+  test('pictures are saved and replaced with the templates', () async {
+    final bear = Uint8List.fromList([0x89, 0x50, 0x4E, 0x47, 1]);
+    await cache.replaceFiles({'a.json': 'A'}, images: {'bear.png': bear});
+    expect(await cache.loadImages(), {'bear.png': bear});
+
+    await cache.replaceFiles({'a.json': 'A'});
+    expect(await cache.loadImages(), isEmpty);
+    expect(await cache.loadFiles(), {'a.json': 'A'});
   });
 }

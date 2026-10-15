@@ -1,14 +1,17 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:scoard_game/application/models/templates/online_template_status.dart';
 import 'package:scoard_game/application/repositories/online_template_repository.dart';
 import 'package:scoard_game/core/templates/template_index.dart';
+import 'package:scoard_game/core/templates/template_validator.dart';
 
 /// Keeps online templates in a folder:
 ///
 /// ```text
 /// <root>/templates/<template>.json
+/// <root>/templates/images/<picture>.png
 /// <root>/status.json
 /// ```
 ///
@@ -43,7 +46,25 @@ class FileOnlineTemplateCache implements OnlineTemplateCache {
   }
 
   @override
-  Future<void> replaceFiles(Map<String, String> files) async {
+  Future<Map<String, Uint8List>> loadImages() async {
+    final folder = Directory(
+      '${(await _templates.exists() ? _templates : _outgoing).path}/images',
+    );
+    if (!await folder.exists()) {
+      return const {};
+    }
+    return {
+      await for (final entity in folder.list())
+        if (entity is File && templateImagePattern.hasMatch(entity.uri.pathSegments.last))
+          entity.uri.pathSegments.last: await entity.readAsBytes(),
+    };
+  }
+
+  @override
+  Future<void> replaceFiles(
+    Map<String, String> files, {
+    Map<String, Uint8List> images = const {},
+  }) async {
     await root.create(recursive: true);
     if (await _incoming.exists()) {
       await _incoming.delete(recursive: true);
@@ -51,6 +72,13 @@ class FileOnlineTemplateCache implements OnlineTemplateCache {
     await _incoming.create();
     for (final entry in files.entries) {
       await File('${_incoming.path}/${entry.key}').writeAsString(entry.value);
+    }
+    if (images.isNotEmpty) {
+      final imagesFolder = Directory('${_incoming.path}/images');
+      await imagesFolder.create();
+      for (final entry in images.entries) {
+        await File('${imagesFolder.path}/${entry.key}').writeAsBytes(entry.value);
+      }
     }
 
     if (await _outgoing.exists()) {
