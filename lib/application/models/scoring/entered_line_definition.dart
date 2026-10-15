@@ -15,6 +15,7 @@ class EnteredLineDefinition {
     this.allowReplace = true,
     this.allowAdjust = false,
     this.valuePickers = const [],
+    this.quickPickRange,
   }) : assert(minimumDisplayDigits > 0);
 
   final String id;
@@ -32,4 +33,8 @@ class EnteredLineDefinition {
   /// Template-defined entry modes offered beside the calculator and quick
   /// pick.
   final List<ValuePickerDefinition> valuePickers;
+
+  /// The values quick pick offers, such as 0–12, or null for the full
+  /// grid. Only a quicker way to pick: other modes take any number.
+  final (int, int)? quickPickRange;
 }

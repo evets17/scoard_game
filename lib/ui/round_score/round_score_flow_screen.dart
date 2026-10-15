@@ -772,6 +772,7 @@ class _RoundScoreFlowScreenState extends State<RoundScoreFlowScreen> {
       allowAdjust: line.allowAdjust,
       entryMemory: _scoreEntryMemory,
       valuePickers: line.valuePickers,
+      quickPickRange: line.quickPickRange,
       initialPick: _entryPicks[playerId],
       markers: preset.markerLines,
       activeMarkers: _markers[playerId] ?? const {},

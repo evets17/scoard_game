@@ -106,6 +106,7 @@ void main() {
     expect(line.enableQuickAdjust, isFalse);
     expect(line.allowReplace, isTrue);
     expect(line.allowAdjust, isFalse);
+    expect(line.quickPickRange, isNull);
     expect(preset.winnerRule, WinnerRule.lowestScoreWins);
   });
 

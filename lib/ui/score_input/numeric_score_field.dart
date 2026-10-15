@@ -386,6 +386,7 @@ class _NumericScoreFieldState extends State<NumericScoreField> {
       allowAdjust: widget.lineDefinition.allowAdjust,
       entryMemory: widget.entryMemory,
       valuePickers: widget.lineDefinition.valuePickers,
+      quickPickRange: widget.lineDefinition.quickPickRange,
       initialPick: widget.entryPick,
       markers: widget.markers,
       activeMarkers: widget.activeMarkers,

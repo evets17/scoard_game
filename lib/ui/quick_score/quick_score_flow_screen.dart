@@ -216,6 +216,7 @@ class _QuickScoreFlowScreenState extends State<QuickScoreFlowScreen> {
       allowAdjust: line.allowAdjust,
       entryMemory: _scoreEntryMemory,
       valuePickers: line.valuePickers,
+      quickPickRange: line.quickPickRange,
       initialPick: _linePick(playerId, lineId),
       nextLabel: nextLabel,
     );

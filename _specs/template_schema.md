@@ -268,7 +268,7 @@ A sheet with several entered lines can be finished with some lines left empty; t
 
 #### `entry`
 
-All keys are optional booleans.
+All keys are optional.
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -276,6 +276,13 @@ All keys are optional booleans.
 | `quickAdjust` | `false` | Shows - and + buttons beside the score. |
 | `replace` | `true` | The entry sheet offers Replace. |
 | `adjust` | `false` | The entry sheet offers Add to Existing. |
+| `quickPick` | full grid | `{ "min": 0, "max": 12 }`: the numbers quick pick offers. Needs `tapToEdit`. |
+
+`quickPick` narrows quick pick to the numbers a line usually scores, so they all fit on screen as one block of bigger keys. Five go to a row, or six when a range would need more than six rows. A range covers at most 36 numbers; leave `quickPick` out for the full grid of −10 to 99. It only makes picking quicker and is not a rule: the calculator, Add to Existing and the − and + buttons still take any number.
+
+```json
+"entry": { "tapToEdit": true, "quickPick": { "min": 0, "max": 12 } }
+```
 
 #### `entryModes`
 

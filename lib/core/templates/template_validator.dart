@@ -16,6 +16,9 @@ const supportedTemplateSchemaVersions = {1};
 const templateLineLabelDisplays = {'text', 'image', 'imageAndText'};
 
 /// A line picture's file name, in the templates' `images` folder.
+/// The most values a quick pick range covers: six rows of six keys.
+const templateQuickPickMaxValues = 36;
+
 final templateImagePattern =
     RegExp(r'^[a-z0-9]+([_-][a-z0-9]+)*\.(png|jpg|jpeg|webp)$');
 
@@ -164,6 +167,26 @@ List<TemplateProblem> validateTemplateJson(
   return problems;
 }
 
+/// The values quick pick offers: whole numbers from min to max, few enough
+/// to show as one block of keys.
+void _validateQuickPick(_ObjectReader quickPick) {
+  quickPick.allowOnlyKeys(const {'min', 'max'});
+  final minimum = quickPick.integer('min', required: true);
+  final maximum = quickPick.integer('max', required: true);
+  if (minimum == null || maximum == null) {
+    return;
+  }
+  if (maximum < minimum) {
+    quickPick.problem('max', 'must be at least min');
+  } else if (maximum - minimum + 1 > templateQuickPickMaxValues) {
+    quickPick.problem(
+      'max',
+      'a range covers at most $templateQuickPickMaxValues values; '
+          'leave quickPick out for the full grid',
+    );
+  }
+}
+
 /// A line whose value players enter. Returns its id if it is valid, and
 /// adds its value pickers' tile group ids to [groupIds].
 String? _validateEnteredLine(_ObjectReader line, Set<String> groupIds) {
@@ -188,13 +211,24 @@ String? _validateEnteredLine(_ObjectReader line, Set<String> groupIds) {
   var tapToEdit = false;
   final entry = line.object('entry');
   if (entry != null) {
-    const entryKeys = {'tapToEdit', 'quickAdjust', 'replace', 'adjust'};
-    entry.allowOnlyKeys(entryKeys);
-    for (final key in entryKeys) {
+    const switchKeys = {'tapToEdit', 'quickAdjust', 'replace', 'adjust'};
+    entry.allowOnlyKeys({...switchKeys, 'quickPick'});
+    for (final key in switchKeys) {
       final value = entry.boolean(key);
       if (key == 'tapToEdit') {
         tapToEdit = value ?? false;
       }
+    }
+  }
+
+  final quickPick = entry?.object('quickPick');
+  if (quickPick != null) {
+    _validateQuickPick(quickPick);
+    if (!tapToEdit) {
+      entry!.problem(
+        'quickPick',
+        'needs entry.tapToEdit to be true, or the entry sheet never opens',
+      );
     }
   }
 

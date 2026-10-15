@@ -456,4 +456,58 @@ void main() {
       ]),
     );
   });
+
+  test('quick pick ranges', () {
+    Map<String, Object?> line(Map<String, Object?> entry) =>
+        {'id': 'points', 'label': 'Points', 'entry': entry};
+
+    final good = sheet(
+      lines: [
+        line({
+          'tapToEdit': true,
+          'quickPick': {'min': 0, 'max': 12},
+        }),
+      ],
+      score: null,
+    );
+    expect(problemsFor(good), isEmpty);
+    final preset = loadTemplateCatalog({
+      'test-game.json': jsonEncode(good),
+    }).catalog.byId('test-game');
+    expect(preset.enteredLines.single.quickPickRange, (0, 12));
+
+    List<String> problemsWith(Map<String, Object?> entry) =>
+        problemsFor(sheet(lines: [line(entry)], score: null));
+
+    expect(
+      problemsWith({
+        'tapToEdit': true,
+        'quickPick': {'min': 5, 'max': 2},
+      }),
+      ['lines[0].entry.quickPick.max: must be at least min'],
+    );
+    expect(
+      problemsWith({
+        'tapToEdit': true,
+        'quickPick': {'min': 0, 'max': 36},
+      }),
+      [startsWith('lines[0].entry.quickPick.max: a range covers at most 36')],
+    );
+    expect(
+      problemsWith({
+        'tapToEdit': true,
+        'quickPick': {'max': 3, 'step': 1},
+      }),
+      containsAll([
+        'lines[0].entry.quickPick.step: unknown key',
+        startsWith('lines[0].entry.quickPick.min'),
+      ]),
+    );
+    expect(
+      problemsWith({
+        'quickPick': {'min': 0, 'max': 3},
+      }),
+      [startsWith('lines[0].entry.quickPick: needs entry.tapToEdit')],
+    );
+  });
 }

@@ -13,6 +13,7 @@ void main() {
     ValueChanged<ScoreValueEditRequest?>? onClosed,
     Size logicalSize = const Size(360, 800),
     double statusBarHeight = 0,
+    (int, int)? range,
   }) async {
     tester.view.physicalSize = logicalSize * 3;
     tester.view.devicePixelRatio = 3;
@@ -32,6 +33,7 @@ void main() {
                   allowReplace: true,
                   allowAdjust: true,
                   entryMemory: memory,
+                  quickPickRange: range,
                 );
                 onClosed?.call(result);
               },
@@ -160,4 +162,57 @@ void main() {
       expect(find.text('Cancel').hitTestable(), findsOneWidget);
     });
   }
+
+  testWidgets('a range shows only its numbers, and the calculator takes any', (
+    tester,
+  ) async {
+    ScoreValueEditRequest? request;
+    await openPicker(
+      tester,
+      memory: ScoreEntryMemory()..mode = ScoreEntryMode.quickPick,
+      range: (0, 12),
+      onClosed: (r) => request = r,
+    );
+
+    expect(isOnScreen(tester, '0'), isTrue);
+    expect(isOnScreen(tester, '12'), isTrue);
+    expect(key('13'), findsNothing);
+    expect(key('-1'), findsNothing);
+
+    await tester.tap(key('12'));
+    await tester.pump();
+    expect(find.text('Replace -> 12'), findsOneWidget);
+
+    // Not a rule: the calculator still takes a number outside the range.
+    await tester.tap(find.byTooltip('Calculator'));
+    await tester.pumpAndSettle();
+    for (final digit in ['4', '5']) {
+      await tester.tap(key(digit));
+      await tester.pump();
+    }
+    await tester.tap(find.text('Replace -> 45'));
+    await tester.pumpAndSettle();
+    expect(request?.value, 45);
+  });
+
+  testWidgets('a 0–30 range fits on a 640px tall phone in six rows', (
+    tester,
+  ) async {
+    await openPicker(
+      tester,
+      memory: ScoreEntryMemory()..mode = ScoreEntryMode.quickPick,
+      range: (0, 30),
+      logicalSize: const Size(360, 640),
+      statusBarHeight: 24,
+    );
+
+    expect(isOnScreen(tester, '30'), isTrue);
+    final rows = {
+      for (final value in [0, 6, 12, 18, 24, 30])
+        tester.getTopLeft(key('$value')).dy,
+    };
+    expect(rows, hasLength(6));
+    expect(tester.getTopLeft(key('5')).dy, tester.getTopLeft(key('0')).dy);
+    expect(find.text('Cancel').hitTestable(), findsOneWidget);
+  });
 }

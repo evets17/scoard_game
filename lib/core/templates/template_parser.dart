@@ -108,6 +108,7 @@ ScoringPreset parseTemplateJson(
 
 EnteredLineDefinition _parseEnteredLine(Map<String, Object?> line) {
   final entry = (line['entry'] as Map<String, Object?>?) ?? const {};
+  final quickPick = entry['quickPick'] as Map<String, Object?>?;
 
   return EnteredLineDefinition(
     id: line['id']! as String,
@@ -124,6 +125,9 @@ EnteredLineDefinition _parseEnteredLine(Map<String, Object?> line) {
     valuePickers: ((line['entryModes'] as List<Object?>?) ?? const [])
         .map((mode) => _parseValuePicker(mode! as Map<String, Object?>))
         .toList(growable: false),
+    quickPickRange: quickPick == null
+        ? null
+        : (quickPick['min']! as int, quickPick['max']! as int),
   );
 }
 

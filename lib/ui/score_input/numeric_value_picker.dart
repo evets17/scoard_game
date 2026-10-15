@@ -26,6 +26,7 @@ Future<ScoreValueEditRequest?> showNumericValuePicker(
   Set<String> activeMarkers = const {},
   void Function(String markerId, bool isSet)? onMarkerChanged,
   String? nextLabel,
+  (int, int)? quickPickRange,
 }) {
   return showModalBottomSheet<ScoreValueEditRequest>(
     context: context,
@@ -45,6 +46,7 @@ Future<ScoreValueEditRequest?> showNumericValuePicker(
       activeMarkers: activeMarkers,
       onMarkerChanged: onMarkerChanged,
       nextLabel: nextLabel,
+      quickPickRange: quickPickRange,
     ),
   );
 }
@@ -65,6 +67,7 @@ class _NumericValuePicker extends StatefulWidget {
     this.activeMarkers = const {},
     this.onMarkerChanged,
     this.nextLabel,
+    this.quickPickRange,
   });
 
   final String title;
@@ -84,6 +87,10 @@ class _NumericValuePicker extends StatefulWidget {
   /// Who is next, such as "Jules". When set, the sheet offers Next, which
   /// saves like Replace and then opens that cell.
   final String? nextLabel;
+
+  /// The values quick pick offers for this line, such as 0–20, or null for
+  /// the full grid. Only a quicker way to pick: other modes take any number.
+  final (int, int)? quickPickRange;
   final bool allowReplace;
   final bool allowAdjust;
   final ScoreEntryMemory entryMemory;
@@ -305,6 +312,7 @@ class _NumericValuePickerState extends State<_NumericValuePicker> {
             ),
           ] else ...[
             QuickPickGrid(
+              range: widget.quickPickRange,
               selectedValue: _quickPickValue,
               initialColumn: widget.entryMemory.quickPickColumn,
               onSelected: (value) => setState(() {
