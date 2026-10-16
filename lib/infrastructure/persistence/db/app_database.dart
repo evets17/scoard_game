@@ -176,6 +176,10 @@ class ActiveSessionsTable extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+/// Marks a database as Scoard's (SQLite's `application_id`), so a backup
+/// can be told apart from any other SQLite file. "SCRD" in ASCII.
+const scoardApplicationId = 0x53435244;
+
 @DriftDatabase(tables: [
   PlayersTable,
   QuickScoreSessionsTable,
@@ -189,7 +193,8 @@ class ActiveSessionsTable extends Table {
   PlayerGroupMembersTable,
 ])
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(_openConnection());
+  /// The app's database, kept in [file].
+  AppDatabase.atFile(File file) : super(NativeDatabase.createInBackground(file));
 
   AppDatabase.forTesting(super.executor);
 
@@ -199,6 +204,10 @@ class AppDatabase extends _$AppDatabase {
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (migrator) async => migrator.createAll(),
+        // Every open, so databases from before the mark get it too, before
+        // any backup of them can be made.
+        beforeOpen: (details) =>
+            customStatement('PRAGMA application_id = $scoardApplicationId'),
         onUpgrade: (migrator, from, to) async {
           if (from < 2) {
             await migrator.createTable(quickScoreSessionsTable);
@@ -237,6 +246,12 @@ class AppDatabase extends _$AppDatabase {
           }
         },
       );
+
+  /// Writes a consistent, compacted copy of the database to [file] while it
+  /// stays open. [file] must not exist yet.
+  Future<void> copyTo(File file) {
+    return customStatement('VACUUM INTO ?', [file.path]);
+  }
 
   /// Renames `<game>_field_values_table` and its `field_id` column to the
   /// line names, if the table is still under its old name.
@@ -805,13 +820,11 @@ class AppDatabase extends _$AppDatabase {
   }
 }
 
-LazyDatabase _openConnection() {
-  return LazyDatabase(() async {
-    final documentsDirectory = await getApplicationDocumentsDirectory();
-    final databaseFile = File(
-      p.join(documentsDirectory.path, 'scoard_game.sqlite'),
-    );
+/// The database file's name, in the app documents folder.
+const appDatabaseFileName = 'scoard_game.sqlite';
 
-    return NativeDatabase.createInBackground(databaseFile);
-  });
+/// Where the app keeps its database: [folder], or the app documents folder.
+Future<File> appDatabaseFile({Directory? folder}) async {
+  final directory = folder ?? await getApplicationDocumentsDirectory();
+  return File(p.join(directory.path, appDatabaseFileName));
 }

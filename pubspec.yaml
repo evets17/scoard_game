@@ -8,12 +8,14 @@ environment:
 
 dependencies:
   drift: ^2.28.2
+  file_picker: ^13.1.0
   flutter:
     sdk: flutter
   http: ^1.6.0
   path: ^1.9.1
   path_provider: ^2.1.5
   shared_preferences: ^2.5.3
+  sqlite3: ^3.5.1
   sqlite3_flutter_libs: ^0.5.39
   url_launcher: ^6.3.3
   wakelock_plus: ^1.7.0

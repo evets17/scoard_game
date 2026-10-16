@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:scoard_game/application/services/templates/online_templates.dart';
+import 'package:scoard_game/infrastructure/backup/app_data_backup.dart';
 import 'package:scoard_game/ui/navigation/app_screen_scaffold.dart';
 import 'package:scoard_game/ui/settings/online_templates_section.dart';
 import 'package:scoard_game/ui/settings/stay_awake_controller.dart';
+import 'package:scoard_game/ui/settings/your_data_section.dart';
 import 'package:scoard_game/ui/theme/app_colors.dart';
 import 'package:scoard_game/ui/theme/app_theme_controller.dart';
 
@@ -11,12 +13,18 @@ class SettingsScreen extends StatelessWidget {
     required this.themeController,
     required this.stayAwakeController,
     required this.onlineTemplates,
+    this.dataBackup,
+    this.restoreBackup,
     super.key,
   });
 
   final AppThemeController themeController;
   final StayAwakeController stayAwakeController;
   final OnlineTemplates onlineTemplates;
+
+  /// Back up and restore; left out where the data is only in memory.
+  final AppDataBackup? dataBackup;
+  final Future<bool> Function()? restoreBackup;
 
   @override
   Widget build(BuildContext context) {
@@ -71,6 +79,14 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 OnlineTemplatesSection(onlineTemplates: onlineTemplates),
+                if (dataBackup case final dataBackup?)
+                  if (restoreBackup case final restoreBackup?) ...[
+                    const SizedBox(height: 24),
+                    YourDataSection(
+                      dataBackup: dataBackup,
+                      restoreBackup: restoreBackup,
+                    ),
+                  ],
               ],
             ),
           ),

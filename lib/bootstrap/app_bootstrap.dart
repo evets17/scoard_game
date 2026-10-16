@@ -2,8 +2,11 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:scoard_game/application/repositories/online_template_repository.dart';
+import 'package:scoard_game/infrastructure/backup/app_data_backup.dart';
+import 'package:scoard_game/infrastructure/persistence/preferences/backup_preference_store.dart';
 import 'package:scoard_game/application/repositories/player_repository.dart';
 import 'package:scoard_game/application/repositories/session_repository.dart';
 import 'package:scoard_game/application/repositories/setup_preferences_repository.dart';
@@ -59,6 +62,10 @@ class AppBootstrap {
     TemplateCatalog? templateCatalog,
     TemplateDownloader? templateDownloader,
     TemplateSourcePreferences? templateSourcePreferences,
+
+    /// Where the database is kept; defaults to the app documents folder.
+    /// Tests give a temporary folder.
+    Directory? dataFolder,
   }) async {
     await Future<void>.microtask(() {});
 
@@ -78,9 +85,22 @@ class AppBootstrap {
     final AppThemeController themeController;
     final StayAwakeController stayAwakeController;
     final SetupPreferencesRepository setupPreferences;
+    AppDataBackup? dataBackup;
 
     if (usePersistentStorage) {
-      final appDatabase = AppDatabase();
+      final databaseFile = await appDatabaseFile(folder: dataFolder);
+      final appDatabase = AppDatabase.atFile(databaseFile);
+      dataBackup = AppDataBackup(
+        database: appDatabase,
+        databaseFile: databaseFile,
+        preferences: await BackupPreferenceStore.create(),
+        workFolder: Directory(
+          p.join(
+            (dataFolder ?? await getTemporaryDirectory()).path,
+            'backup_work',
+          ),
+        ),
+      );
       final themePreferenceStore = await ThemePreferenceStore.create();
       final stayAwakePreferenceStore = await StayAwakePreferenceStore.create();
       setupPreferences = await SetupPreferenceStore.create();
@@ -88,7 +108,7 @@ class AppBootstrap {
           await TemplateSourcePreferenceStore.create();
       onlineTemplateCache = FileOnlineTemplateCache(
         Directory(
-          '${(await getApplicationSupportDirectory()).path}/online_templates',
+          '${(dataFolder ?? await getApplicationSupportDirectory()).path}/online_templates',
         ),
       );
 
@@ -126,6 +146,7 @@ class AppBootstrap {
     await onlineTemplates.loadSaved();
 
     return AppEnvironment(
+      dataBackup: dataBackup,
       playerRepository: playerRepository,
       gameRepository: gameRepository,
       sessionRepository: sessionRepository,

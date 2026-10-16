@@ -17,10 +17,18 @@ import 'package:scoard_game/ui/theme/app_theme.dart';
 class ScoardGameApp extends StatelessWidget {
   const ScoardGameApp({
     required this.environment,
+    this.restoreBackup,
+    this.scaffoldMessengerKey,
     super.key,
   });
 
   final AppEnvironment environment;
+
+  /// Restores the backup the player picked and checked, and opens the app
+  /// on it. Null where restoring isn't offered.
+  final Future<bool> Function()? restoreBackup;
+
+  final GlobalKey<ScaffoldMessengerState>? scaffoldMessengerKey;
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +36,7 @@ class ScoardGameApp extends StatelessWidget {
       animation: environment.themeController,
       builder: (context, _) {
         return MaterialApp(
+          scaffoldMessengerKey: scaffoldMessengerKey,
           title: 'Scoard Game',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(
@@ -86,6 +95,8 @@ class ScoardGameApp extends StatelessWidget {
                   themeController: environment.themeController,
                   stayAwakeController: environment.stayAwakeController,
                   onlineTemplates: environment.onlineTemplates,
+                  dataBackup: environment.dataBackup,
+                  restoreBackup: restoreBackup,
                 ),
           },
           onGenerateRoute: (settings) {

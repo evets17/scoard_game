@@ -1,3 +1,4 @@
+import 'package:scoard_game/infrastructure/backup/app_data_backup.dart';
 import 'package:scoard_game/application/repositories/game_repository.dart';
 import 'package:scoard_game/application/repositories/player_repository.dart';
 import 'package:scoard_game/application/repositories/session_repository.dart';
@@ -59,7 +60,12 @@ class AppEnvironment {
     required this.loadRoundScoreActiveSession,
     required this.saveRoundScoreActiveSession,
     required this.deleteActiveSession,
+    this.dataBackup,
   });
+
+  /// Backs up and restores the app's data; null when the data is only in
+  /// memory, as on the web and in most tests.
+  final AppDataBackup? dataBackup;
 
   final PlayerRepository playerRepository;
   final GameRepository gameRepository;

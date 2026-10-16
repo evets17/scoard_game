@@ -244,6 +244,10 @@ String describeWhen(DateTime when, DateTime now) {
   return 'on ${when.day} ${_months[when.month - 1]}';
 }
 
+/// "12 Oct 2026".
+String describeDate(DateTime when) =>
+    '${when.day} ${_months[when.month - 1]} ${when.year}';
+
 class _TemplateUrlDialog extends StatefulWidget {
   const _TemplateUrlDialog({required this.onlineTemplates});
 
