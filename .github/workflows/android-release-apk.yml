@@ -34,11 +34,59 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Resolve release metadata
+        id: release_meta
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+
+          VERSION_NAME="${TAG#v}"
+          BUILD_NUMBER="${GITHUB_RUN_NUMBER}"
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare Android signing files
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${KEYSTORE_BASE64}" || -z "${KEY_ALIAS}" || -z "${KEY_PASSWORD}" || -z "${STORE_PASSWORD}" ]]; then
+            echo "Missing one or more required Android signing secrets."
+            echo "Required: ANDROID_UPLOAD_KEYSTORE_BASE64, ANDROID_UPLOAD_KEY_ALIAS, ANDROID_UPLOAD_KEY_PASSWORD, ANDROID_UPLOAD_STORE_PASSWORD"
+            exit 1
+          fi
+
+          mkdir -p android/app
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+
+          cat > android/key.properties <<EOF
+          storeFile=app/upload-keystore.jks
+          storePassword=${STORE_PASSWORD}
+          keyAlias=${KEY_ALIAS}
+          keyPassword=${KEY_PASSWORD}
+          EOF
+
       - name: Get dependencies
         run: flutter pub get
 
       - name: Build release APK
-        run: flutter build apk --release
+        run: >-
+          flutter build apk --release
+          --build-name "${{ steps.release_meta.outputs.version_name }}"
+          --build-number "${{ steps.release_meta.outputs.build_number }}"
 
       - name: Prepare release assets
         id: prepare_assets
@@ -46,12 +94,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          VERSION_LINE="$(grep '^version:' pubspec.yaml | head -n1 | awk '{print $2}')"
-          VERSION_NAME="${VERSION_LINE%%+*}"
-          BUILD_NUMBER="${VERSION_LINE#*+}"
-          if [[ "$BUILD_NUMBER" == "$VERSION_LINE" ]]; then
-            BUILD_NUMBER="0"
-          fi
+          VERSION_NAME="${{ steps.release_meta.outputs.version_name }}"
+          BUILD_NUMBER="${{ steps.release_meta.outputs.build_number }}"
 
           VERSIONED_APK="scoard-game-v${VERSION_NAME}+${BUILD_NUMBER}.apk"
           LATEST_APK="scoard-game-latest.apk"
@@ -63,20 +107,10 @@ jobs:
           echo "versioned_apk=$VERSIONED_APK" >> "$GITHUB_OUTPUT"
           echo "latest_apk=$LATEST_APK" >> "$GITHUB_OUTPUT"
 
-      - name: Resolve release tag
-        id: release_tag
-        shell: bash
-        run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.release_tag.outputs.tag }}
+          tag_name: ${{ steps.release_meta.outputs.tag }}
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
           overwrite_files: true

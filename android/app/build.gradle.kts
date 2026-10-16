@@ -1,8 +1,17 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+val keyProperties = Properties()
+val keyPropertiesFile = rootProject.file("key.properties")
+if (keyPropertiesFile.exists()) {
+    keyProperties.load(FileInputStream(keyPropertiesFile))
 }
 
 android {
@@ -30,11 +39,35 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            val storePath = keyProperties.getProperty("storeFile")
+                ?: throw GradleException(
+                    "Missing Android signing config. Add android/key.properties with storeFile.",
+                )
+            val storePasswordValue = keyProperties.getProperty("storePassword")
+                ?: throw GradleException(
+                    "Missing Android signing config. Add storePassword in android/key.properties.",
+                )
+            val keyAliasValue = keyProperties.getProperty("keyAlias")
+                ?: throw GradleException(
+                    "Missing Android signing config. Add keyAlias in android/key.properties.",
+                )
+            val keyPasswordValue = keyProperties.getProperty("keyPassword")
+                ?: throw GradleException(
+                    "Missing Android signing config. Add keyPassword in android/key.properties.",
+                )
+
+            storeFile = rootProject.file(storePath)
+            storePassword = storePasswordValue
+            keyAlias = keyAliasValue
+            keyPassword = keyPasswordValue
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
