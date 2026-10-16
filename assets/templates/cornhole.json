@@ -1,13 +1,14 @@
 {
   "schemaVersion": 1,
   "id": "cornhole",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "name": "Cornhole",
   "subtitle": "Cancellation scoring",
   "description": "Each inning, both sides throw their bags. A bag on the board is 1 point and a bag in the hole is 3. The side with more points scores the difference; the other side scores nothing. First to 21 wins.\n\nThis scores by entering both teams points for each inning.  The game will automatically calculate the points scored based on the difference.",
   "players": { "minimum": 2, "maximum": 2 },
   "scoringModel": "rounds",
   "winner": "highestScore",
+  "card": { "image": "cornhole_board.jpg" },
   "lines": [
     {
       "id": "inning-points",

@@ -24,7 +24,7 @@ TemplateImages bundledImages() => TemplateImages(
 void main() {
   Future<AppEnvironment> startCascadia(
     WidgetTester tester, {
-    String templateId = 'cascadia',
+    String templateId = 'cascadia-bonuses',
   }) async {
     tester.view.physicalSize = const Size(1440, 2400);
     tester.view.devicePixelRatio = 3;
@@ -102,17 +102,14 @@ void main() {
     );
     expect(rows[5].style.bold, isTrue);
 
-    // Lines show their pictures only; the bonus rows show picture and "+";
-    // subtotals have no picture, so show their text.
+    // Lines show their pictures only; subtotals have no picture, so show
+    // their text.
     expect(rows.first.image, isNotNull);
     expect(rows.first.imageOnly, isTrue);
-    final bonus = rows.firstWhere((row) => row.label == '+');
-    expect(bonus.image, isNotNull);
-    expect(bonus.imageOnly, isFalse);
     expect(rows[5].image, isNull);
     expect(rows[5].editable, isFalse);
     // The score line is the totals row, under its own label.
-    final preset = environment.templateCatalog.byId('cascadia');
+    final preset = environment.templateCatalog.byId('cascadia-bonuses');
     expect(
       grid(tester).totalLabel,
       preset.calculatedLines
@@ -162,7 +159,7 @@ void main() {
         home: QuickScoreFlowScreen(
           key: const ValueKey('resumed'),
           loadQuickScoreSetupModel: environment.loadQuickScoreSetupModel,
-          preset: environment.templateCatalog.byId('cascadia'),
+          preset: environment.templateCatalog.byId('cascadia-bonuses'),
           createPlayer: environment.createPlayer,
           renamePlayer: environment.renamePlayer,
           stayAwakeController: environment.stayAwakeController,
@@ -201,7 +198,7 @@ void main() {
   testWidgets('bonuses worked out show under their habitat, with no rows', (
     tester,
   ) async {
-    await startCascadia(tester, templateId: 'cascadia-bonuses');
+    await startCascadia(tester);
 
     // The game being scored shows under the title.
     expect(find.text('Enter Scores'), findsOneWidget);

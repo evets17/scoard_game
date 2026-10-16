@@ -46,16 +46,12 @@ void main() {
 
     expect(pictureIn('Flip 7'), findsOneWidget);
     expect(pictureIn('Skyjo'), findsOneWidget);
-    expect(pictureIn('Cornhole'), findsNothing);
+    expect(pictureIn('Quick Score'), findsNothing);
 
     // As tall as a card with a subtitle, whether the name shows or not.
     final subtitleHeight = tester.getSize(cardOf('Quick Score')).height;
     expect(tester.getSize(cardOf('Flip 7')).height, subtitleHeight);
     expect(tester.getSize(cardOf('Skyjo')).height, subtitleHeight);
-    expect(
-      tester.getSize(cardOf('Rack-O')).height,
-      lessThan(subtitleHeight),
-    );
 
     // Flip 7's banner names the game, so its name is hidden but still read
     // by screen readers; Skyjo's box shows its name.

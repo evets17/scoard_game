@@ -1,7 +1,6 @@
 {
   "indexVersion": 1,
   "templates": [
-    "cascadia.json",
     "cascadia-bonuses.json",
     "cornhole.json",
     "flip-7.json",

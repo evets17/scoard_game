@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "cascadia-bonuses",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "Cascadia",
   "subtitle": "Bonuses worked out",
   "description": "At the end of the game, score each wildlife card, each habitat's largest corridor, and every unused nature token. The habitat majority bonuses are worked out from the corridors and shown beside them. Highest total wins; on a tie, the player with the most nature tokens left wins.",
@@ -9,6 +9,7 @@
   "players": { "minimum": 1, "maximum": 4 },
   "scoringModel": "finalScore",
   "winner": "highestScore",
+  "card": { "image": "cascadia_box.jpg" },
   "lineLabels": "image",
   "lines": [
     { "id": "bear", "label": "Bear", "image": "cascadia_bear.png", "entry": { "tapToEdit": true, "adjust": true, "quickPick": { "min": 0, "max": 30 } }, "style": { "shade": "#8A6946" } },
