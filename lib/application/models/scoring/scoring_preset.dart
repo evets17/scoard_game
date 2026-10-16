@@ -1,5 +1,6 @@
 import 'package:scoard_game/application/models/scoring/calculated_line_definition.dart';
 import 'package:scoard_game/application/models/scoring/card_text_definition.dart';
+import 'package:scoard_game/application/models/scoring/game_card_art.dart';
 import 'package:scoard_game/application/models/scoring/marker_line_definition.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
 import 'package:scoard_game/application/models/scoring/entered_line_definition.dart';
@@ -30,6 +31,7 @@ class ScoringPreset {
     this.scoreSubLabels = const [],
     this.playerBadges = const [],
     this.lineSubLabels = const {},
+    this.card,
     this.scoreLineId,
     this.sheetLayout = const [],
     this.declaredEntryOrder,
@@ -82,6 +84,9 @@ class ScoringPreset {
   /// keyed by line id. The first that applies is shown.
   final Map<String, List<CardTextDefinition>> lineSubLabels;
 
+  /// The picture behind the game's card when choosing a game, if any.
+  final GameCardArt? card;
+
   /// The line that is each player's score. Defaults to the entered line.
   final String? scoreLineId;
   final List<PresetPromptDefinition> promptDefinitions;
@@ -114,10 +119,11 @@ class ScoringPreset {
   /// What line labels show on the sheet, unless a line's style says.
   final LineLabelDisplay lineLabels;
 
-  /// Every picture the sheet's lines use.
-  Set<String> get lineImages => {
+  /// Every picture the template uses: its lines' and its card's.
+  Set<String> get images => {
         for (final item in sheetLayout)
           if (item.image case final String image) image,
+        if (card case final card?) card.image,
       };
 
   /// Whether this sheet has more than one value to enter per player.

@@ -108,6 +108,7 @@ List<TemplateProblem> validateTemplateJson(
     'score',
     'entryOrder',
     'lineLabels',
+    'card',
   });
 
   final id = template.identifier('id', required: true);
@@ -129,6 +130,12 @@ List<TemplateProblem> validateTemplateJson(
       template.oneOf('scoringModel', templateScoringModels, required: true);
   template.oneOf('winner', templateWinnerRules, required: true);
   template.oneOf('entryOrder', const {'byPlayer', 'byLine'});
+  final card = template.object('card');
+  if (card != null) {
+    card.allowOnlyKeys(const {'image', 'showName'});
+    _checkImageName(card, required: true);
+    card.boolean('showName');
+  }
   template.oneOf('lineLabels', templateLineLabelDisplays);
 
   final players = template.object('players', required: true);
@@ -826,15 +833,20 @@ class _ObjectReader {
 }
 
 /// A line's or heading's `style`: how its row looks on the score sheet.
-void _validateRowStyle(_ObjectReader line) {
-  final image = line.text('image');
+/// Checks [owner]'s `image`, a picture in the templates' images folder.
+void _checkImageName(_ObjectReader owner, {bool required = false}) {
+  final image = owner.text('image', required: required);
   if (image != null && !templateImagePattern.hasMatch(image)) {
-    line.problem(
+    owner.problem(
       'image',
       '"$image" must be a file name like cascadia_bear.png, from the '
           "templates' images folder",
     );
   }
+}
+
+void _validateRowStyle(_ObjectReader line) {
+  _checkImageName(line);
   final style = line.object('style');
   if (style == null) {
     return;

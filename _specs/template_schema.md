@@ -111,6 +111,7 @@ Players enter each side's inning points (with the Bags picker or the usual score
 | `name` | yes | string | Non-empty. Shown in Score a Game, on the game page, and in game history. |
 | `subtitle` | no | string | Non-empty. One short line under the name in Score a Game, for example `"Alternate rules"` to tell two templates for the same game apart. |
 | `general` | no | boolean | Default `false`. `true` marks a general scoring style rather than a specific game (Quick Score, Round Score). General templates are listed first in Score a Game; games follow, most recently played first. |
+| `card` | no | object | A picture behind the game's card in Score a Game. See [Game card art](#game-card-art). |
 | `description` | yes | string | Non-empty. Shown on the game page, which opens after the game is picked. |
 | `source` | no | string | Where the scoring rules came from, for example `"Skyjo rulebook, scoring section"` or a URL. Shown on the game page; a URL becomes a link. |
 | `players` | yes | object | See below. |
@@ -126,6 +127,38 @@ Players enter each side's inning points (with the Bags picker or the usual score
 | `playerBadges` | no | array | Chips shown after the player's name. See Player Card. |
 
 Any key not listed here is an error.
+
+### Game Card Art
+
+A picture behind the game's card in Score a Game, so it is recognisable at a glance:
+
+```json
+"card": { "image": "flip7_banner.jpg", "showName": false }
+```
+
+| Key | Required | Type | Rules |
+|---|---|---|---|
+| `image` | yes | string | A file in `assets/templates/images/`, named like line pictures (see [Line pictures](#line-pictures)). |
+| `showName` | no | boolean | Default `true`: the name and subtitle show in white over a dark fade. Turn it off when the picture already names the game, such as a logo; the name is still read by screen readers. |
+
+The picture fills the card's width and drifts as the list scrolls, as if the card were a window onto a larger picture: its top edge shows when the card is at the top of the list, its bottom edge when the card is at the bottom. How far it drifts is how much taller it is than the card, so **the picture's shape decides the effect**. A card with a picture is as tall as a card with a subtitle: on phones about 87 high and 320 to 370 wide, roughly 4:1, and up to about 6:1 on tablets.
+
+| Picture shape | Effect |
+|---|---|
+| About 6:1 or wider | Still. On phones the sides are trimmed a little. |
+| About 3:1, like a banner | A gentle drift. |
+| About 2:1 | A noticeable drift; a logo this shape gets cut off near the top and bottom of the list. |
+| Portrait, like a game box | A long travel, revealing the whole box as the list scrolls. |
+
+* Keep what must always show, such as a logo, in a band across the middle of the picture.
+* With the phone's remove animations setting on, pictures hold their middle.
+* A picture that can't be found or downloaded leaves a plain card.
+
+Prepare a picture with the script, which shrinks it to 1080 wide (never enlarging it) and saves it as JPEG in the images folder, typically 100 to 300 KB:
+
+```text
+dart run tool/prepare_template_image.dart _specs/staged_images/flip7-logo.png flip7_banner.jpg
+```
 
 ### `scoringModel`
 

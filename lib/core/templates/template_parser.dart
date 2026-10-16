@@ -5,6 +5,7 @@ import 'package:scoard_game/application/models/scoring/marker_line_definition.da
 import 'package:scoard_game/application/models/scoring/preset_prompt_behavior.dart';
 import 'package:scoard_game/application/models/scoring/preset_prompt_definition.dart';
 import 'package:scoard_game/application/models/scoring/entered_line_definition.dart';
+import 'package:scoard_game/application/models/scoring/game_card_art.dart';
 import 'package:scoard_game/application/models/scoring/score_input_kind.dart';
 import 'package:scoard_game/application/models/scoring/scoring_model.dart';
 import 'package:scoard_game/application/models/scoring/scoring_preset.dart';
@@ -103,6 +104,13 @@ ScoringPreset parseTemplateJson(
     scoreLabels: _parseCardTexts(json['scoreLabels']),
     scoreSubLabels: _parseCardTexts(json['scoreSubLabels']),
     playerBadges: _parseCardTexts(json['playerBadges']),
+    card: switch (json['card']) {
+      final Map<String, Object?> card => GameCardArt(
+          image: card['image']! as String,
+          showName: (card['showName'] as bool?) ?? true,
+        ),
+      _ => null,
+    },
     lineSubLabels: {
       for (final line in lines)
         if (line['subLabels'] case final List<Object?> subLabels)

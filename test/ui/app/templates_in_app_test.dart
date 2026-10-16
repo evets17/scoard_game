@@ -40,7 +40,12 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('2–8 players'), findsOneWidget);
-    expect(find.text('Template v2.4.0 · built in'), findsOneWidget);
+    expect(
+      find.text(
+        'Template v${loadTestTemplateCatalog().byId('skyjo').version} · built in',
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Options'), findsOneWidget);
     expect(find.text('Double negative scores'), findsOneWidget);
 

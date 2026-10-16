@@ -82,6 +82,7 @@ class ScoardGameApp extends StatelessWidget {
                   setPlayerGroups: environment.setPlayerGroups,
                 ),
             AppRoutes.newGame: (_) => ScoreGameScreen(
+                  templateImages: environment.templateImages,
                   loadScoreGameChoices: environment.loadScoreGameChoices,
                   templatesChanged: environment.templateCatalog,
                 ),

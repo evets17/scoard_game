@@ -426,7 +426,7 @@ void main() {
       'test-game.json': jsonEncode(template),
     }).catalog.byId('test-game');
     expect(preset.lineLabels, LineLabelDisplay.image);
-    expect(preset.lineImages, {'cascadia_bear.png'});
+    expect(preset.images, {'cascadia_bear.png'});
     final bonus =
         preset.sheetLayout.firstWhere((item) => item.lineId == 'bear-bonus');
     expect(bonus.style.label, LineLabelDisplay.imageAndText);
@@ -564,6 +564,41 @@ void main() {
         startsWith('lines[0].subLabels[0].text: unknown name "{bonsu}"'),
         startsWith('lines[0].subLabels[1].text: must be at most'),
       ]),
+    );
+  });
+
+  test('card art', () {
+    final template = sheet(lines: [entered], score: null)
+      ..['card'] = {'image': 'flip7_banner.jpg', 'showName': false};
+    expect(problemsFor(template), isEmpty);
+
+    final preset = loadTemplateCatalog({
+      'test-game.json': jsonEncode(template),
+    }).catalog.byId('test-game');
+    expect(preset.card!.image, 'flip7_banner.jpg');
+    expect(preset.card!.showName, isFalse);
+    // Downloaded and checked with the template's other pictures.
+    expect(preset.images, {'flip7_banner.jpg'});
+
+    final plain = loadTemplateCatalog({
+      'test-game.json': jsonEncode(sheet(lines: [entered], score: null)),
+    }).catalog.byId('test-game');
+    expect(plain.card, isNull);
+
+    expect(
+      problemsFor(
+        sheet(lines: [entered], score: null)
+          ..['card'] = {'image': 'Box Art.PNG', 'showName': 'no', 'fit': 1},
+      ),
+      containsAll([
+        startsWith('card.image: "Box Art.PNG" must be a file name'),
+        startsWith('card.showName: '),
+        'card.fit: unknown key',
+      ]),
+    );
+    expect(
+      problemsFor(sheet(lines: [entered], score: null)..['card'] = {}),
+      ['card.image: is required'],
     );
   });
 }

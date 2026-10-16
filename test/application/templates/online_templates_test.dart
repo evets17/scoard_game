@@ -17,6 +17,8 @@ String skyjo([void Function(Map<String, Object?> json)? edit]) {
   final json = jsonDecode(
     File('assets/templates/skyjo.json').readAsStringSync(),
   ) as Map<String, Object?>;
+  // Pictures are tested on their own; the sample asks for none.
+  json.remove('card');
   edit?.call(json);
   return jsonEncode(json);
 }

@@ -18,7 +18,7 @@ void main() {
         : <String>{};
 
     for (final template in loadTestTemplateCatalog().templates) {
-      final missing = template.lineImages.difference(present);
+      final missing = template.images.difference(present);
       expect(
         missing,
         isEmpty,

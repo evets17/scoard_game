@@ -1,13 +1,14 @@
 {
   "schemaVersion": 1,
   "id": "flip-7",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "name": "Flip 7",
   "description": "Add up the cards in front of you each round: number cards (doubled by ×2), then +modifiers, plus 15 for seven different number cards. A bust scores 0. Highest total wins once someone has 200 or more at the end of a round.",
   "source": "https://officialgamerules.org/game-rules/flip-7-rules/",
   "players": { "minimum": 3 },
   "scoringModel": "rounds",
   "winner": "highestScore",
+  "card": { "image": "flip7_banner.jpg", "showName": false },
   "lines": [
     {
       "id": "round-score",

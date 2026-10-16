@@ -179,7 +179,7 @@ class OnlineTemplates extends ChangeNotifier {
       final previousImages = await _cache.loadImages();
       final wanted = {
         for (final template in loadTemplateCatalog(kept).catalog.templates)
-          ...template.lineImages,
+          ...template.images,
       };
       final imageDownload = wanted.isEmpty
           ? const ImageDownload()
