@@ -1,0 +1,81 @@
+{
+  "templateId": "flip-7-with-a-vengeance",
+  "scenarios": [
+    {
+      "name": "Scored hands, round badges, and the highest total above 200",
+      "players": ["avery", "jules", "mina"],
+      "rounds": [
+        { "avery": 185, "jules": 195, "mina": 175 },
+        {
+          "avery": { "tiles": ["0", "1", "2", "3", "4", "13", "13★"] },
+          "jules": { "tiles": ["11", "6", "÷2", "-2"] },
+          "mina": { "tiles": ["12", "Bust"] }
+        }
+      ],
+      "expected": {
+        "roundScores": [
+          { "avery": 185, "jules": 195, "mina": 175 },
+          { "avery": 51, "jules": 6, "mina": 0 }
+        ],
+        "roundScoreLabels": [{}, { "mina": "Bust" }],
+        "roundPlayerBadges": [{ "avery": ["1st"] }, { "avery": ["7!"], "jules": ["1st"] }],
+        "totals": { "avery": 236, "jules": 201, "mina": 175 },
+        "winners": ["avery"],
+        "placements": { "avery": 1, "jules": 2, "mina": 3 }
+      }
+    },
+    {
+      "name": "Brutal Mode scores can be entered manually",
+      "players": ["avery", "jules", "mina"],
+      "rounds": [{ "avery": 28, "jules": -15, "mina": -4 }],
+      "expected": { "totals": { "avery": 28, "jules": -15, "mina": -4 }, "winners": ["avery"] }
+    },
+    {
+      "name": "Equal highest totals share first place",
+      "players": ["avery", "jules", "mina"],
+      "rounds": [
+        { "avery": 190, "jules": 192, "mina": 187 },
+        { "avery": 10, "jules": 8, "mina": 12 }
+      ],
+      "expected": { "totals": { "avery": 200, "jules": 200, "mina": 199 }, "winners": ["avery", "jules"] }
+    }
+  ],
+  "pickerTotals": [
+    {
+      "name": "Divide and round down before subtracting stacked penalties",
+      "picker": "cards",
+      "taps": ["9", "8", "÷2", "-2", "-2"],
+      "expected": 4
+    },
+    {
+      "name": "Penalties cannot make a standard round negative",
+      "picker": "cards",
+      "taps": ["3", "-8"],
+      "expected": 0
+    },
+    {
+      "name": "Apply the zero floor before adding the Flip 7 bonus",
+      "picker": "cards",
+      "taps": ["1", "2", "3", "4", "5", "6", "7", "÷2", "-8", "-10"],
+      "expected": 15
+    },
+    {
+      "name": "The Zero wipes out a hand short of Flip 7",
+      "picker": "cards",
+      "taps": ["0", "3", "8", "11", "12", "13"],
+      "expected": 0
+    },
+    {
+      "name": "A regular 13 and Lucky 13 both score and count toward Flip 7",
+      "picker": "cards",
+      "taps": ["1", "2", "3", "4", "5", "13", "13★"],
+      "expected": 56
+    },
+    {
+      "name": "A bust overrides a hand that would otherwise earn the bonus",
+      "picker": "cards",
+      "taps": ["1", "2", "3", "4", "5", "6", "7", "Bust"],
+      "expected": 0
+    }
+  ]
+}

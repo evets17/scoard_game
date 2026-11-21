@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "id": "flip-7-with-a-vengeance",
+  "version": "1.0.0",
+  "name": "Flip 7: With a Vengeance",
+  "description": "Enter each player's final cards after resolving actions, or select Bust. The Zero wipes out your round score unless you Flip 7. A Flip 7 earns 15 bonus points, and Lucky 13 (13★) and a regular 13 can both count toward it. When someone reaches 200 at the end of a round, the highest total wins. For Brutal Mode, enter the final round scores manually.",
+  "source": "https://cdn.shopify.com/s/files/1/0611/3958/3198/files/26_FLIP_7_VENGEANCE_RULES_C.pdf?v=1770853610",
+  "players": { "minimum": 3 },
+  "scoringModel": "rounds",
+  "winner": "highestScore",
+  "card": { "image": "flip7_vengeance_banner.jpg" },
+  "lines": [
+    {
+      "id": "round-score",
+      "label": "Round Score",
+      "initialValue": 0,
+      "minimumDisplayDigits": 2,
+      "entry": { "tapToEdit": true, "quickAdjust": true, "replace": true, "adjust": true },
+      "entryModes": [
+        {
+          "type": "valuePicker",
+          "id": "cards",
+          "label": "Cards",
+          "groups": [
+            {
+              "id": "zero",
+              "values": [{ "value": 0 }]
+            },
+            {
+              "id": "numbers",
+              "values": [
+                { "value": 1 }, { "value": 2 }, { "value": 3 }, { "value": 4 },
+                { "value": 5 }, { "value": 6 }, { "value": 7 }, { "value": 8 },
+                { "value": 9 }, { "value": 10 }, { "value": 11 }, { "value": 12 },
+                { "value": 13 }, { "value": 13, "text": "13★", "color": "#1565C0" }
+              ]
+            },
+            {
+              "id": "penalties",
+              "values": [
+                { "value": -2, "text": "-2", "color": "#F57C00" },
+                { "value": -4, "text": "-4", "color": "#F57C00" },
+                { "value": -6, "text": "-6", "color": "#F57C00" },
+                { "value": -8, "text": "-8", "color": "#F57C00" },
+                { "value": -10, "text": "-10", "color": "#F57C00" }
+              ]
+            },
+            {
+              "id": "halve",
+              "values": [{ "value": 1, "text": "÷2", "color": "#F57C00" }]
+            },
+            {
+              "id": "bust",
+              "values": [{ "value": 1, "text": "Bust", "color": "#B71C1C" }]
+            }
+          ],
+          "total": "if({bust} > 0 or (countIn(zero) > 0 and distinctIn(zero) + distinctIn(numbers) < 7), 0, max(0, {numbers} / if({halve} > 0, 2, 1) + {penalties}) + if(distinctIn(zero) + distinctIn(numbers) >= 7, 15, 0))"
+        }
+      ]
+    }
+  ],
+  "scoreLabels": [
+    { "when": "{bust} > 0", "text": "Bust", "color": "#C62828", "size": "small" }
+  ],
+  "playerBadges": [
+    { "when": "{bust} == 0 and distinctIn(zero) + distinctIn(numbers) >= 7", "text": "7!", "color": "#2E7D32" },
+    { "when": "({roundNumber} - 1) % {playerCount} + 1 == {playerPosition}", "text": "1st", "color": "#1565C0" }
+  ]
+}
